@@ -1,28 +1,34 @@
 
-from typing import Tuple
-import itertools
-import numpy as np
-from numpy.typing import NDArray
+from typing import Iterable
 
-class CellUniverse(list[list[list[int]]]): #Fuck speed, I want readability (list for the win)
+import vector
+
+
+class RadiUniverse(list[list[list[bool]]]): #Fuck speed, I want readability (list for the win) [but will need the speed later]
     """
-        A base class to define the cell-separated universe
-        used to place and model each element of the population
+    A base class to define the cell-separated universe
+    used to place and model each element of the population
     """
     def __init__(
         self,
-        cell_size : float,
-        cell_num : int | Tuple[int, int, int],
-        atom_radius : float,
+        dot_distance : float,
+        dot_num : int | tuple[int, int, int],
     ):
-        universe_size = (cell_num,cell_num,cell_num) if isinstance(cell_num, int) else cell_num
 
-        super().__init__(
-            [[[0]*universe_size[0]]*universe_size[1]]*universe_size[2],
-        )
+        universe_size = (dot_num, dot_num, dot_num) if isinstance(dot_num, int) else dot_num
 
-        self.cell_size = cell_size
-        self.cell_num = cell_num
-        self.atom_radius = atom_radius
+        super().__init__([
+            [
+                [
+                    False
+                    for _ in range(universe_size[2])
+                ]
+                for _ in range(universe_size[1])
+            ] 
+            for _ in range(universe_size[0])
+        ])
 
+        self.dot_distance = dot_distance
+        self.dot_num = universe_size
 
+    def apply_spheres(self, pos : Iterable[vector.VectorObject3D], radius : float) -> None:
