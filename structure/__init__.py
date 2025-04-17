@@ -1,13 +1,15 @@
-from typing import Iterable, Self, cast
+from typing import Iterable, Self
 import structure.constants as constants
-import vector, itertools, bisect
+import itertools, bisect
+import numpy as np
+from numpy.typing import NDArray
 from math import sqrt
 
 class Atom:
     z : int
-    pos : vector.VectorObject3D
+    pos : NDArray[np.float64]
 
-    def __init__(self, atomic_number : int, pos : vector.VectorObject3D):
+    def __init__(self, atomic_number : int, pos : NDArray[np.float64]):
         self.z = atomic_number
         self.pos = pos
 
@@ -19,7 +21,7 @@ class Atom:
         return str(self)
 
     def __str__(self) -> str:
-        return f"{self.name} ({self.pos.x}, {self.pos.y}, {self.pos.z})"
+        return f"{self.name} ({self.pos[0]}, {self.pos[1]}, {self.pos[2]})"
 
 class Structure(tuple[Atom, ...]):
     """
@@ -42,31 +44,35 @@ class Structure(tuple[Atom, ...]):
         DOI: 10.1140/epjd/e2005-00141-6
         Equation (1)
         """
+        #Check if number of atoms is the same in both structures
         assert len(self) == len(other), "Both structure should have the same number of atoms"
 
-        atoms_num : int = len(self)
+        atoms_num : int = len(self) # Number of atoms in structure
 
+        ####################################################################################
         ### SUM DISTANCES BETWEEN ATOMS OF EACH STRUCTURE AND STORE IT IN A ORDERED LIST ###
+        ####################################################################################
         self_dists : list[float] = []
         for atom_i, atom_j in itertools.combinations(self, 2):
-            diff = cast(vector.VectorObject3D, atom_i.pos - atom_j.pos)
+            diff = atom_i.pos - atom_j.pos
             bisect.insort(
                 self_dists,
-                diff.mag,
+                sqrt(diff @ diff),
             )
         other_dists : list[float] = []
         for atom_i, atom_j in itertools.combinations(other, 2):
-            diff = cast(vector.VectorObject3D, atom_i.pos - atom_j.pos)
+            diff = atom_i.pos - atom_j.pos
             bisect.insort(
                 other_dists,
-                diff.mag,
+                sqrt(diff @ diff),
             )
-        ####################################################################################
 
-        # Get difference between each distance in each molecule (squared)
-        distances_squared_diff : list[float] = [(i-j)**2 for i, j  in zip(self_dists, other_dists)]
+        ### Get difference between each distance in each molecule (squared) ###
+        distances_squared_diff : NDArray[np.float64] = (
+            np.array(self_dists) - np.array(other_dists)
+        )**2
 
-        q : float = sqrt( ( 2/(atoms_num*(atoms_num-1)) ) * sum(distances_squared_diff) )
+        q : float = sqrt( ( 2/(atoms_num*(atoms_num-1)) ) * distances_squared_diff.sum() )
         s : float = 1 / (1 + q)
 
         return s
