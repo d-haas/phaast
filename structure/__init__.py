@@ -23,6 +23,12 @@ class Atom:
     def __str__(self) -> str:
         return f"{self.name} ({self.pos[0]}, {self.pos[1]}, {self.pos[2]})"
 
+    def copy(self) -> Self:
+        return self.__class__(
+            self.z,
+            self.pos.copy(),
+        )
+
 class Structure(tuple[Atom, ...]):
     """
     Main class for representing molecular/cluster
@@ -76,3 +82,12 @@ class Structure(tuple[Atom, ...]):
         s : float = 1 / (1 + q)
 
         return s
+    
+    def copy(self) -> Self:
+        return self.__class__(
+            (
+                atom.copy()
+                for atom
+                in self
+            )
+        )
