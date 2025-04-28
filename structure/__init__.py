@@ -15,7 +15,7 @@ class Atom:
 
     @property
     def name(self) -> str:
-        return constants.atomic_name[self.z]
+        return constants.AtomicName[self.z]
 
     def __repr__(self) -> str:
         return str(self)

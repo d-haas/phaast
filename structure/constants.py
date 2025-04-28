@@ -1,6 +1,6 @@
-# numb_atoms is the number of atoms in a molecule
+AtomicNumber = int
 
-atomic_name = {
+AtomicName : dict[AtomicNumber, str] = {
     1: "H",
     2: "He",
     3: "Li",
@@ -121,7 +121,7 @@ atomic_name = {
     118: "Uuo",
 }
 
-atomid_radi = {
+AtomicRadi : dict[AtomicNumber, float] = {
     1: 0.31,
     2: 0.28,
     3: 1.28,
