@@ -5,17 +5,27 @@ import numpy as np
 from numpy.typing import NDArray
 from math import sqrt
 
-class Atom:
-    z : int
-    pos : NDArray[np.float64]
+class Atom(tuple[int, NDArray[np.float64]]):
 
-    def __init__(self, atomic_number : int, pos : NDArray[np.float64]):
-        self.z = atomic_number
-        self.pos = pos
+    def __new__(cls, atomic_number : int, pos : NDArray[np.float64]):
+        copy_pos = pos.copy()
+        copy_pos.flags.writeable = False
+        return super().__new__(cls, (atomic_number, copy_pos))
+
+    @property
+    def z(self) -> int:
+        return self[0]
+    @property
+    def pos(self) -> NDArray[np.float64]:
+        return self[1]
 
     @property
     def name(self) -> str:
         return constants.AtomicName[self.z]
+
+    @property
+    def mass(self) -> float:
+        return constants.AtomicMass[self.z]
 
     def __repr__(self) -> str:
         return str(self)
