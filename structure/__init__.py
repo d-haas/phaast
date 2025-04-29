@@ -53,6 +53,26 @@ class Structure(tuple[Atom, ...]):
     def __str__(self) -> str:
         return "\n".join((str(atom) for atom in super()))
 
+    @property
+    def cm(self) -> NDArray[np.float64]:
+        """
+        Return structure's center of mass
+        """
+        # Sum vector to accumulate ponderate positions (A.U.)
+        sum_vector = np.array((0,0,0), dtype=np.float64)
+
+        # Accumulated mass of all atoms (A.U.)
+        mass_counter = 0
+
+        # Adds positions to sum_vector and atomic masses to center of mass
+        for atom in self:
+            sum_vector+= atom.mass * atom.pos
+            mass_counter+= atom.mass
+
+        sum_vector/= mass_counter
+
+        return sum_vector
+
     def compare(self, other : Self) -> float:
         """
         Compare different structures using the
