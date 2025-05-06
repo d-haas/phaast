@@ -3,19 +3,24 @@ import more_itertools
 from typing import Optional, Iterator, cast
 
 from structure import Structure, Atom
+from vec import Vector
 
 def imut_random(structure : Structure, max_displacement : float = 0.1, rng : None | random.Random = None) -> None:
     for atom in structure:
         if rng:
-            displacement = [
-                (rng.random()-0.5)*2*max_displacement
-                for _ in range(3)
-            ]
+            displacement = Vector(
+                *[
+                    (rng.random()-0.5)*2*max_displacement
+                    for _ in range(3)
+                ]
+            )
         else:
-            displacement = [
-                (random.random()-0.5)*2*max_displacement
-                for _ in range(3)
-            ]
+            displacement = Vector(
+                *[
+                    (random.random()-0.5)*2*max_displacement
+                    for _ in range(3)
+                ]
+            )
 
         atom.pos+= displacement
 

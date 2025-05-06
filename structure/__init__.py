@@ -1,22 +1,19 @@
 from typing import Iterable, Self
 import structure.constants as constants
 import itertools, bisect
-import numpy as np
-from numpy.typing import NDArray
+from vec import Vector
 from math import sqrt
 
-class Atom(tuple[int, NDArray[np.float64]]):
+class Atom(tuple[int, Vector]):
 
-    def __new__(cls, atomic_number : int, pos : NDArray[np.float64]):
-        copy_pos = pos.copy()
-        copy_pos.flags.writeable = False
-        return super().__new__(cls, (atomic_number, copy_pos))
+    def __new__(cls, atomic_number : int, pos : Vector):
+        return super().__new__(cls, (atomic_number, pos.copy()))
 
     @property
     def z(self) -> int:
         return self[0]
     @property
-    def pos(self) -> NDArray[np.float64]:
+    def pos(self) -> Vector:
         return self[1]
 
     @property
@@ -54,24 +51,26 @@ class Structure(tuple[Atom, ...]):
         return "\n".join((str(atom) for atom in super()))
 
     @property
-    def cm(self) -> NDArray[np.float64]:
+    def cm(self) -> Vector:
         """
         Return structure's center of mass
         """
         # Sum vector to accumulate ponderate positions (A.U.)
-        sum_vector = np.array((0,0,0), dtype=np.float64)
+        sum_vector : Vector = Vector(0,0,0)
 
         # Accumulated mass of all atoms (A.U.)
         mass_counter = 0
 
         # Adds positions to sum_vector and atomic masses to center of mass
         for atom in self:
-            sum_vector+= atom.mass * atom.pos
+            sum_vector+= atom.pos * atom.mass
             mass_counter+= atom.mass
 
-        sum_vector/= mass_counter
-
-        return sum_vector
+        if mass_counter:
+            sum_vector/= mass_counter
+            return sum_vector
+        else:
+            raise Exception("No atoms in structure")
 
     def compare(self, other : Self) -> float:
         """
@@ -87,28 +86,35 @@ class Structure(tuple[Atom, ...]):
 
         ####################################################################################
         ### SUM DISTANCES BETWEEN ATOMS OF EACH STRUCTURE AND STORE IT IN A ORDERED LIST ###
+        ### FOR EACH STRUCTURE                                                           ###
         ####################################################################################
         self_dists : list[float] = []
         for atom_i, atom_j in itertools.combinations(self, 2):
             diff = atom_i.pos - atom_j.pos
             bisect.insort(
                 self_dists,
-                sqrt(diff @ diff),
+                diff.squared_mod,
             )
         other_dists : list[float] = []
         for atom_i, atom_j in itertools.combinations(other, 2):
             diff = atom_i.pos - atom_j.pos
             bisect.insort(
                 other_dists,
-                sqrt(diff @ diff),
+                diff.squared_mod,
             )
 
         ### Get difference between each distance in each molecule (squared) ###
-        distances_squared_diff : NDArray[np.float64] = (
-            np.array(self_dists) - np.array(other_dists)
-        )**2
+        distances_squared_diff : list[float] = [
+            (self_dist - other_dist)**2
+            for self_dist, other_dist
+            in zip(
+                self_dists,
+                other_dists
+            )
+        ]
 
-        q : float = sqrt( ( 2/(atoms_num*(atoms_num-1)) ) * distances_squared_diff.sum() )
+        # Calculate final value of Grigoryan-Springborn algorithm
+        q : float = sqrt( ( 2/(atoms_num*(atoms_num-1)) ) * sum(distances_squared_diff) )
         s : float = 1 / (1 + q)
 
         return s
