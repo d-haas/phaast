@@ -1,0 +1,20 @@
+#!/bin/python
+import sys, importlib, glob
+
+args = sys.argv
+
+modules = [
+    file.split("/")[-1].rstrip(".py")
+    for file
+    in glob.glob("./tests/*.py")
+]
+
+if len(args)>1:
+    if args[1] in modules:
+        module = importlib.import_module(f"tests.{args[1]}")
+        module.run()
+    else:
+        print("This test does not exists, try one of the following:")
+        for module in modules:
+            print(" * " + module)
+        print("")
