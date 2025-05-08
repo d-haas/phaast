@@ -1,12 +1,21 @@
 import cython
-
 from typing import Any, Iterator, Union, overload
 
-@cython.cclass
-class Vector:
-    x : cython.double
-    y : cython.double
-    z : cython.double
+
+from libc.math cimport sqrt
+
+cdef class Vector:
+    #cdef public double x, y, z
+
+    @staticmethod
+    cdef Vector create(double x, double y, double z):
+        cdef Vector new_vector = Vector.__new__(Vector)
+
+        new_vector.x = x
+        new_vector.y = y
+        new_vector.z = z
+
+        return new_vector
 
     def __init__(self, *args : cython.double):
         args_size = len(args)
@@ -61,7 +70,7 @@ class Vector:
             ),
         )
 
-    def __add__(self, other : 'Vector') -> 'Vector':
+    def __add__(self, other : Vector) -> Vector:
         """
         Vector addition
         """
@@ -70,7 +79,7 @@ class Vector:
             self.y+other.y,
             self.z+other.z,
         )
-    def __iadd__(self, other : 'Vector') -> 'Vector':
+    def __iadd__(self, other : Vector) -> Vector:
         """
         In-place vector addition
         """
@@ -79,7 +88,7 @@ class Vector:
         self.z+= other.z
         return self
 
-    def __sub__(self, other : 'Vector') -> 'Vector':
+    def __sub__(self, other : Vector) -> Vector:
         """
         Vector subtraction
         """
@@ -88,7 +97,7 @@ class Vector:
             self.y-other.y,
             self.z-other.z,
         )
-    def __isub__(self, other : 'Vector') -> 'Vector':
+    def __isub__(self, other : Vector) -> Vector:
         """
         In-place vector subtraction
         """
@@ -97,18 +106,14 @@ class Vector:
         self.z-= other.z
         return self
 
-    @overload
-    def __mul__(self, other : 'Vector') -> cython.double:...
-    @overload
-    def __mul__(self, other : cython.double) -> 'Vector':...
-    def __mul__(self, other : Union['Vector',cython.double]) -> Union[cython.double, 'Vector']:
+    def __mul__(self, other : Union[Vector,cython.double]) -> Union[cython.double, Vector]:
         """
         This function contains both vector multiplication by scalar
         and scalar product, depending on the other variable
         """
         if isinstance(other, Vector):
             return self.x*other.x + self.y*other.y + self.z*other.z
-        elif isinstance(other, cython.double):
+        elif isinstance(other, float):
             return self.__class__(
                 other*self.x,
                 other*self.y,
@@ -119,18 +124,14 @@ class Vector:
                 f"Multiplication only accepts a Vector or cython.double, not {type(other)}."
             )
 
-    @overload
-    def __rmul__(self, other : cython.double) -> 'Vector':...
-    @overload
-    def __rmul__(self, other : 'Vector') -> 'Vector':...
-    def __rmul__(self, other : Union['Vector', cython.double]) -> Union[cython.double, 'Vector']:
+    def __rmul__(self, other : Union[Vector, cython.double]) -> Union[cython.double, Vector]:
         """
         This function contains both vector multiplication by scalar
         and scalar product, depending on the other variable
         """
         if isinstance(other, Vector):
             return self.x*other.x + self.y*other.y + self.z*other.z
-        elif isinstance(other, cython.double):
+        elif isinstance(other, float):
             return self.__class__(
                 other*self.x,
                 other*self.y,
@@ -141,7 +142,7 @@ class Vector:
                 f"Multiplication only accepts a Vector or cython.double, not {type(other)}."
             )
 
-    def __imul__(self, other : cython.double) -> 'Vector':
+    def __imul__(self, other : cython.double) -> Vector:
         """
         In-place multiplication by scalar
         """
@@ -155,8 +156,16 @@ class Vector:
                 f"In-place multiplication only accepts cython.double, not {type(other)}."
             )
 
+    cdef Vector cmul(self, double other):
+        cdef Vector new_vec = Vector.create(
+            self.x * other,
+            self.y * other,
+            self.z * other,
+        )
+        return new_vec
 
-    def __truediv__(self, other : cython.double) -> 'Vector':
+
+    def __truediv__(self, other : cython.double) -> Vector:
         """
         Division by scalar
         """
@@ -165,7 +174,7 @@ class Vector:
             self.y/other,
             self.z/other,
         )
-    def __itruediv__(self, other : cython.double) -> 'Vector':
+    def __itruediv__(self, other : cython.double) -> Vector:
         """
         In-place division by scalar
         """
@@ -174,7 +183,7 @@ class Vector:
         self.z/= other
         return self
 
-    def __neg__(self) -> 'Vector':
+    def __neg__(self) -> Vector:
         return self.__class__(
             -self.x,
             -self.y,
@@ -193,8 +202,7 @@ class Vector:
     def __str__(self) -> cython.basestring:
         return f"({self.x}, {self.y}, {self.z})"
 
-    @cython.ccall
-    def cross(self, other : 'Vector') -> 'Vector':
+    cpdef Vector cross(Vector self, Vector other):
         """
         Vectorial product
         """
@@ -205,10 +213,13 @@ class Vector:
         )
 
     @property
-    def squared_mod(self) -> cython.double:
+    def mod_sqr(self) -> cython.double:
         """
         Get square or vector module
         """
+        return self.x*self.x + self.y*self.y + self.z*self.z
+
+    cpdef double get_mod_sqr(Vector self):
         return self.x*self.x + self.y*self.y + self.z*self.z
 
     @property
@@ -218,11 +229,28 @@ class Vector:
         """
         return self.squared_mod**.5
 
+    cpdef double get_mod(Vector self):
+        return sqrt(self.get_mod_sqr())
+
+    cpdef void normalize(Vector self):
+        """
+        Normalize vector in-place
+        """
+        mod = self.mod
+        self.x/= mod
+        self.y/= mod
+        self.z/= mod
+
+    cpdef Vector normalized(self):
+        """
+        Return normalized vector
+        """
+        return self.copy()/self.mod
+
     def __abs__(self) -> cython.double:
         return self.mod
 
-    @cython.ccall
-    def copy(self) -> 'Vector':
+    cpdef Vector copy(Vector self):
         return self.__class__(
             self.x,
             self.y,

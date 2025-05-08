@@ -1,5 +1,4 @@
 import cython
-
 from typing import Any, Iterator, Union, overload
 
 @cython.cclass
@@ -108,7 +107,7 @@ class Vector:
         """
         if isinstance(other, Vector):
             return self.x*other.x + self.y*other.y + self.z*other.z
-        elif isinstance(other, cython.double):
+        elif isinstance(other, float):
             return self.__class__(
                 other*self.x,
                 other*self.y,
@@ -130,7 +129,7 @@ class Vector:
         """
         if isinstance(other, Vector):
             return self.x*other.x + self.y*other.y + self.z*other.z
-        elif isinstance(other, cython.double):
+        elif isinstance(other, float):
             return self.__class__(
                 other*self.x,
                 other*self.y,

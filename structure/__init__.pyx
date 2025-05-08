@@ -1,36 +1,41 @@
-from typing import Iterable, Self
+import cython
+from typing import Iterable, Optional, Self
 import structure.constants as constants
 import itertools, bisect
-from vec import Vector
-from math import sqrt
+from vec cimport Vector
 
-class Atom(tuple[int, Vector]):
+cdef class Atom:
+    def __init__(self, atomic_number : cython.uint, pos : Optional[Vector] = None):
+        self.z = atomic_number
+        if pos:
+            self.pos = pos.copy()
+        else:
+            self.pos = Vector()
 
-    def __new__(cls, atomic_number : int, pos : Vector):
-        return super().__new__(cls, (atomic_number, pos.copy()))
+    @staticmethod
+    cdef Atom create(unsigned int atomic_number, Vector pos):
+        cdef Atom new_atom = Atom.__new__(Atom)
+
+        new_atom.z = atomic_number
+        new_atom.pos = pos.copy()
+
+        return new_atom
 
     @property
-    def z(self) -> int:
-        return self[0]
-    @property
-    def pos(self) -> Vector:
-        return self[1]
-
-    @property
-    def name(self) -> str:
+    def name(self) -> cython.basestring:
         return constants.AtomicName[self.z]
 
     @property
-    def mass(self) -> float:
+    def mass(self) -> cython.double:
         return constants.AtomicMass[self.z]
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> cython.basestring:
         return str(self)
 
-    def __str__(self) -> str:
-        return f"{self.name} ({self.pos[0]}, {self.pos[1]}, {self.pos[2]})"
+    def __str__(self) -> cython.basestring:
+        return f"{self.name} ({', '.join([str(round(self.pos[i], 1)) for i in range(3)])})"
 
-    def copy(self) -> Self:
+    cpdef Atom copy(self):
         return self.__class__(
             self.z,
             self.pos.copy(),
@@ -44,11 +49,40 @@ class Structure(tuple[Atom, ...]):
     def __new__(cls, atoms : Iterable[Atom]):
         return super().__new__(cls, tuple(atoms))
 
-    def __repr__(self) -> str:
-        return f"Structure\n\t{str(self).replace("\n", "\n\t")}"
+    def __repr__(self) -> cython.basestring:
+        self_text = str(self).replace("\n", "\n\t")
+        return f"Structure\n\t{self_text}"
 
-    def __str__(self) -> str:
-        return "\n".join((str(atom) for atom in super()))
+    def __str__(self) -> cython.basestring:
+        return "\n".join((str(atom) for atom in self))
+
+    def is_equal_to(self, other : Self) -> bool:
+        if len(self)==len(other):
+            other_count = other.element_count()
+            for z, quantity in self.element_count().items():
+                if z in other_count:
+                    if quantity == other_count[z]:
+                        continue
+                    else:
+                        return False
+                else:
+                    return False
+            return True
+
+        else:
+            return False
+
+    def element_count(self) -> dict[int, int]:
+        """
+        Returns dict with quantity of each atom in each molecule
+        """
+        r : dict[int, int] = {}
+        for atom in self:
+            if atom.z in r:
+                r[atom.z]+= 1
+            else:
+                r[atom.z] = 1
+        return r
 
     @property
     def cm(self) -> Vector:
@@ -72,30 +106,30 @@ class Structure(tuple[Atom, ...]):
         else:
             raise Exception("No atoms in structure")
 
-    def compare(self, other : Self) -> float:
+    def compare(self, other : Self) -> cython.double:
         """
         Compare different structures using the
         Grigoryan-Springborn algorithm
         DOI: 10.1140/epjd/e2005-00141-6
         Equation (1)
         """
-        #Check if number of atoms is the same in both structures
-        assert len(self) == len(other), "Both structure should have the same number of atoms"
+        atoms_num : cython.uint = len(self) # Number of atoms in structure
 
-        atoms_num : int = len(self) # Number of atoms in structure
+        #Check if number of atoms is the same in both structures
+        assert atoms_num == len(other), "Both structure should have the same number of atoms"
 
         ####################################################################################
         ### SUM DISTANCES BETWEEN ATOMS OF EACH STRUCTURE AND STORE IT IN A ORDERED LIST ###
         ### FOR EACH STRUCTURE                                                           ###
         ####################################################################################
-        self_dists : list[float] = []
+        self_dists : list[cython.double] = []
         for atom_i, atom_j in itertools.combinations(self, 2):
-            diff = atom_i.pos - atom_j.pos
+            diff : Vector = atom_i.pos - atom_j.pos
             bisect.insort(
                 self_dists,
                 diff.squared_mod,
             )
-        other_dists : list[float] = []
+        other_dists : list[cython.double] = []
         for atom_i, atom_j in itertools.combinations(other, 2):
             diff = atom_i.pos - atom_j.pos
             bisect.insort(
@@ -104,7 +138,7 @@ class Structure(tuple[Atom, ...]):
             )
 
         ### Get difference between each distance in each molecule (squared) ###
-        distances_squared_diff : list[float] = [
+        distances_squared_diff : list[cython.double] = [
             (self_dist - other_dist)**2
             for self_dist, other_dist
             in zip(
@@ -114,8 +148,8 @@ class Structure(tuple[Atom, ...]):
         ]
 
         # Calculate final value of Grigoryan-Springborn algorithm
-        q : float = sqrt( ( 2/(atoms_num*(atoms_num-1)) ) * sum(distances_squared_diff) )
-        s : float = 1 / (1 + q)
+        q : cython.double = ( ( 2/(atoms_num*(atoms_num-1)) ) * sum(distances_squared_diff) )**.5
+        s : cython.double = 1 / ( 1 + q )
 
         return s
     
@@ -125,5 +159,5 @@ class Structure(tuple[Atom, ...]):
                 atom.copy()
                 for atom
                 in self
-            )
+            ),
         )

@@ -1,11 +1,12 @@
 import random
 from structure import Atom
-from constants import AtomicRadi
+from structure.constants import AtomicRadi
 
 import itertools
-import numpy as np
 
-class RadiUniverse(list[list[list[int]]]): #Fuck speed, I want readability (list for the win) [but will need the speed later]
+from vec import Vector
+
+class RadiUniverse(list[list[list[int]]]):
     """
     A base class to define the cell-separated universe
     used to place and model each element of the population
@@ -30,43 +31,53 @@ class RadiUniverse(list[list[list[int]]]): #Fuck speed, I want readability (list
 
     def check_available_position(self, cell_pos : tuple[int, int, int], atomic_number : int) -> bool:
         result : bool = False
-        pos_vec = np.array(cell_pos, dtype=np.float64)
+        pos_vec = Vector(*cell_pos) * self.dot_distance
 
-        for atom in self.atom_population:
-            distance_vec = cell_pos - pos_vec
-            distance_squared = distance_vec.dot(distance_vec)
-            radius_sum : float = AtomicRadi[atom.z] + AtomicRadi[atomic_number]
-            if distance_squared < radius_sum:
-                # Atom would be "inside the delimited field of bonding"
-                return False
-            elif distance_squared < radius_sum + self.dot_distance:
-                # Atom is in "ideal distance for bonding"
-                result = True
+        if self.atom_population:
+            for atom in self.atom_population:
+                dist_vec= atom.pos - pos_vec
+                dist_squared = dist_vec.squared_mod
+                radius_sum_squared : float = (AtomicRadi[atom.z] + AtomicRadi[atomic_number])**2
+                if dist_squared < radius_sum_squared:
+                    # Atom would be "inside the delimited field of bonding"
+                    return False
+                elif dist_squared < radius_sum_squared + self.dot_distance:
+                    # Atom is in "ideal distance for bonding"
+                    result = True
+        else:
+            return True
 
         return result
 
-    def get_random_available_position(self, atomic_number : int, rng : None | random.Random = None) -> tuple[int, int, int] | None:
+    def get_random_available_position(self, atomic_number : int, rand_gen : None | random.Random = None) -> tuple[int, int, int] | None:
         loop_counter = 1
         result : tuple[int, int, int] | None = None
+        rng = rand_gen if rand_gen else random.Random()
 
-        iterators : tuple[range, range, range] = (
-            range(self.dot_num[0]),
-            range(self.dot_num[1]),
-            range(self.dot_num[2]),
-        )
-
-        for position in itertools.product(*iterators):
-            if self.check_available_position(position, atomic_number):
-                rand : float = rng.random() if rng else random.random()
-                if rand>=1/loop_counter:
-                    loop_counter+= 1
-                    result = position
+        if self.atom_population:
+            iterators : tuple[range, range, range] = (
+                range(self.dot_num[0]),
+                range(self.dot_num[1]),
+                range(self.dot_num[2]),
+            )
+            for position in itertools.product(*iterators):
+                if self.check_available_position(position, atomic_number):
+                    rand : float = rng.random() if rng else random.random()
+                    if rand<=(1/loop_counter):
+                        loop_counter+= 1
+                        result = position
+        else:
+            return (
+                self.dot_num[0]//2,
+                self.dot_num[1]//2,
+                self.dot_num[2]//2,
+            )
 
         return result
 
 
 
     def include_atom(self, cell_pos : tuple[int, int, int], atom : Atom) -> None:
-        atom.pos = np.array(cell_pos, dtype=np.float64)
+        atom.pos = Vector(*cell_pos)*self.dot_distance
         self.atom_population.append(atom)
 
