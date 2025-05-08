@@ -1,6 +1,6 @@
 import random
 import more_itertools
-from typing import Optional, Iterator, cast
+from typing import Optional, cast
 
 from structure import Structure, Atom
 from vec import Vector
