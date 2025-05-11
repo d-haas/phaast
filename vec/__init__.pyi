@@ -1,11 +1,9 @@
-import cython
-
 from typing import Any, Iterator, Union, overload
 
 class Vector:
-    x : cython.double
-    y : cython.double
-    z : cython.double
+    x : float
+    y : float
+    z : float
 
     @overload
     def __init__(self, x : float, y : float, z : float):...
@@ -15,16 +13,16 @@ class Vector:
     def __init__(self):...
     def __init__(self, *args : float):...
 
-    def __getitem__(self, key : cython.uint) -> cython.double:
+    def __getitem__(self, key : int) -> float:
         """
         Get item function, in case its needed
         to index by attribute number
         """
         pass
 
-    def __setitem__(self, key : cython.uint, value : cython.double) -> None:...
+    def __setitem__(self, key : int, value : float) -> None:...
 
-    def __iter__(self) -> Iterator[cython.double]:
+    def __iter__(self) -> Iterator[float]:
         """
         Iter over vector
         """
@@ -55,10 +53,10 @@ class Vector:
         pass
 
     @overload
-    def __mul__(self, other : 'Vector') -> cython.double:...
+    def __mul__(self, other : 'Vector') -> float:...
     @overload
-    def __mul__(self, other : cython.double) -> 'Vector':...
-    def __mul__(self, other : Union['Vector',cython.double]) -> Union[cython.double, 'Vector']:
+    def __mul__(self, other : float) -> 'Vector':...
+    def __mul__(self, other : Union['Vector',float]) -> Union[float, 'Vector']:
         """
         This function contains both vector multiplication by scalar
         and scalar product, depending on the other variable
@@ -66,29 +64,29 @@ class Vector:
         pass
 
     @overload
-    def __rmul__(self, other : cython.double) -> 'Vector':...
+    def __rmul__(self, other : float) -> 'Vector':...
     @overload
     def __rmul__(self, other : 'Vector') -> 'Vector':...
-    def __rmul__(self, other : Union['Vector', cython.double]) -> Union[cython.double, 'Vector']:
+    def __rmul__(self, other : Union['Vector', float]) -> Union[float, 'Vector']:
         """
         This function contains both vector multiplication by scalar
         and scalar product, depending on the other variable
         """
         pass
 
-    def __imul__(self, other : cython.double) -> 'Vector':
+    def __imul__(self, other : float) -> 'Vector':
         """
         In-place multiplication by scalar
         """
         pass
 
-    def __truediv__(self, other : cython.double) -> 'Vector':
+    def __truediv__(self, other : float) -> 'Vector':
         """
         Division by scalar
         """
         pass
 
-    def __itruediv__(self, other : cython.double) -> 'Vector':
+    def __itruediv__(self, other : float) -> 'Vector':
         """
         In-place division by scalar
         """
@@ -106,9 +104,9 @@ class Vector:
         """
         pass
 
-    def __repr__(self) -> cython.basestring:...
+    def __repr__(self) -> str:...
 
-    def __str__(self) -> cython.basestring:...
+    def __str__(self) -> str:...
 
     def cross(self, other : 'Vector') -> 'Vector':
         """
@@ -117,14 +115,14 @@ class Vector:
         pass
 
     @property
-    def squared_mod(self) -> cython.double:
+    def mod_sqr(self) -> float:
         """
         Get square or vector module
         """
         pass
 
     @property
-    def mod(self) -> cython.double:
+    def mod(self) -> float:
         """
         Get vector module
         """
@@ -142,7 +140,7 @@ class Vector:
         """
         pass
 
-    def __abs__(self) -> cython.double:...
+    def __abs__(self) -> float:...
 
     def copy(self) -> 'Vector':
         """
@@ -150,3 +148,7 @@ class Vector:
         in a different address
         """
         pass
+
+    def __getstate__(self) -> tuple[float, float, float]:...
+
+    def __setstate__(self, state : tuple[float, float, float]) -> None:...

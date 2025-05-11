@@ -205,7 +205,7 @@ class Vector:
         )
 
     @property
-    def squared_mod(self) -> cython.double:
+    def mod_sqr(self) -> cython.double:
         """
         Get square or vector module
         """
@@ -216,7 +216,7 @@ class Vector:
         """
         Get vector module
         """
-        return self.squared_mod**.5
+        return self.mod_sqr**.5
 
     def __abs__(self) -> cython.double:
         return self.mod

@@ -1,21 +1,12 @@
-import cython
-from typing import Any, Iterator, Union, overload
+# cython: freethreading_compatible = True
 
+cimport cython
+from typing import Any, Iterator, Union, overload
 
 from libc.math cimport sqrt
 
 cdef class Vector:
-    #cdef public double x, y, z
-
-    @staticmethod
-    cdef Vector create(double x, double y, double z):
-        cdef Vector new_vector = Vector.__new__(Vector)
-
-        new_vector.x = x
-        new_vector.y = y
-        new_vector.z = z
-
-        return new_vector
+    cdef public double x, y, z
 
     def __init__(self, *args : cython.double):
         args_size = len(args)
@@ -146,7 +137,7 @@ cdef class Vector:
         """
         In-place multiplication by scalar
         """
-        if isinstance(other, cython.double):
+        if isinstance(other, float):
             self.x*= other
             self.y*= other
             self.z*= other
@@ -155,15 +146,6 @@ cdef class Vector:
             raise TypeError(
                 f"In-place multiplication only accepts cython.double, not {type(other)}."
             )
-
-    cdef Vector cmul(self, double other):
-        cdef Vector new_vec = Vector.create(
-            self.x * other,
-            self.y * other,
-            self.z * other,
-        )
-        return new_vec
-
 
     def __truediv__(self, other : cython.double) -> Vector:
         """
@@ -196,13 +178,13 @@ cdef class Vector:
         else:
             return False
 
-    def __repr__(self) -> cython.basestring:
+    def __repr__(self) -> str:
         return f"Vector({self.x}, {self.y}, {self.z})"
 
-    def __str__(self) -> cython.basestring:
+    def __str__(self) -> str:
         return f"({self.x}, {self.y}, {self.z})"
 
-    cpdef Vector cross(Vector self, Vector other):
+    def cross(Vector self, Vector other) -> Vector:
         """
         Vectorial product
         """
@@ -219,20 +201,15 @@ cdef class Vector:
         """
         return self.x*self.x + self.y*self.y + self.z*self.z
 
-    cpdef double get_mod_sqr(Vector self):
-        return self.x*self.x + self.y*self.y + self.z*self.z
-
     @property
     def mod(self) -> cython.double:
         """
         Get vector module
         """
-        return self.squared_mod**.5
+        return sqrt(self.squared_mod)
 
-    cpdef double get_mod(Vector self):
-        return sqrt(self.get_mod_sqr())
 
-    cpdef void normalize(Vector self):
+    def normalize(self) -> None:
         """
         Normalize vector in-place
         """
@@ -241,7 +218,7 @@ cdef class Vector:
         self.y/= mod
         self.z/= mod
 
-    cpdef Vector normalized(self):
+    def normalized(self) -> Vector:
         """
         Return normalized vector
         """
@@ -250,9 +227,19 @@ cdef class Vector:
     def __abs__(self) -> cython.double:
         return self.mod
 
-    cpdef Vector copy(Vector self):
+    def copy(self) -> Vector:
         return self.__class__(
             self.x,
             self.y,
             self.z,
         )
+
+    def __getstate__(self) -> tuple[float, float, float]:
+        return (
+            self.x,
+            self.y,
+            self.z,
+        )
+
+    def __setstate__(self, state : tuple[float, float, float]) -> None:
+        self.x, self.y, self.z = state
