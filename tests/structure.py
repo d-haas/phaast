@@ -20,9 +20,9 @@ def run():
         ],
     )
 
-    Structures_numbers : tuple[int, ...] = (64, 128)
-    Processes_numbers : tuple[int, ...] = (8, 16)
-    Cell_sizes : tuple[float, ...] = (0.2, 0.15, 0.1)
+    Structures_numbers : tuple[int, ...] = (128,)
+    Processes_numbers : tuple[int, ...] = (8,)
+    Cell_sizes : tuple[float, ...] = (0.2, 0.15)
 
 
     time_data : list[tuple[int, int, float, float, float]] = []
@@ -31,13 +31,15 @@ def run():
     for p_num, struct_num, cell_size in itertools.product(Processes_numbers, Structures_numbers, Cell_sizes):
 
         start = time.perf_counter_ns()
-        structure.creator.generate_random_structures(
+
+        structures = structure.creator.generate_random_structures(
             base,
             struct_num,
             p_num,
             cell_size,
             2345678,
         )
+
         end = time.perf_counter_ns()
         total_s = (end - start)/1e9
         per_struct_ms = ((end - start)/1e6)/struct_num
