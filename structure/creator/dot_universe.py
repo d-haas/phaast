@@ -74,17 +74,19 @@ class DotUniverse:
         i : cython.int
         j : cython.int
         k : cython.int
-        range_list : tuple[range, range, range] = (
+        _ : tuple[range, range, range] = (
             range(self.limits[0].min, self.limits[0].max+1),
             range(self.limits[1].min, self.limits[1].max+1),
             range(self.limits[2].min, self.limits[2].max+1),
         )
 
-        for i, j, k in itertools.product(*range_list):
-            if self.check_available_position((i, j, k), atomic_number):
-                positions.append(
-                    (i, j, k),
-                )
+        for i in range(self.limits[0].min, self.limits[0].max+1):
+            for j in range(self.limits[1].min, self.limits[1].max+1):
+                for k in range(self.limits[2].min, self.limits[2].max+1):
+                    if self.check_available_position((i, j, k), atomic_number):
+                        positions.append(
+                            (i, j, k),
+                        )
 
         return positions
 
