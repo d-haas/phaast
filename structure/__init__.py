@@ -1,6 +1,5 @@
-from io import FileIO
 import tempfile
-from typing import Iterable, Optional, Self, TextIO
+from typing import Iterable, Optional, Self
 from structure.constants import *
 import itertools, bisect
 from vec import Vector
@@ -241,21 +240,29 @@ class Molecule(Structure):
     energy : float
 
     def __new__(cls, atoms: Iterable[Atom], _ : float) -> Self:
+        # Create new molecule
         return super().__new__(cls, atoms)
 
     def __init__(self, _: Iterable[Atom], energy : float) -> None:
+        # Initialize Molecule and assign energy
         super().__init__()
 
         self.energy = energy
 
     @staticmethod
     def from_xyz(file_path: str) -> 'Molecule':
+        """
+        Create a Molecule from a xyz file 
+        """
         with open(file_path) as file:
             s : str = file.read()
             return Molecule.from_xyz_str(s)
 
     @staticmethod
     def from_xyz_str(s : str) -> 'Molecule':
+        """
+        Create a Molecule from a xyz string
+        """
         lines = s.splitlines()
         energy = float(lines[1].split()[1])
         return Molecule(

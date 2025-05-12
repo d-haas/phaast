@@ -32,7 +32,7 @@ def run():
 
         start = time.perf_counter_ns()
 
-        structures = structure.creator.generate_random_structures(
+        _ = structure.creator.generate_random_structures(
             base,
             struct_num,
             p_num,

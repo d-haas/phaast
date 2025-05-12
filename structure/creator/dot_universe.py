@@ -8,8 +8,6 @@ import cython
 
 from vec import Vector
 
-import itertools
-
 @cython.cclass
 class Limit:
     min = cython.declare(cython.int, visibility="public")

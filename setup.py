@@ -1,5 +1,5 @@
 from setuptools import setup, Extension
-from Cython.Build import cythonize
+from Cython.Build.Dependencies import cythonize
 
 extensions = [
     Extension(

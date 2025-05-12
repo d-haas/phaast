@@ -20,7 +20,7 @@ def optimize_structure(structure : Structure, charge : int = 0) -> Molecule:
                     f"Could not locate XTB: {xtb_path}"
                 )
 
-            result = subprocess.run(
+            subprocess.run(
                 [
                     xtb_path,
                     input_xyz_file.name,

@@ -1,5 +1,4 @@
 from structure import Atom, Structure
-import structure.creator
 import structure.optimizer
 from vec import Vector
 
