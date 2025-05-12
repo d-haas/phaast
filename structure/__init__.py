@@ -1,4 +1,6 @@
-from typing import Iterable, Optional, Self
+from io import FileIO
+import tempfile
+from typing import Iterable, Optional, Self, TextIO
 from structure.constants import *
 import itertools, bisect
 from vec import Vector
@@ -37,6 +39,27 @@ class Atom:
             self.pos.copy(),
         )
 
+    @staticmethod
+    def from_xyz_str(line) -> 'Atom':
+        s : str = line.replace("\t", "")
+        while "  " in s:
+            s.replace("  ", " ")
+
+        parsed_line : list[str] = s.split()
+
+        return Atom(
+            AtomicNumber[parsed_line[0]],
+            Vector(*[
+                float(parsed_line[i])
+                for i
+                in range(1, 4)
+            ])
+        )
+
+
+    def to_xyz_str(self) -> str:
+        return f"{self.name} {self.pos.x} {self.pos.y} {self.pos.z}"
+
     def __getstate__(self) -> tuple[int, Vector]:
         return (
             self.z,
@@ -50,7 +73,7 @@ class Atom:
 class Structure(tuple[Atom, ...]):
     """
     Main class for representing molecular/cluster
-    structures
+    structure geometry
     """
     def __new__(cls, atoms : Iterable[Atom]) -> Self:
         return super().__new__(cls, tuple(atoms))
@@ -159,6 +182,50 @@ class Structure(tuple[Atom, ...]):
 
         return s
     
+    @staticmethod
+    def from_xyz(file_path : str) -> 'Structure':
+        with open(file_path) as xyz_file:
+            return Structure.from_xyz_str(xyz_file.read())
+
+    def to_xyz(self) -> tempfile._TemporaryFileWrapper:
+        file = tempfile.NamedTemporaryFile(
+            mode = "w+",
+            prefix="phaast_xyz_",
+            suffix=".xyz"
+        )
+
+        file.write(self.to_xyz_str())
+        # For some GD reason, the files needs to be read before xtb uses it
+        # (????)
+        file.read()
+
+
+        return file
+
+    @staticmethod
+    def from_xyz_str(s : str) -> 'Structure':
+        atoms : list[Atom] = []
+
+        for line in s.splitlines()[2:]:
+            atoms.append(
+                Atom.from_xyz_str(line)
+            )
+
+        return Structure(atoms)
+
+    def to_xyz_str(self) -> str:
+        lines : list[str] = [
+            str(len(self)),
+            "",
+        ] + [
+            atom.to_xyz_str()
+            for atom
+            in self
+        ]
+
+        return "\n".join(lines)
+
+
     def copy(self) -> Self:
         return self.__class__(
             (
@@ -166,4 +233,34 @@ class Structure(tuple[Atom, ...]):
                 for atom
                 in self
             ),
+        )
+
+class Molecule(Structure):
+    """
+    A class representing a molecule, inheriting from Structure.
+    Can be extended with molecule-specific properties and methods.
+    """
+    energy : float
+
+    def __new__(cls, atoms: Iterable[Atom], _ : float) -> Self:
+        return super().__new__(cls, atoms)
+
+    def __init__(self, _: Iterable[Atom], energy : float) -> None:
+        super().__init__()
+
+        self.energy = energy
+
+    @staticmethod
+    def from_xyz(file_path: str) -> 'Molecule':
+        with open(file_path) as file:
+            s : str = file.read()
+            return Molecule.from_xyz_str(s)
+
+    @staticmethod
+    def from_xyz_str(s : str) -> 'Molecule':
+        lines = s.splitlines()
+        energy = float(lines[1].split()[2])
+        return Molecule(
+            Structure.from_xyz_str(s),
+            energy,
         )
