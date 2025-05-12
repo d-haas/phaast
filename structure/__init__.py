@@ -42,8 +42,6 @@ class Atom:
     @staticmethod
     def from_xyz_str(line) -> 'Atom':
         s : str = line.replace("\t", "")
-        while "  " in s:
-            s.replace("  ", " ")
 
         parsed_line : list[str] = s.split()
 
@@ -259,7 +257,7 @@ class Molecule(Structure):
     @staticmethod
     def from_xyz_str(s : str) -> 'Molecule':
         lines = s.splitlines()
-        energy = float(lines[1].split()[2])
+        energy = float(lines[1].split()[1])
         return Molecule(
             Structure.from_xyz_str(s),
             energy,
