@@ -1,6 +1,5 @@
-AtomicNumber = int
 
-AtomicName : dict[AtomicNumber, str] = {
+AtomicName : dict[int, str] = {
     1: "H",
     2: "He",
     3: "Li",
@@ -121,7 +120,11 @@ AtomicName : dict[AtomicNumber, str] = {
     118: "Uuo",
 }
 
-AtomicRadi : dict[AtomicNumber, float] = {
+AtomicNumber : dict[str, int] = {
+    v: k for k, v in AtomicName.items()
+}
+
+AtomicRadi : dict[int, float] = {
     1: 0.31,
     2: 0.28,
     3: 1.28,
