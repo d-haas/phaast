@@ -17,4 +17,6 @@ def run():
 
     print(f"Optimized is: {optimized.to_xyz_str()}")
 
+    print(f"\nThe difference between them is {struct.compare(optimized)}")
+
 
