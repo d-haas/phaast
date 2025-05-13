@@ -31,3 +31,8 @@ Structure module compiled to cython:
 |        16 |          128 |            0.15 |             4.92 |                     38.46 |
 |        16 |          128 |            0.10 |            13.62 |                    106.42 |
 
+Changed to python 3.14.0b1t
+|   Threads |   Structures |   Cell size (Å) |   Total time (s) |   Time per structure (ms) |
+|-----------|--------------|-----------------|------------------|---------------------------|
+|         8 |          128 |            0.20 |             1.52 |                     11.90 |
+|         8 |          128 |            0.15 |             3.32 |                     25.97 |
