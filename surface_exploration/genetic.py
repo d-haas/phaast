@@ -7,7 +7,11 @@ from multiprocessing.dummy import Pool
 
 
 class Generation(list[Molecule]):
-    def __init__(self, structures : Iterable[Structure | Molecule], charge : int):
+    def __init__(
+        self,
+        structures : Iterable[Structure | Molecule],
+        charge : int,
+    ):
 
         # Remove hard-coded 8, please
         with Pool(8) as p:
@@ -31,3 +35,7 @@ class Generation(list[Molecule]):
                 if abs(self[i].energy-self[j].energy) <= energy_threshold:
                     if self[i].compare(self[j]):
                         del self[j]
+
+    def reproduce(self, top_k : int):
+        pass
+
