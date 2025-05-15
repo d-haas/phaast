@@ -3,10 +3,12 @@ import sys, importlib, glob
 
 args = sys.argv
 
+current_dir = __file__.rstrip("/test")
+
 modules = [
     file.split("/")[-1].rstrip(".py")
     for file
-    in glob.glob("./tests/*.py")
+    in glob.glob(f"{current_dir}/tests/*.py")
 ]
 
 if len(args)>1:
