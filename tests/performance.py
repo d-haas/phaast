@@ -4,11 +4,9 @@ import cython
 from typing import Any, Iterator, Union, overload
 
 class Vector:
-    x : cython.double
-    y : cython.double
-    z : cython.double
+    __slots__ = ("x", "y", "z")
 
-    def __init__(self, *args : cython.double):
+    def __init__(self, *args : float):
         args_size = len(args)
         if   args_size == 0:
             self.x, self.y, self.z = 0, 0, 0
@@ -21,7 +19,7 @@ class Vector:
                 f"There should be 0, 1 or 3 arguments, not {len(args)}",
             )
 
-    def __getitem__(self, key : cython.uint) -> cython.double:
+    def __getitem__(self, key : int) -> float:
         """
         Get item function, in case its needed
         to index by attribute number
@@ -37,7 +35,7 @@ class Vector:
                 f"{key} is out of vector bounds"
             )
 
-    def __setitem__(self, key : cython.uint, value : cython.double) -> None:
+    def __setitem__(self, key : int, value : float) -> None:
         if key == 0:
             self.x = value
         elif key == 1:
@@ -49,7 +47,7 @@ class Vector:
                 f"{key} is out of vector bounds"
             )
 
-    def __iter__(self) -> Iterator[cython.double]:
+    def __iter__(self) -> Iterator[float]:
         """
         Iter over vector
         """
@@ -98,17 +96,17 @@ class Vector:
         return self
 
     @overload
-    def __mul__(self, other : 'Vector') -> cython.double:...
+    def __mul__(self, other : 'Vector') -> float:...
     @overload
-    def __mul__(self, other : cython.double) -> 'Vector':...
-    def __mul__(self, other : Union['Vector',cython.double]) -> Union[cython.double, 'Vector']:
+    def __mul__(self, other : float) -> 'Vector':...
+    def __mul__(self, other : Union['Vector',float]) -> Union[float, 'Vector']:
         """
         This function contains both vector multiplication by scalar
         and scalar product, depending on the other variable
         """
         if isinstance(other, Vector):
             return self.x*other.x + self.y*other.y + self.z*other.z
-        elif isinstance(other, cython.double):
+        elif isinstance(other, float):
             return self.__class__(
                 other*self.x,
                 other*self.y,
@@ -116,21 +114,21 @@ class Vector:
             )
         else:
             raise TypeError(
-                f"Multiplication only accepts a Vector or cython.double, not {type(other)}."
+                f"Multiplication only accepts a Vector or float, not {type(other)}."
             )
 
     @overload
-    def __rmul__(self, other : cython.double) -> 'Vector':...
+    def __rmul__(self, other : float) -> 'Vector':...
     @overload
     def __rmul__(self, other : 'Vector') -> 'Vector':...
-    def __rmul__(self, other : Union['Vector', cython.double]) -> Union[cython.double, 'Vector']:
+    def __rmul__(self, other : Union['Vector', float]) -> Union[float, 'Vector']:
         """
         This function contains both vector multiplication by scalar
         and scalar product, depending on the other variable
         """
         if isinstance(other, Vector):
             return self.x*other.x + self.y*other.y + self.z*other.z
-        elif isinstance(other, cython.double):
+        elif isinstance(other, float):
             return self.__class__(
                 other*self.x,
                 other*self.y,
@@ -138,25 +136,25 @@ class Vector:
             )
         else:
             raise TypeError(
-                f"Multiplication only accepts a Vector or cython.double, not {type(other)}."
+                f"Multiplication only accepts a Vector or float, not {type(other)}."
             )
 
-    def __imul__(self, other : cython.double) -> 'Vector':
+    def __imul__(self, other : float) -> 'Vector':
         """
         In-place multiplication by scalar
         """
-        if isinstance(other, cython.double):
+        if isinstance(other, float):
             self.x*= other
             self.y*= other
             self.z*= other
             return self
         else:
             raise TypeError(
-                f"In-place multiplication only accepts cython.double, not {type(other)}."
+                f"In-place multiplication only accepts float, not {type(other)}."
             )
 
 
-    def __truediv__(self, other : cython.double) -> 'Vector':
+    def __truediv__(self, other : float) -> 'Vector':
         """
         Division by scalar
         """
@@ -165,7 +163,7 @@ class Vector:
             self.y/other,
             self.z/other,
         )
-    def __itruediv__(self, other : cython.double) -> 'Vector':
+    def __itruediv__(self, other : float) -> 'Vector':
         """
         In-place division by scalar
         """
@@ -187,10 +185,10 @@ class Vector:
         else:
             return False
 
-    def __repr__(self) -> cython.basestring:
+    def __repr__(self) -> str:
         return f"Vector({self.x}, {self.y}, {self.z})"
 
-    def __str__(self) -> cython.basestring:
+    def __str__(self) -> str:
         return f"({self.x}, {self.y}, {self.z})"
 
     @cython.ccall
@@ -205,20 +203,20 @@ class Vector:
         )
 
     @property
-    def mod_sqr(self) -> cython.double:
+    def mod_sqr(self) -> float:
         """
         Get square or vector module
         """
         return self.x*self.x + self.y*self.y + self.z*self.z
 
     @property
-    def mod(self) -> cython.double:
+    def mod(self) -> float:
         """
         Get vector module
         """
         return self.mod_sqr**.5
 
-    def __abs__(self) -> cython.double:
+    def __abs__(self) -> float:
         return self.mod
 
     @cython.ccall
@@ -230,7 +228,7 @@ class Vector:
         )
 
 def run():
-    VECTOR_VALUE = 1.4
+    VECTOR_VALUE = 1.2
 
     start_var = time.monotonic_ns()
     a = Vector(VECTOR_VALUE)
@@ -239,8 +237,8 @@ def run():
     for _ in range(100000):
         a+= a
     end_sum = time.monotonic_ns()
-    print(f"Pure python variable creation time was {(end_var-start_var)/10e3} µs")
-    print(f"Pure python sum time was {(end_sum-start_sum)/10e3} µs")
+    print(f"Pure python variable creation time was {(end_var-start_var)/1e3} µs")
+    print(f"Pure python sum time was {(end_sum-start_sum)/1e3} µs")
 
     start_var_c = time.monotonic_ns()
     a = vec.Vector(VECTOR_VALUE)
@@ -249,7 +247,7 @@ def run():
     for _ in range(100000):
         a+= a
     end_sum_c = time.monotonic_ns()
-    print(f"Cython variable creation time was {(end_var_c-start_var_c)/10e3} µs")
-    print(f"Cython sum time was {(end_sum_c-start_sum_c)/10e3} µs")
+    print(f"Cython variable creation time was {(end_var_c-start_var_c)/1e3} µs")
+    print(f"Cython sum time was {(end_sum_c-start_sum_c)/1e3} µs")
 
     print(f"Cython is {round((end_sum-start_sum)/(end_sum_c-start_sum_c), 2)} times faster than pure python.")

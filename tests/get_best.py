@@ -1,10 +1,6 @@
 from structure import Atom, Structure
 import structure.creator
-from vec import Vector
 from calculators.xtb import XTB
-import matplotlib.pyplot as plt
-from mpl_toolkits import mplot3d
-import numpy as np
 from multiprocessing.dummy import Pool
 
 def run():
