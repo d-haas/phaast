@@ -9,28 +9,28 @@ from multiprocessing.dummy import Pool
 from surface_explorator import SurfaceExplorator
 
 class Genetic(SurfaceExplorator, list[Molecule]):
-    charge : int
     population_size : int
     calculator : Calculator
+    computers : list[Computer]
 
     def __init__(
         self,
         structures : Iterable[Structure | Molecule],
-        charge : int,
         population_size : int,
-        computer : Computer,
+        computers : Iterable[Computer],
         calculator : Calculator,
     ):
-        self.charge = charge
         self.population_size = population_size
         self.calculator = calculator
+
+        self.computers = [cpu for cpu in computers]
 
         # Remove hard-coded 8, please
         with Pool(8) as p:
             molecules : list[Molecule] = p.starmap(
                 self.calculator.optimize,
                 [
-                    (structure, charge)
+                    (structure,)
                     for structure in structures
                     if isinstance(structure, Structure)
                 ]
@@ -50,7 +50,7 @@ class Genetic(SurfaceExplorator, list[Molecule]):
                     if self[i].compare(self[j]) <= geometry_threshold:
                         del self[j]
 
-    def reproduce(self, top_k : int):
+    def reproduce(self, _top_k : int):
         pass
 
     def loop(self) -> None:

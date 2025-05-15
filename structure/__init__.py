@@ -1,8 +1,8 @@
-import tempfile
 from typing import Iterable, Optional, Self
 from structure.constants import *
 import itertools, bisect
 from vec import Vector
+import subprocess, tempfile
 
 class Atom:
     z : int
@@ -72,8 +72,11 @@ class Structure(tuple[Atom, ...]):
     Main class for representing molecular/cluster
     structure geometry
     """
-    def __new__(cls, atoms : Iterable[Atom]) -> Self:
-        return super().__new__(cls, tuple(atoms))
+    __charge : int
+    def __new__(cls, atoms : Iterable[Atom], charge : int = 0) -> Self:
+        instance = super().__new__(cls, tuple(atoms))
+        instance.__charge = charge
+        return instance
 
     def __repr__(self) -> str:
         self_text = str(self).replace("\n", "\n\t")
@@ -109,6 +112,10 @@ class Structure(tuple[Atom, ...]):
             else:
                 r[atom.z] = 1
         return r
+
+    @property
+    def charge(self) -> int:
+        return self.__charge
 
     @property
     def cm(self) -> Vector:
@@ -222,6 +229,15 @@ class Structure(tuple[Atom, ...]):
 
         return "\n".join(lines)
 
+    def plot(self) -> None:
+        with self.to_xyz() as xyz_file:
+            subprocess.run(
+                [
+                    "jmol",
+                    xyz_file.name,
+                ],
+            )
+
 
     def copy(self) -> Self:
         return self.__class__(
@@ -269,3 +285,4 @@ class Molecule(Structure):
             Structure.from_xyz_str(s),
             energy,
         )
+

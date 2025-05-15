@@ -1,4 +1,3 @@
-
 import subprocess
 import tempfile
 from calculators import Calculator
@@ -7,7 +6,7 @@ from structure import Molecule, Structure
 
 class XTB(Calculator):
     @staticmethod
-    def optimize(structure : Structure, charge : int = 0) -> Molecule:
+    def optimize(structure : Structure) -> Molecule:
         with structure.to_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
                 which_xtb = subprocess.run(
@@ -28,7 +27,7 @@ class XTB(Calculator):
                     [
                         xtb_path,
                         input_xyz_file.name,
-                        f"--chrg {'+' if charge>0 else ''}{charge}",
+                        f"--chrg {'+' if structure.charge>0 else ''}{structure.charge}",
                         "--opt",
                     ],
                     cwd = dir,
@@ -40,7 +39,7 @@ class XTB(Calculator):
                 return Molecule.from_xyz(dir+"/xtbopt.xyz")
 
     @staticmethod
-    def measure_memory_usage(structure : Structure, charge : int):
+    def measure_memory_usage(structure : Structure) -> int:
         with structure.to_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
                 which_xtb = subprocess.run(
@@ -64,7 +63,7 @@ class XTB(Calculator):
                         "-o", "memory.out",
                         xtb_path,
                         input_xyz_file.name,
-                        "--chrg", f"{'+' if charge>0 else ''}{charge}",
+                        "--chrg", f"{'+' if structure.charge>0 else ''}{structure.charge}",
                         "--opt",
                         "-s",
                     ],
@@ -76,4 +75,3 @@ class XTB(Calculator):
                 memory = int(open(dir+"/memory.out").read())
 
         return memory
-

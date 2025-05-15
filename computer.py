@@ -4,9 +4,9 @@ from calculators import Calculator
 from structure import Structure
 
 class Computer:
-    cpu_count_limit : int
-    memory_limit : int
-    calculators : int
+    cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
+    memory_limit : int # Maximum memory the software can use (in KiB)
+    calculators : int # Calculators that will be used the for software
     max_processes : dict[Calculator, int]
     def __init__(
         self,
@@ -14,7 +14,6 @@ class Computer:
         memory_limit : int,
         calculators : Iterable[Calculator],
         structure_type : Structure,
-        structure_charge : int,
     ):
         # Set core count on computer automatically if it was not set
         max_core_count = multiprocessing.cpu_count()
@@ -37,7 +36,7 @@ class Computer:
         for calculator in calculators:
             self.max_processes[calculator] = max(
                 *[
-                    calculator.measure_memory_usage(structure_type, structure_charge)
+                    calculator.measure_memory_usage(structure_type)
                     for _ in range(10)
                 ]
             )
