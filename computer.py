@@ -2,6 +2,7 @@ import multiprocessing
 from typing import Iterable
 from calculators import Calculator
 from structure import Structure
+import socket
 
 class Computer:
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
@@ -40,3 +41,18 @@ class Computer:
                     for _ in range(10)
                 ]
             )
+
+"""
+class RemoteComputer(Computer):
+    conn : socket.socket
+    def __init__(
+        self,
+        cpu_count_limit : int,
+        memory_limit : int,
+        calculators : Iterable[Calculator],
+        structure_type : Structure,
+        address : socket._Address,
+    ):
+        self.socket = socket.socket(socket.AF_INET)
+        self.socket.connect(address)
+"""
