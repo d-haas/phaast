@@ -7,27 +7,35 @@ from structure import Molecule, Structure
 from multiprocessing.dummy import Pool
 
 from surface_explorator import SurfaceExplorator
+from typecheck import check_types
 
-class Genetic(SurfaceExplorator, list[Molecule]):
+class Genetic(SurfaceExplorator):
     population_size : int
+    population : list[Molecule]
     calculator : Calculator
     computers : list[Computer]
+    energy_threshold : float
+    geometry_threshold : float
 
+    @check_types
     def __init__(
         self,
         structures : Iterable[Structure | Molecule],
         population_size : int,
         computers : Iterable[Computer],
-        calculator : Calculator,
+        energy_threshold : float,
+        geometry_threshold : float,
     ):
         self.population_size = population_size
-        self.calculator = calculator
 
         self.computers = [cpu for cpu in computers]
 
+        self.energy_threshold = energy_threshold
+        self.geometry_threshold = geometry_threshold
+
         # Remove hard-coded 8, please
-        with Pool(8) as p:
-            molecules : list[Molecule] = p.starmap(
+        with Pool(self.computers[0].cpu_count_limit) as p:
+            self.population : list[Molecule] = p.starmap(
                 self.calculator.optimize,
                 [
                     (structure,)
@@ -39,23 +47,26 @@ class Genetic(SurfaceExplorator, list[Molecule]):
                 if isinstance(molecule, Molecule)
             ]
 
-        super().__init__(molecules)
-
-    def remove_duplicates(self, geometry_threshold : float, energy_threshold : float = 0.0) -> None:
-        for i in reversed(range(len(self))):
-            for j in reversed(range(i+1, len(self))):
+    def remove_duplicates(self) -> None:
+        for i in reversed(range(len(self.population))):
+            for j in reversed(range(i+1, len(self.population))):
                 # Compare energies
-                if abs(self[i].energy-self[j].energy) <= energy_threshold:
+                if abs(self.population[i].energy-self.population[j].energy) <= self.energy_threshold:
                     # Then compare geometries
-                    if self[i].compare(self[j]) <= geometry_threshold:
-                        del self[j]
+                    if Structure.compare_geometry(self.population[i], self.population[j]) <= self.geometry_threshold:
+                        del self.population[j]
 
-    def reproduce(self, _top_k : int):
+    def reproduce(self):
+        pass
+
+    def create(self) -> None:
         pass
 
     def loop(self) -> None:
+        self.reproduce()
         pass
 
     def save(self, file : str) -> None:
+        print(file)
         pass
 
