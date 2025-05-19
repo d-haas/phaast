@@ -4,15 +4,10 @@ import itertools, bisect
 from vec import Vector
 import subprocess, tempfile
 
-class Atom:
+class Element:
     z : AtomicNumber
-    pos : Vector
-    def __init__(self, atomic_number : AtomicNumber, pos : Optional[Vector] = None):
+    def __init__(self, atomic_number : AtomicNumber):
         self.z = atomic_number
-        if pos:
-            self.pos = pos.copy()
-        else:
-            self.pos = Vector()
 
     @property
     def name(self) -> str:
@@ -25,6 +20,23 @@ class Atom:
     @property
     def radius(self) -> float:
         return AtomicRadi[self.z]
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return str(self)
+
+
+class Atom(Element):
+    z : AtomicNumber
+    pos : Vector
+    def __init__(self, atomic_number : AtomicNumber, pos : Optional[Vector] = None):
+        super().__init__(atomic_number)
+        if pos:
+            self.pos = pos.copy()
+        else:
+            self.pos = Vector()
 
     def __repr__(self) -> str:
         return str(self)
