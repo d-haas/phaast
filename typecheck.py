@@ -1,13 +1,18 @@
 from types import GenericAlias, UnionType
-from typing import Any, Callable, Literal, ParamSpec, TypeVar, get_origin
+from typing import Any, Callable, Literal, ParamSpec, Sequence, TypeVar, get_origin
+import collections.abc
 from inspect import signature, Parameter
 from functools import wraps
 
-def check_union(arg, tp : UnionType) -> bool:
-    return any((
-        check_type(arg, _tp)
-        for _tp in tp.__args__
-    ))
+def check_union(arg, tp : UnionType) -> Literal[True]:
+    for arg_tp in tp.__args__:
+        if check_type(arg, arg_tp):
+            return True
+    
+    raise TypeError(
+        f"Argument {arg} doesnt fit in union conditions {tp}"
+    )
+
 
 def check_list(arg, tp : GenericAlias) -> Literal[True]:
     if isinstance(arg, list):
@@ -52,6 +57,10 @@ def check_tuple(arg, tp : GenericAlias) -> Literal[True]:
 def check_dict(arg, tp : GenericAlias) -> Literal[True]:
     if isinstance(arg, dict):
         key_tp, item_tp = tp.__args__
+        if not hasattr(key_tp, "__hash__"):
+            raise TypeError(
+                f"Key type {key_tp} is not hashable, therefore can not be used as a dictionary key"
+            )
 
         for key, item in arg.items():
             if not check_type(key, key_tp):
@@ -70,10 +79,72 @@ def check_dict(arg, tp : GenericAlias) -> Literal[True]:
             f"Argument {arg} is not a dict"
         )
 
+def check_iterable(arg : Any, tp) -> Literal[True]:
+    if hasattr(arg, "__iter__"):
+        item_tp = tp.__args__[0]
+        for item in arg:
+            if not check_type(item, item_tp):
+                raise TypeError(
+                    f"Iterable item {item} is not of type {item_tp}"
+                )
 
-def check_type(arg : Any, tp):
-    origin = get_origin(tp)
+        return True
+
+    else:
+        raise TypeError(
+            f"Argument {arg} is not an Iterable"
+        )
+
+def check_callable(arg : Any, tp) -> Literal[True]:
+    if hasattr(arg, "__call__"):
+        if hasattr(tp, "__args__"):
+            tp_args = tp.__args__[:-1]
+            arg_args = [
+                param.annotation
+                for param
+                in signature(arg).parameters.values()
+            ]
+            for tp_type, arg_type in zip(tp_args, arg_args):
+                if not (tp_type == arg_type):
+                    raise TypeError(
+                        f"Argument of type {arg_type} is not compatible with type {tp_type}"
+                    )
+            return True
+
+        else:
+            return True
+
+    else:
+        raise TypeError(
+            f"Argument {arg} is not callable"
+        )
+
+def check_sequence(arg : Any, tp) -> Literal[True]:
+    if isinstance(arg, Sequence):
+        if hasattr(tp, "__args__"):
+            tp_type = tp.__args__[0]
+            for item in arg:
+                if not check_type(item, tp_type):
+                    raise TypeError(
+                        f"Sequence item {arg} is not of type {tp_type}"
+                    )
+            return True
+        else:
+            return True
+    else:
+        raise TypeError(
+            f"Argument {arg} is not a sequence"
+        )
+
+def check_type(arg : Any, tp) -> Literal[True]:
+    """
+    Check the argument type, at runtime even if its a dynamic
+    argument like list[float | str]
+    """
     # Match-case was giving typehint errors for some reason :P
+    # then well maintain if-else, just keep in mind that its a
+    # little slower...
+    origin = get_origin(tp)
     if origin:
         if origin is UnionType:
             return check_union(arg, tp)
@@ -83,10 +154,25 @@ def check_type(arg : Any, tp):
             return check_tuple(arg, tp)
         elif origin is dict:
             return check_dict(arg, tp)
+        elif origin is collections.abc.Iterable:
+            return check_iterable(arg, tp)
+        elif origin is collections.abc.Callable:
+            return check_callable(arg, tp)
+        elif (origin is collections.abc.Sequence or
+             origin is collections.abc.ByteString or
+             origin is collections.abc.MutableSequence):
+            return check_sequence(arg, tp)
         else:
-            return None
+            raise TypeError(
+                f"Type {tp} doesnt fit typecheck possibilities"
+            )
     else:
-        return isinstance(arg, tp)
+        if isinstance(arg, tp):
+            return True
+        else:
+            raise TypeError(
+                f"Argument {arg} is not of type {tp}"
+            )
 
 ARGS = ParamSpec("ARGS")
 RETURN = TypeVar("RETURN")
@@ -96,7 +182,6 @@ def check_types(func: Callable[ARGS, RETURN]) -> Callable[ARGS, RETURN]:
     
     @wraps(func)
     def wrapper(*args, **kwargs) -> RETURN:
-        # Create a mapping of parameter names to their passed values
 
         bound_args = sig.bind(*args, **kwargs)
         bound_args.apply_defaults()
@@ -104,11 +189,9 @@ def check_types(func: Callable[ARGS, RETURN]) -> Callable[ARGS, RETURN]:
         for name, value in bound_args.arguments.items():
             param = params[name]
 
-            # Skip if parameter has no type annotation
             if param.annotation is Parameter.empty:
                 continue
 
-            # Check the type
             if not check_type(value, param.annotation):
                 raise TypeError(
                     f"Argument '{name}' has incorrect type. ",
