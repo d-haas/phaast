@@ -2,10 +2,13 @@
 
 import random
 from math import ceil
+from typing import Optional
 from structure import Atom
-from structure.constants import AtomicRadi
+from structure.constants import *
 import cython
+from structure.creator import FilterList, FilterMode
 
+from typecheck import check_types
 from vec import Vector
 
 @cython.cclass
@@ -26,11 +29,14 @@ class DotUniverse:
     atom_population : list[Atom]
     limits : tuple[Limit, Limit, Limit]
     max_radius: cython.double
+    bond_filter : FilterList
 
+    @check_types
     def __init__(
         self,
         dot_distance : float,
         max_radius : float = 2.60,
+        filter_list : Optional[FilterList] = None,
     ):
         self.dot_distance = dot_distance
         self.atom_population : list[Atom] = []
@@ -40,9 +46,10 @@ class DotUniverse:
             Limit(0, 0),
         )
         self.max_radius = max_radius
+        self.bond_filter = filter_list if filter_list else FilterList(FilterMode.NONE, ())
 
     @cython.ccall
-    def check_available_position(self, cell_pos : tuple[int, int, int], atomic_number : int) -> cython.int:
+    def check_available_position(self, cell_pos : tuple[int, int, int], atomic_number : AtomicNumber) -> cython.int:
         pos_vec = Vector(*cell_pos) * self.dot_distance
         result : cython.int = False
         atomic_radius : cython.double = AtomicRadi[atomic_number]
@@ -56,7 +63,8 @@ class DotUniverse:
                     if dist_squared < radius_sum_squared:
                         # Atom would be "inside the delimited field of bonding"
                         return False
-                    else:
+                    # If atomic bonding is permitted
+                    elif self.bond_filter.is_permited(atomic_number, atom.z):
                         # Atom is in "ideal distance for bonding"
                         result = True
         else:
@@ -65,7 +73,7 @@ class DotUniverse:
         return result
 
     @cython.ccall
-    def get_available_positions(self, atomic_number : int) -> list[tuple[int, int, int]]:
+    def get_available_positions(self, atomic_number : AtomicNumber) -> list[tuple[int, int, int]]:
         positions : list[
             tuple[cython.int, cython.int, cython.int]
         ] = []
@@ -89,7 +97,7 @@ class DotUniverse:
         return positions
 
     @cython.ccall
-    def get_random_available_position(self, atomic_number : int, rand_gen : None | random.Random = None) -> tuple[int, int, int]:
+    def get_random_available_position(self, atomic_number : AtomicNumber, rand_gen : None | random.Random = None) -> tuple[int, int, int]:
         rng = rand_gen if rand_gen else random.Random()
 
         if self.atom_population:

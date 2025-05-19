@@ -1,12 +1,54 @@
-from typing import Iterable, Sequence
+from typing import Iterable, Optional, Sequence
 from structure import Atom, Structure
 import multiprocessing, random
 from multiprocessing.dummy import Pool
+from enum import Enum
 
+from structure.constants import *
 from structure.creator.dot_universe import DotUniverse
+from typecheck import check_types
 
 
-def generate_random_structures(base : Iterable[Atom], N : int, p_num : int = 0, cell_size : float = 0.1, seed : int | None = None) -> Sequence[Structure]:
+class FilterMode(Enum):
+    NONE = 0
+    INCLUDE = 1
+    EXCLUDE = 2
+
+
+class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
+    mode: FilterMode
+
+    @check_types
+    def __init__(
+        self,
+        mode: FilterMode,
+        bondings: Iterable[tuple[AtomicNumber, AtomicNumber]],
+    ):
+        self.mode = mode
+
+        super().__init__()
+        for i, j in bondings:
+            self[(i, j)] = True
+            self[(j, i)] = True
+
+    def is_permited(self, zi: AtomicNumber, zj: AtomicNumber):
+        match self.mode:
+            case FilterMode.INCLUDE:
+                return (zi, zj) in self
+            case FilterMode.EXCLUDE:
+                return (zi, zj) not in self
+            case _:
+                return True
+
+
+@check_types
+def generate_random_structures(
+    base: Iterable[Atom],
+    N: int,
+    p_num: int = 0,
+    cell_size: float = 0.1,
+    seed: int | None = None,
+) -> Sequence[Structure]:
     """
     Generate N random structures with the atoms in the base
     Use seed as parameter for future reproducibility
@@ -21,10 +63,10 @@ def generate_random_structures(base : Iterable[Atom], N : int, p_num : int = 0, 
         )
 
     # Set new RNG based on a predetermined seed or not
-    main_rng : random.Random = random.Random() if seed is None else random.Random(seed)
+    main_rng: random.Random = random.Random() if seed is None else random.Random(seed)
 
     # Create a list of seeds from the rng to be used by each structure generation process
-    single_seeds : list[int] = main_rng.sample(range(0, 2*N), N) 
+    single_seeds: list[int] = main_rng.sample(range(0, 2 * N), N)
 
     if p_num == 1:
         # Execute sequentially if there's only one process
@@ -42,15 +84,20 @@ def generate_random_structures(base : Iterable[Atom], N : int, p_num : int = 0, 
 
     return structures
 
-def generate_random_structure(base : Iterable[Atom], cell_size : float = 0.1, seed : int | None = None) -> Structure:
+
+def generate_random_structure(
+    base: Iterable[Atom],
+    cell_size: float = 0.1,
+    seed: int | None = None,
+    filter_list: Optional[FilterList] = None,
+) -> Structure:
     """
     Generate a random structure with atoms in the base
     Use seed as parameter for future reproducibility
     (same seed with the same base will result in the same structure)
     """
 
-    # f = open(f"debug_{seed}.log", "w")
-    # sys.stdout = f 
+    # Get random generator
     rng = random.Random(seed)
 
     copied_base = [atom.copy() for atom in base]
@@ -59,6 +106,7 @@ def generate_random_structure(base : Iterable[Atom], cell_size : float = 0.1, se
     universe = DotUniverse(
         cell_size,
         max((atom.radius for atom in base)),
+        filter_list,
     )
 
     for atom in copied_base:
