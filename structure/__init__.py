@@ -5,9 +5,9 @@ from vec import Vector
 import subprocess, tempfile
 
 class Atom:
-    z : int
+    z : AtomicNumber
     pos : Vector
-    def __init__(self, atomic_number : int, pos : Optional[Vector] = None):
+    def __init__(self, atomic_number : AtomicNumber, pos : Optional[Vector] = None):
         self.z = atomic_number
         if pos:
             self.pos = pos.copy()
@@ -16,7 +16,7 @@ class Atom:
 
     @property
     def name(self) -> str:
-        return AtomicName[self.z]
+        return AtomicSymbols[self.z]
 
     @property
     def mass(self) -> float:
@@ -45,7 +45,7 @@ class Atom:
         parsed_line : list[str] = s.split()
 
         return Atom(
-            AtomicNumber[parsed_line[0]],
+            AtomicNumbers[parsed_line[0]],
             Vector(*[
                 float(parsed_line[i])
                 for i
@@ -57,13 +57,13 @@ class Atom:
     def to_xyz_str(self) -> str:
         return f"{self.name} {self.pos.x} {self.pos.y} {self.pos.z}"
 
-    def __getstate__(self) -> tuple[int, Vector]:
+    def __getstate__(self) -> tuple[AtomicNumber, Vector]:
         return (
             self.z,
             self.pos,
         )
 
-    def __setstate__(self, state : tuple[int, Vector]) -> None:
+    def __setstate__(self, state : tuple[AtomicNumber, Vector]) -> None:
         self.z = state[0]
         self.pos = state[1]
 
@@ -139,7 +139,7 @@ class Structure(tuple[Atom, ...]):
         else:
             raise Exception("No atoms in structure")
 
-    def compare(self, other : Self) -> float:
+    def compare_geometry(self, other : Self) -> float:
         """
         Compare different structures using the
         Grigoryan-Springborn algorithm

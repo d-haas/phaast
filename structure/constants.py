@@ -1,5 +1,18 @@
+from __future__ import annotations
+from typing import Literal
 
-AtomicName : dict[int, str] = {
+AtomicNumber = Literal[
+     1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12,
+    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+    37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+    49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+    61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72,
+    73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+    85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96,
+]
+
+AtomicSymbols : dict[AtomicNumber, str] = {
     1: "H",
     2: "He",
     3: "Li",
@@ -96,35 +109,35 @@ AtomicName : dict[int, str] = {
     94: "Pu",
     95: "Am",
     96: "Cm",
-    97: "Bk",
-    98: "Cf",
-    99: "Es",
-    100: "Fm",
-    101: "Md",
-    102: "No",
-    103: "Lr",
-    104: "Rf",
-    105: "Db",
-    106: "Sg",
-    107: "Bh",
-    108: "Hs",
-    109: "Mt",
-    110: "Ds",
-    111: "Uuu",
-    112: "Uub",
-    113: "Uut",
-    114: "Uuq",
-    115: "Uup",
-    116: "Uuh",
-    117: "Uus",
-    118: "Uuo",
+#   97: "Bk",
+#   98: "Cf",
+#   99: "Es",
+#   100: "Fm",
+#   101: "Md",
+#   102: "No",
+#   103: "Lr",
+#   104: "Rf",
+#   105: "Db",
+#   106: "Sg",
+#   107: "Bh",
+#   108: "Hs",
+#   109: "Mt",
+#   110: "Ds",
+#   111: "Uuu",
+#   112: "Uub",
+#   113: "Uut",
+#   114: "Uuq",
+#   115: "Uup",
+#   116: "Uuh",
+#   117: "Uus",
+#   118: "Uuo",
 }
 
-AtomicNumber : dict[str, int] = {
-    v: k for k, v in AtomicName.items()
+AtomicNumbers : dict[str, AtomicNumber] = {
+    v: k for k, v in AtomicSymbols.items()
 }
 
-AtomicRadi : dict[int, float] = {
+AtomicRadi : dict[AtomicNumber, float] = {
     1: 0.31,
     2: 0.28,
     3: 1.28,
@@ -223,7 +236,7 @@ AtomicRadi : dict[int, float] = {
     96: 1.69,
 }
 
-AtomicMass : dict[int ,float] = {
+AtomicMass : dict[AtomicNumber ,float] = {
     1: 1.0079,
     2: 4.003,
     3: 6.941,
@@ -320,16 +333,16 @@ AtomicMass : dict[int ,float] = {
     94: 244,
     95: 243.000,
     96: 247,
-    97: 247,
-    98: 251.000,
-    99: 252,
-    100: 257,
-    101: 258,
-    102: 259.000,
-    103: 262,
-    104: 261,
-    105: 262,
-    106: 266,
-    107: 264.000,
-    108: 277,
+#   97: 247,
+#   98: 251.000,
+#   99: 252,
+#   100: 257,
+#   101: 258,
+#   102: 259.000,
+#   103: 262,
+#   104: 261,
+#   105: 262,
+#   106: 266,
+#   107: 264.000,
+#   108: 277,
 }
