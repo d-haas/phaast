@@ -22,6 +22,6 @@ def run():
 
     print(f"Memory usage was close to: {XTB.measure_memory_usage(struct)}")
 
-    print(f"\nThe difference between them is {struct.compare(optimized)}")
+    print(f"\nThe difference between them is {struct.compare_geometry(optimized)}")
 
 

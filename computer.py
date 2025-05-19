@@ -2,7 +2,6 @@ import multiprocessing
 from typing import Iterable
 from calculators import Calculator
 from structure import Structure
-import socket
 
 class Computer:
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
