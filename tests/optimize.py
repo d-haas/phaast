@@ -20,7 +20,7 @@ def run():
 
     print(f"Optimized is: {optimized.to_xyz_str()}")
 
-    print(f"Memory usage was close to: {XTB.measure_memory_usage(struct)}")
+    print(f"Memory usage was close to: {XTB.measure_optimization_memory_usage(struct)}")
 
     print(f"\nThe difference between them is {struct.compare_geometry(optimized)}")
 

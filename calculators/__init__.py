@@ -12,5 +12,5 @@ class Calculator(ABC):
 
     @staticmethod
     @abstractmethod
-    def measure_memory_usage(structure : Structure) -> int:
+    def measure_optimization_memory_usage(structure : Structure) -> int:
         pass

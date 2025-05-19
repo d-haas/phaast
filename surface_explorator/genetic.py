@@ -1,10 +1,9 @@
 from typing import Iterable
 
 from calculators import Calculator
+from calculators.xtb import XTB
 from computer import Computer
 from structure import Molecule, Structure
-
-from multiprocessing.dummy import Pool
 
 from surface_explorator import SurfaceExplorator
 from typecheck import check_types
@@ -13,7 +12,7 @@ class Genetic(SurfaceExplorator):
     population_size : int
     population : list[Molecule]
     calculator : Calculator
-    computers : list[Computer]
+    computer : Computer
     energy_threshold : float
     geometry_threshold : float
 
@@ -22,30 +21,18 @@ class Genetic(SurfaceExplorator):
         self,
         structures : Iterable[Structure | Molecule],
         population_size : int,
-        computers : Iterable[Computer],
+        computers : Computer,
         energy_threshold : float,
         geometry_threshold : float,
     ):
         self.population_size = population_size
 
-        self.computers = [cpu for cpu in computers]
+        self.computer = computers
 
         self.energy_threshold = energy_threshold
         self.geometry_threshold = geometry_threshold
 
-        # Remove hard-coded 8, please
-        with Pool(self.computers[0].cpu_count_limit) as p:
-            self.population : list[Molecule] = p.starmap(
-                self.calculator.optimize,
-                [
-                    (structure,)
-                    for structure in structures
-                    if isinstance(structure, Structure)
-                ]
-            ) + [
-                molecule for molecule in structures
-                if isinstance(molecule, Molecule)
-            ]
+        self.population : list[Molecule] = self.computer.optimize(XTB, list(structures))
 
     def remove_duplicates(self) -> None:
         for i in reversed(range(len(self.population))):

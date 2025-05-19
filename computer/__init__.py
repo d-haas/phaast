@@ -1,13 +1,21 @@
+from abc import ABC, abstractmethod
 import multiprocessing
+from multiprocessing.dummy import Pool
 from typing import Iterable
 from calculators import Calculator
-from structure import Structure
+from structure import Molecule, Structure
 
-class Computer:
+class BaseComputer(ABC):
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
     memory_limit : int # Maximum memory the software can use (in KiB)
-    calculators : int # Calculators that will be used the for software
-    max_processes : dict[Calculator, int]
+    calculators : list[Calculator] 
+    max_processes : dict[Calculator, int] # Calculators that will be used the for software
+
+    @abstractmethod
+    def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:
+        pass
+
+class Computer(BaseComputer):
     def __init__(
         self,
         cpu_count_limit : int,
@@ -36,22 +44,14 @@ class Computer:
         for calculator in calculators:
             self.max_processes[calculator] = max(
                 *[
-                    calculator.measure_memory_usage(structure_type)
+                    calculator.measure_optimization_memory_usage(structure_type)
                     for _ in range(10)
                 ]
             )
 
-"""
-class RemoteComputer(Computer):
-    conn : socket.socket
-    def __init__(
-        self,
-        cpu_count_limit : int,
-        memory_limit : int,
-        calculators : Iterable[Calculator],
-        structure_type : Structure,
-        address : socket._Address,
-    ):
-        self.socket = socket.socket(socket.AF_INET)
-        self.socket.connect(address)
-"""
+        def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:
+            with Pool(self.max_processes[calculator]) as pool:
+                return pool.map(
+                    calculator.optimize,
+                    structures,
+                )
