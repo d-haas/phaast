@@ -9,7 +9,7 @@ class BaseComputer(ABC):
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
     memory_limit : int # Maximum memory the software can use (in KiB)
     calculators : list[Calculator] 
-    max_processes : dict[Calculator, int] # Calculators that will be used the for software
+    max_processes : dict[type[Calculator], int] # Calculators that will be used the for software
 
     @abstractmethod
     def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:
@@ -20,7 +20,7 @@ class Computer(BaseComputer):
         self,
         cpu_count_limit : int,
         memory_limit : int,
-        calculators : Iterable[Calculator],
+        calculators : Iterable[type[Calculator]],
         structure_type : Structure,
     ):
         # Set core count on computer automatically if it was not set
@@ -49,9 +49,9 @@ class Computer(BaseComputer):
                 ]
             )
 
-        def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:
-            with Pool(self.max_processes[calculator]) as pool:
-                return pool.map(
-                    calculator.optimize,
-                    structures,
-                )
+    def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:
+        with Pool(self.max_processes[calculator]) as pool:
+            return pool.map(
+                calculator.optimize,
+                structures,
+            )
