@@ -6,8 +6,11 @@ from functools import wraps
 
 def check_union(arg, tp : UnionType) -> Literal[True]:
     for arg_tp in tp.__args__:
-        if check_type(arg, arg_tp):
+        try:
+            check_type(arg, arg_tp)
             return True
+        except:
+            pass
     
     raise TypeError(
         f"Argument {arg} doesnt fit in union conditions {tp}"

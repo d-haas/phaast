@@ -6,7 +6,7 @@ from enum import Enum
 
 from structure.constants import *
 from structure.creator.dot_universe import DotUniverse
-from typecheck import check_types
+from utils.typecheck import check_types
 
 
 class FilterMode(Enum):

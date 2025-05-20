@@ -6,7 +6,7 @@ from computer import Computer
 from structure import Molecule, Structure
 
 from surface_explorator import SurfaceExplorator
-from typecheck import check_types
+from utils.typecheck import check_types
 
 class Genetic(SurfaceExplorator):
     population_size : int

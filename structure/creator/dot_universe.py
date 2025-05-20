@@ -8,7 +8,7 @@ from structure.constants import *
 import cython
 from structure.creator import FilterList, FilterMode
 
-from typecheck import check_types
+from utils.typecheck import check_types
 from vec import Vector
 
 @cython.cclass
