@@ -4,10 +4,6 @@ from abc import ABC, abstractmethod
 
 class SurfaceExplorator(ABC):
     @abstractmethod
-    def create(self) -> None:
-        pass
-
-    @abstractmethod
     def loop(self) -> None:
         pass
 
