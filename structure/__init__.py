@@ -1,35 +1,51 @@
-from typing import Iterable, Optional, Self
+from typing import Iterable, Iterator, Optional, Self
 from structure.constants import *
 import itertools, bisect
+from utils.typecheck import check_types
 from vec import Vector
 import subprocess, tempfile
+import struct
 
 class Element:
+    """
+    Class representing an atomic element
+    mostly used for Stoichiometry expressions
+    """
     z : AtomicNumber
     def __init__(self, atomic_number : AtomicNumber):
         self.z = atomic_number
 
     @property
-    def name(self) -> str:
+    def symbol(self) -> str:
+        """
+        Get atomic symbol for element
+        """
         return AtomicSymbols[self.z]
 
     @property
     def mass(self) -> float:
+        """
+        Get average atomic mass
+        (based on isotopic proportions)
+        """
         return AtomicMass[self.z]
 
     @property
     def radius(self) -> float:
+        """
+        Get atom covalent radius
+        (based on same-element bondings)
+        """
         return AtomicRadi[self.z]
 
     def __str__(self) -> str:
-        return self.name
+        return self.symbol
 
     def __repr__(self) -> str:
         return str(self)
 
 
 class Atom(Element):
-    z : AtomicNumber
     pos : Vector
     def __init__(self, atomic_number : AtomicNumber, pos : Optional[Vector] = None):
         super().__init__(atomic_number)
@@ -38,11 +54,8 @@ class Atom(Element):
         else:
             self.pos = Vector()
 
-    def __repr__(self) -> str:
-        return str(self)
-
     def __str__(self) -> str:
-        return f"{self.name} ({', '.join([str(round(self.pos[i], 1)) for i in range(3)])})"
+        return f"{self.symbol} ({', '.join([str(round(self.pos[i], 1)) for i in range(3)])})"
 
     def copy(self) -> Self:
         return self.__class__(
@@ -67,35 +80,44 @@ class Atom(Element):
 
 
     def to_xyz_str(self) -> str:
-        return f"{self.name} {self.pos.x} {self.pos.y} {self.pos.z}"
+        return f"{self.symbol} {self.pos.x} {self.pos.y} {self.pos.z}"
 
-    def __getstate__(self) -> tuple[AtomicNumber, Vector]:
-        return (
+    def to_bytes(self) -> bytes:
+        return struct.pack(
+            b"Iddd",
             self.z,
-            self.pos,
+            self.pos.x,
+            self.pos.y,
+            self.pos.z,
         )
 
-    def __setstate__(self, state : tuple[AtomicNumber, Vector]) -> None:
-        self.z = state[0]
-        self.pos = state[1]
-
-class Structure(tuple[Atom, ...]):
+class Structure:
     """
     Main class for representing molecular/cluster
     structure geometry
     """
     __charge : int
-    def __new__(cls, atoms : Iterable[Atom], charge : int = 0) -> Self:
-        instance = super().__new__(cls, tuple(atoms))
-        instance.__charge = charge
-        return instance
+    __atoms : tuple[Atom, ...]
+    @check_types
+    def __init__(self, atoms : Iterable[Atom], charge : int = 0):
+        self.__charge = charge
+        self.__atoms = tuple(atoms)
+
+    def __getitem__(self, key : int) -> Atom:
+        return self.__atoms[key]
+
+    def __len__(self) -> int:
+        return len(self.__atoms)
+
+    def __iter__(self) -> Iterator[Atom]:
+        return iter(self.__atoms)
 
     def __repr__(self) -> str:
         self_text = str(self).replace("\n", "\n\t")
         return f"Structure\n\t{self_text}"
 
     def __str__(self) -> str:
-        return "\n".join((str(atom) for atom in self))
+        return "\n".join((str(atom) for atom in self.__atoms))
 
     def is_equal_to(self, other : Self) -> bool:
         if len(self)==len(other):
@@ -118,7 +140,7 @@ class Structure(tuple[Atom, ...]):
         Returns dict with quantity of each atom in each molecule
         """
         r : dict[int, int] = {}
-        for atom in self:
+        for atom in self.__atoms:
             if atom.z in r:
                 r[atom.z]+= 1
             else:
@@ -141,7 +163,7 @@ class Structure(tuple[Atom, ...]):
         mass_counter = 0
 
         # Adds positions to sum_vector and atomic masses to center of mass
-        for atom in self:
+        for atom in self.__atoms:
             sum_vector+= atom.pos * atom.mass
             mass_counter+= atom.mass
 
@@ -168,14 +190,14 @@ class Structure(tuple[Atom, ...]):
         ### FOR EACH STRUCTURE                                                           ###
         ####################################################################################
         self_dists : list[float] = []
-        for atom_i, atom_j in itertools.combinations(self, 2):
+        for atom_i, atom_j in itertools.combinations(self.__atoms, 2):
             diff : Vector = atom_i.pos - atom_j.pos
             bisect.insort(
                 self_dists,
                 diff.mod_sqr,
             )
         other_dists : list[float] = []
-        for atom_i, atom_j in itertools.combinations(other, 2):
+        for atom_i, atom_j in itertools.combinations(other.__atoms, 2):
             diff = atom_i.pos - atom_j.pos
             bisect.insort(
                 other_dists,
@@ -199,9 +221,9 @@ class Structure(tuple[Atom, ...]):
         return s
     
     @staticmethod
-    def from_xyz(file_path : str) -> 'Structure':
+    def from_xyz(file_path : str, charge : int) -> 'Structure':
         with open(file_path) as xyz_file:
-            return Structure.from_xyz_str(xyz_file.read())
+            return Structure.from_xyz_str(xyz_file.read(), charge)
 
     def to_xyz(self) -> tempfile._TemporaryFileWrapper:
         file = tempfile.NamedTemporaryFile(
@@ -219,7 +241,7 @@ class Structure(tuple[Atom, ...]):
         return file
 
     @staticmethod
-    def from_xyz_str(s : str) -> 'Structure':
+    def from_xyz_str(s : str, charge : int) -> 'Structure':
         atoms : list[Atom] = []
 
         for line in s.splitlines()[2:]:
@@ -227,7 +249,7 @@ class Structure(tuple[Atom, ...]):
                 Atom.from_xyz_str(line)
             )
 
-        return Structure(atoms)
+        return Structure(atoms, charge)
 
     def to_xyz_str(self) -> str:
         lines : list[str] = [
@@ -236,7 +258,7 @@ class Structure(tuple[Atom, ...]):
         ] + [
             atom.to_xyz_str()
             for atom
-            in self
+            in self.__atoms
         ]
 
         return "\n".join(lines)
@@ -256,9 +278,17 @@ class Structure(tuple[Atom, ...]):
             (
                 atom.copy()
                 for atom
-                in self
+                in self.__atoms
             ),
         )
+
+    def to_bytes(self) -> bytes:
+        r = struct.pack(b"Ii", len(self), self.__charge)
+
+        for atom in self.__atoms:
+            r+= atom.to_bytes()
+
+        return r
 
 class Molecule(Structure):
     """
@@ -267,34 +297,39 @@ class Molecule(Structure):
     """
     energy : float
 
-    def __new__(cls, atoms: Iterable[Atom], _ : float) -> Self:
-        # Create new molecule
-        return super().__new__(cls, atoms)
-
-    def __init__(self, _: Iterable[Atom], energy : float) -> None:
-        # Initialize Molecule and assign energy
-        super().__init__()
-
+    def __init__(self, atoms: Iterable[Atom], charge : int, energy : float):
+        super().__init__(atoms,  charge)
         self.energy = energy
 
     @staticmethod
-    def from_xyz(file_path: str) -> 'Molecule':
+    def from_xyz(file_path: str, charge : int) -> 'Molecule':
         """
         Create a Molecule from a xyz file 
         """
         with open(file_path) as file:
             s : str = file.read()
-            return Molecule.from_xyz_str(s)
+            return Molecule.from_xyz_str(s, charge)
 
     @staticmethod
-    def from_xyz_str(s : str) -> 'Molecule':
+    def from_xyz_str(s : str, charge : int) -> 'Molecule':
         """
         Create a Molecule from a xyz string
+        (this operation is exclusive to xtb geometry
+        optimization output xyz file)
         """
         lines = s.splitlines()
         energy = float(lines[1].split()[1])
+        struct = Structure.from_xyz_str(s, charge)
         return Molecule(
-            Structure.from_xyz_str(s),
+            struct,
+            charge,
             energy,
         )
 
+    def to_bytes(self) -> bytes:
+        r = struct.pack(b"Iid", len(self), self.__charge, self.energy)
+
+        for atom in self:
+            r+= atom.to_bytes()
+
+        return r
