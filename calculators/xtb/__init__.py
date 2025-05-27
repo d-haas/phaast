@@ -36,7 +36,7 @@ class XTB(Calculator):
                     stderr = subprocess.DEVNULL,
                 )
 
-                return Molecule.from_xyz(dir+"/xtbopt.xyz")
+                return Molecule.from_xyz(dir+"/xtbopt.xyz", structure.__charge)
 
     @staticmethod
     def measure_optimization_memory_usage(structure : Structure) -> int:
