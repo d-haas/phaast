@@ -21,27 +21,31 @@ class Genetic(SurfaceExplorator):
     energy_threshold : float
     geometry_threshold : float
     children_mutant_ratio : float
+    best_energy : float
+    best_energy_loops : int
+    cycle_counter : int
 
     @check_types
     def __init__(
         self,
         structures : Iterable[Structure | Molecule],
-        population_size : int,
-        computers : Computer,
+        computer : Computer,
         energy_threshold : float,
         geometry_threshold : float,
         children_mutant_ratio : float,
     ):
-        self.population_size = population_size
-
-        self.computer = computers
+        self.computer = computer
+        self.population : list[Molecule] = self.computer.optimize(XTB, list(structures))
+        self.population_size = len(self.population)
 
         self.energy_threshold = energy_threshold
         self.geometry_threshold = geometry_threshold
 
-        self.population : list[Molecule] = self.computer.optimize(XTB, list(structures))
-
         self.children_mutant_ratio = children_mutant_ratio
+
+        self.best_energy = min([mol.energy for mol in self.population])
+        self.best_energy_loops = 0
+        self.cycle_counter = 0
 
     def remove_duplicates(self) -> None:
         for i in reversed(range(len(self.population))):
@@ -83,12 +87,26 @@ class Genetic(SurfaceExplorator):
 
         return self.computer.optimize(XTB, mutants)
 
-    def loop(self) -> None:
+    def get_best_energy(self) -> None:
+        new_best_energy : float = min([mol.energy for mol in self.population])
+        if new_best_energy < self.best_energy:
+            self.best_energy = new_best_energy
+            self.best_energy_loops = 0
+        else:
+            self.best_energy_loops+= 1
+
+    def loop(self) -> bool:
+        self.cycle_counter+= 1
+
         self.remove_duplicates()
+
         children : list[Molecule] = self.reproduce()
         mutants : list[Molecule] = self.mutate()
         self.population+= children
         self.population+= mutants
+
+        self.get_best_energy()
+        return self.best_energy_loops <=8
 
     def save(self, file : str) -> None:
         print(file)

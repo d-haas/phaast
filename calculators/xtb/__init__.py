@@ -72,7 +72,7 @@ class XTB(Calculator):
                     stdout = subprocess.DEVNULL,
                     stderr = subprocess.DEVNULL,
                 )
-                memory = int(open(dir+"/memory.out").read())
+                memory = int(open(dir+"/memory.out").read().splitlines()[-1])
 
         return memory
 

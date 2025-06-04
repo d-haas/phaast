@@ -6,7 +6,7 @@ from typing import Optional
 from structure import Atom
 from structure.constants import *
 import cython
-from structure.creator import FilterList, FilterMode
+from structure.creator.filter_list import *
 
 from utils.typecheck import check_types
 from vec import Vector

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 class SurfaceExplorator(ABC):
     @abstractmethod
-    def loop(self) -> None:
+    def loop(self) -> bool:
         pass
 
     @abstractmethod

@@ -10,6 +10,7 @@ extensions = [
     Extension(
         name="structure.creator.dot_universe",
         sources=["./structure/creator/dot_universe.py"],
+        include_dirs = ["./structure/creator/filter_list.py"]
     )
 ]
 
