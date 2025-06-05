@@ -10,13 +10,14 @@ from utils.typecheck import check_types
 
 
 
-@check_types
+#@check_types
 def generate_random_structures(
     base: Iterable[Atom],
     N: int,
     p_num: int = 0,
     cell_size: float = 0.1,
     seed: int | None = None,
+    filter_list: Optional[FilterList] = None,
 ) -> Sequence[Structure]:
     """
     Generate N random structures with the atoms in the base
@@ -40,7 +41,7 @@ def generate_random_structures(
     if p_num == 1:
         # Execute sequentially if there's only one process
         structures = [
-            generate_random_structure(base, cell_size, single_seeds[0])
+            generate_random_structure(base, cell_size, single_seeds[0], filter_list)
             for _ in range(N)
         ]
     else:

@@ -11,7 +11,7 @@ class FilterMode(Enum):
 class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
     mode: FilterMode
 
-    @check_types
+    #@check_types
     def __init__(
         self,
         mode: FilterMode,

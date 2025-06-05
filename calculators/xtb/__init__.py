@@ -2,11 +2,12 @@ import subprocess
 import tempfile
 from calculators import Calculator
 from structure import Molecule, Structure
+import os, glob
 
 
 class XTB(Calculator):
     @staticmethod
-    def optimize(structure : Structure) -> Molecule:
+    def optimize(structure : Structure) -> Molecule | None:
         with structure.to_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
                 which_xtb = subprocess.run(
@@ -29,6 +30,7 @@ class XTB(Calculator):
                         input_xyz_file.name,
                         f"--chrg {'+' if structure.charge>0 else ''}{structure.charge}",
                         "--opt",
+                        "-P", "4",
                     ],
                     cwd = dir,
                     capture_output = False,
@@ -36,7 +38,14 @@ class XTB(Calculator):
                     stderr = subprocess.DEVNULL,
                 )
 
-                return Molecule.from_xyz(dir+"/xtbopt.xyz", structure.charge)
+                if os.path.exists(dir+"/xtbopt.xyz"):
+                    molecule = Molecule.from_xyz(dir+"/xtbopt.xyz", structure.charge)
+                else:
+                    print("Could not return molecule, no file in path")
+                    print(f"Only {glob.glob(dir+'/*')}")
+                    molecule = None
+
+        return molecule
 
     @staticmethod
     def measure_optimization_memory_usage(structure : Structure) -> int:

@@ -3,6 +3,7 @@ from structure import Atom, Structure
 import structure.creator
 from calculators.xtb import XTB
 
+from structure.creator.filter_list import FilterList, FilterMode
 from surface_explorator.genetic import Genetic
 
 def run():
@@ -24,17 +25,23 @@ def run():
         charge = 2,
     )
 
+    filter_list = FilterList(
+        FilterMode.EXCLUDE,
+        ((1,1),),
+    )
+
     seed = None #2345678
     structs = structure.creator.generate_random_structures(
         base,
-        100,
+        1000,
         4,
         0.15,
         seed,
+        filter_list,
     )
 
     computer = Computer(
-        cpu_count_limit = 0,
+        cpu_count_limit = 8,
         memory_limit = 0,
         calculators = [XTB],
         structure_type = base,

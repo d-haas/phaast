@@ -35,7 +35,11 @@ class Genetic(SurfaceExplorator):
         children_mutant_ratio : float,
     ):
         self.computer = computer
-        self.population : list[Molecule] = self.computer.optimize(XTB, list(structures))
+        self.population : list[Molecule] = [
+            mol for mol
+            in self.computer.optimize(XTB, list(structures))
+            if mol is not None
+        ]
         self.population_size = len(self.population)
 
         self.energy_threshold = energy_threshold
@@ -72,7 +76,7 @@ class Genetic(SurfaceExplorator):
                 structure.recombiner.plane_mating(mother, father)
             )
 
-        return self.computer.optimize(XTB, children)
+        return [mol for mol in self.computer.optimize(XTB, children) if mol is not None]
 
     def mutate(self) -> list[Molecule]:
         remaining_population : int = self.population_size - len(self.population)
@@ -85,7 +89,7 @@ class Genetic(SurfaceExplorator):
                 structure.mutator.mut_random(mutant, 0.5)
             )
 
-        return self.computer.optimize(XTB, mutants)
+        return [mol for mol in self.computer.optimize(XTB, mutants) if mol is not None]
 
     def get_best_energy(self) -> None:
         new_best_energy : float = min([mol.energy for mol in self.population])

@@ -43,7 +43,7 @@ class Computer(BaseComputer):
         # Get maximum memory consumed per structure optimization
         self.max_processes = {}
         for calculator in calculators:
-            self.max_processes[calculator] = max(
+            self.max_processes[calculator] = min(
                 math.floor(
                     self.memory_limit/max(
                         *[
@@ -55,7 +55,7 @@ class Computer(BaseComputer):
                 self.cpu_count_limit,
             )
 
-    def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:
+    def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule | None]:
         with Pool(self.max_processes[calculator]) as pool:
             return pool.map(
                 calculator.optimize,
