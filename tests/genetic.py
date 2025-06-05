@@ -24,7 +24,7 @@ def run():
         charge = 2,
     )
 
-    seed = 2345678
+    seed = None #2345678
     structs = structure.creator.generate_random_structures(
         base,
         100,
@@ -43,9 +43,9 @@ def run():
     genetic = Genetic(
         structures = structs,
         computer = computer,
-        energy_threshold = 0.02,
-        geometry_threshold = 0.3,
-        children_mutant_ratio = 0.5,
+        energy_threshold = 1.0,
+        geometry_threshold = 0.87,
+        children_mutant_ratio = 1.0,
     )
 
     while genetic.loop():
@@ -54,9 +54,9 @@ def run():
     best = sorted(
         genetic.population,
         key = lambda mol: mol.energy,
-    )[0:10]
+    )
 
-    for mol in best:
+    for mol in best[0:min(len(best),10)]:
         mol.plot()
     
 
