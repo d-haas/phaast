@@ -4,6 +4,7 @@ from multiprocessing.dummy import Pool
 from typing import Iterable
 from calculators import Calculator
 from structure import Molecule, Structure
+import math
 
 class BaseComputer(ABC):
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
@@ -26,7 +27,7 @@ class Computer(BaseComputer):
         # Set core count on computer automatically if it was not set
         max_core_count = multiprocessing.cpu_count()
         assert isinstance(cpu_count_limit, int) and 0<=cpu_count_limit<=multiprocessing.cpu_count(), "core_count should be an int and between 0 and the number of cores available"
-        self.core_count = max_core_count if cpu_count_limit == 0 else cpu_count_limit
+        self.cpu_count_limit = max_core_count if cpu_count_limit == 0 else cpu_count_limit
 
         # Set memory limit based on physical memory accessible on pc
         assert isinstance(memory_limit, int) and 0<=memory_limit, "Memory limit should be 0 or above"
@@ -43,10 +44,15 @@ class Computer(BaseComputer):
         self.max_processes = {}
         for calculator in calculators:
             self.max_processes[calculator] = max(
-                *[
-                    calculator.measure_optimization_memory_usage(structure_type)
-                    for _ in range(10)
-                ]
+                math.floor(
+                    self.memory_limit/max(
+                        *[
+                            calculator.measure_optimization_memory_usage(structure_type)
+                            for _ in range(10)
+                        ]
+                    )
+                ),
+                self.cpu_count_limit,
             )
 
     def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:

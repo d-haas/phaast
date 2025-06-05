@@ -270,6 +270,9 @@ class Structure:
                     "jmol",
                     xyz_file.name,
                 ],
+                capture_output = False,
+                stdout = subprocess.DEVNULL,
+                stderr = subprocess.DEVNULL,
             )
 
 

@@ -170,7 +170,7 @@ def check_type(arg : Any, tp) -> Literal[True]:
                 f"Type {tp} doesnt fit typecheck possibilities"
             )
     else:
-        if isinstance(arg, tp):
+        if isinstance(arg, (tp, int) if tp==float else tp):
             return True
         else:
             raise TypeError(

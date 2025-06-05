@@ -53,7 +53,7 @@ class Genetic(SurfaceExplorator):
                 # Compare energies
                 if abs(self.population[i].energy-self.population[j].energy) <= self.energy_threshold:
                     # Then compare geometries
-                    if Structure.compare_geometry(self.population[i], self.population[j]) <= self.geometry_threshold:
+                    if Structure.compare_geometry(self.population[i], self.population[j]) > self.geometry_threshold:
                         del self.population[j]
 
     def reproduce(self) -> list[Molecule]:
@@ -99,6 +99,7 @@ class Genetic(SurfaceExplorator):
         self.cycle_counter+= 1
 
         self.remove_duplicates()
+        print(f"After removing duplicates, population now has {len(self.population)} molecules.")
 
         children : list[Molecule] = self.reproduce()
         mutants : list[Molecule] = self.mutate()

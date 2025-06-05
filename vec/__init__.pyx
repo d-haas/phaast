@@ -206,7 +206,7 @@ cdef class Vector:
         """
         Get vector module
         """
-        return sqrt(self.squared_mod)
+        return sqrt(self.mod_sqr)
 
 
     def normalize(self) -> None:
