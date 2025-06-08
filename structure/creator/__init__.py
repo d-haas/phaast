@@ -1,18 +1,17 @@
-from typing import Iterable, Optional, Sequence
-from structure import Atom, Structure
+from typing import Optional, Sequence
+from structure import Atom, Base, Structure
 import multiprocessing, random
 from multiprocessing.dummy import Pool
 
 from structure.constants import *
 from structure.creator.dot_universe import DotUniverse
 from structure.creator.filter_list import FilterList
-from utils.typecheck import check_types
 
 
 
 #@check_types
 def generate_random_structures(
-    base: Iterable[Atom],
+    base: Base,
     N: int,
     p_num: int = 0,
     cell_size: float = 0.1,
@@ -56,7 +55,7 @@ def generate_random_structures(
 
 
 def generate_random_structure(
-    base: Iterable[Atom],
+    base: Base,
     cell_size: float = 0.1,
     seed: int | None = None,
     filter_list: Optional[FilterList] = None,
@@ -70,18 +69,18 @@ def generate_random_structure(
     # Get random generator
     rng = random.Random(seed)
 
-    copied_base = [atom.copy() for atom in base]
-    rng.shuffle(copied_base)
+    atoms = [Atom(element.z) for element in base.elements]
+    rng.shuffle(atoms)
 
     universe = DotUniverse(
         cell_size,
-        max((atom.radius for atom in base)),
+        max((atom.radius for atom in atoms)),
         filter_list,
     )
 
-    for atom in copied_base:
+    for atom in atoms:
         random_available_position = universe.get_random_available_position(atom.z, rng)
         if random_available_position:
             universe.include_atom(random_available_position, atom)
 
-    return Structure(copied_base)
+    return Structure(atoms, charge = base.charge)

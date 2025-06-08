@@ -1,6 +1,4 @@
-
 from typing import Generator, Sequence, TypeVar
-
 
 T = TypeVar("T")
 def distinct_pairs(seq : Sequence[T]) -> Generator[tuple[T, T]]:

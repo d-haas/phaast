@@ -109,6 +109,15 @@ class Genetic(SurfaceExplorator):
         else:
             self.best_energy_loops+= 1
 
+    def remove_top_half_energies(self) -> None:
+        min_energy : float = min((mol.energy for mol in self.population))
+        max_energy : float = max((mol.energy for mol in self.population))
+        median_energy : float = (min_energy + max_energy)/2
+        for i in reversed(range(len(self.population))):
+            if self.population[i].energy > median_energy:
+                del self.population[i]
+
+
     def loop(self) -> bool:
         self.cycle_counter+= 1
 

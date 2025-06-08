@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Literal, Iterable
 from structure.constants import AtomicNumber
-from utils.typecheck import check_types
 
 class FilterMode(Enum):
     NONE = 0

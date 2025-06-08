@@ -8,7 +8,7 @@ import os, glob
 class XTB(Calculator):
     @staticmethod
     def optimize(structure : Structure) -> Molecule | None:
-        with structure.to_xyz() as input_xyz_file:
+        with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
                 which_xtb = subprocess.run(
                     [
@@ -28,7 +28,7 @@ class XTB(Calculator):
                     [
                         xtb_path,
                         input_xyz_file.name,
-                        f"--chrg {'+' if structure.charge>0 else ''}{structure.charge}",
+                        "--chrg", str(structure.charge),
                         "--opt",
                         "-P", "4",
                     ],
@@ -49,7 +49,7 @@ class XTB(Calculator):
 
     @staticmethod
     def measure_optimization_memory_usage(structure : Structure) -> int:
-        with structure.to_xyz() as input_xyz_file:
+        with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
                 which_xtb = subprocess.run(
                     [
@@ -87,7 +87,7 @@ class XTB(Calculator):
 
     @staticmethod
     def measure_optimization_time(structure : Structure) -> float:
-        with structure.to_xyz() as input_xyz_file:
+        with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
                 which_xtb = subprocess.run(
                     [

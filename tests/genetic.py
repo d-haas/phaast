@@ -1,5 +1,5 @@
 from computer import Computer
-from structure import Atom, Structure
+from structure import Base
 import structure.creator
 from calculators.xtb import XTB
 
@@ -7,21 +7,8 @@ from structure.creator.filter_list import FilterList, FilterMode
 from surface_explorator.genetic import Genetic
 
 def run():
-    base = Structure(
-        [
-            Atom(6),
-            Atom(6),
-            Atom(6),
-            Atom(6),
-            Atom(6),
-            Atom(6),
-            Atom(1),
-            Atom(1),
-            Atom(1),
-            Atom(1),
-            Atom(1),
-            Atom(1),
-        ],
+    base = Base(
+        "C6H6",
         charge = 2,
     )
 
@@ -31,6 +18,7 @@ def run():
     )
 
     seed = None #2345678
+
     structs = structure.creator.generate_random_structures(
         base,
         1000,
@@ -55,6 +43,7 @@ def run():
         children_mutant_ratio = 1.0,
     )
 
+    print("Starting cycles")
     while genetic.loop():
         print(f"Cycle {genetic.cycle_counter}!!")
 
@@ -63,9 +52,5 @@ def run():
         key = lambda mol: mol.energy,
     )
 
-    for mol in best[0:min(len(best),10)]:
-        mol.plot()
-    
-
-
-    
+    for i, mol in enumerate(best[0:min(len(best),10)]):
+        mol.to_xyz(f"out_{i}.xyz")

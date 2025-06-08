@@ -3,7 +3,7 @@ import multiprocessing
 from multiprocessing.dummy import Pool
 from typing import Iterable
 from calculators import Calculator
-from structure import Molecule, Structure
+from structure import Base, Molecule, Structure
 import math
 
 class BaseComputer(ABC):
@@ -22,7 +22,7 @@ class Computer(BaseComputer):
         cpu_count_limit : int,
         memory_limit : int,
         calculators : Iterable[type[Calculator]],
-        structure_type : Structure,
+        structure_type : Base,
     ):
         # Set core count on computer automatically if it was not set
         max_core_count = multiprocessing.cpu_count()
@@ -55,9 +55,11 @@ class Computer(BaseComputer):
                 self.cpu_count_limit,
             )
 
-    def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule | None]:
+    def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:
         with Pool(self.max_processes[calculator]) as pool:
-            return pool.map(
+            molecules : list[Molecule | None] = pool.map(
                 calculator.optimize,
                 structures,
             )
+
+        return [mol for mol in molecules if mol]

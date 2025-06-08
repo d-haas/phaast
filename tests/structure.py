@@ -1,25 +1,11 @@
 import time, sys
-from tabulate import tabulate
-from structure import Structure, Atom
+from tabulate import tabulate #type: ignore
+from structure import Base
 import structure.creator
 import itertools
 
 def run():
-    carbon = Atom(6)
-    hydrogen = Atom(1)
-
-    base = Structure(
-        [
-            carbon.copy()
-            for _
-            in range(4)
-        ] + [
-            hydrogen.copy()
-            for _
-            in range(10)
-        ],
-    )
-
+    base = Base("C4H6")
     Structures_numbers : tuple[int, ...] = (128,)
     Processes_numbers : tuple[int, ...] = (8,)
     Cell_sizes : tuple[float, ...] = (0.2, 0.15)

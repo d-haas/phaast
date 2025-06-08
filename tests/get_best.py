@@ -1,24 +1,13 @@
-from structure import Atom, Structure
+from structure import Atom, Base, Structure
 import structure.creator
 from calculators.xtb import XTB
 from multiprocessing.dummy import Pool
 
 def run():
-    base = Structure(
-        [
-            Atom(6),
-            Atom(6),
-            Atom(6),
-            Atom(6),
-            Atom(6),
-            Atom(6),
-            Atom(1),
-            Atom(1),
-            Atom(1),
-            Atom(1),
-            Atom(1),
-            Atom(1),
-        ],
+    computer = Computer()
+
+    base = Base(
+        "C6H6",
         charge = 2,
     )
 
@@ -30,15 +19,13 @@ def run():
         None,
     )
 
-    molecules = sorted(
-        [
-            XTB.optimize(struct)
-            for struct in structs
-        ],
-        key = lambda mol : mol.energy,
-    )
+    molecules = [
+        XTB.optimize(struct)
+        for struct in structs
+    ]
+    molecules = [mol for mol in molecules if mol]
 
-    with Pool(10) as p:
+    with Pool() as p:
         p.map(
             Structure.plot,
             [

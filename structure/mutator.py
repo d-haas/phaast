@@ -1,8 +1,8 @@
 import random
-import more_itertools
 from typing import Optional, cast
 
 from structure import Structure, Atom
+from utils.custom_iter import distinct_pairs
 from vec import Vector
 
 def imut_random(structure : Structure, max_displacement : float = 0.1, rng : None | random.Random = None) -> None:
@@ -39,7 +39,7 @@ def imut_permute(structure : Structure, num_permutations : int | None = None, rn
 
     all_permutations = cast(
         list[tuple[Atom,Atom]],
-        list(more_itertools.distinct_permutations(structure, 2)),
+        list(distinct_pairs(tuple(structure))),
     )
     max_permutations = (len(structure)**2 - len(structure))/2
 

@@ -7,7 +7,7 @@ from structure import Molecule, Structure
 class Calculator(ABC):
     @staticmethod
     @abstractmethod
-    def optimize(structure : Structure) -> Molecule:
+    def optimize(structure : Structure) -> Molecule | None:
         pass
 
     @staticmethod

@@ -6,6 +6,7 @@ from vec import Vector
 import subprocess, tempfile
 import struct
 
+
 class Element:
     """
     Class representing an atomic element
@@ -43,6 +44,66 @@ class Element:
 
     def __repr__(self) -> str:
         return str(self)
+
+class Base:
+    elements : tuple[Element, ...]
+    charge : int
+
+    def __init__(self, elements : Iterable[Element] | str, charge = 0):
+        if isinstance(elements, str):
+            self.elements = self.parse_formula(elements)
+        else:
+            self.elements = tuple(elements)
+
+        self.charge = charge
+
+    def __iter__(self) -> Iterator[Element]:
+        return iter(self.elements)
+
+    def parse_formula(self, formula : str) -> tuple[Element, ...]:
+        if not formula:
+            raise ValueError("Formula is empty")
+        elif not formula.isalnum():
+            raise ValueError("Formula is not alphanumeric")
+
+        elements : list[Element] = []
+        temp_term : str = ""
+
+        while formula:
+            if formula[0].isalpha():
+                for c in formula:
+                    if c.isalpha():
+                        temp_term+= c
+                    else:
+                        break
+                if temp_term in AtomicNumbers:
+                    elements.append(
+                        Element(AtomicNumbers[temp_term])
+                    )
+                    formula = formula.replace(temp_term, "", 1)
+                    temp_term = ""
+                else:
+                    raise KeyError(
+                        f"No element with symbol \"{temp_term}\""
+                    )
+
+            elif formula[0].isdigit():
+                for c in formula:
+                    if c.isdigit():
+                        temp_term+= c
+                    else:
+                        break
+
+                if elements:
+                    elements+= [elements.pop()]*int(temp_term)
+                    formula = formula.replace(temp_term, "", 1)
+                    temp_term = ""
+                else:
+                    raise ValueError("Numbers must follow an element symbol in the chemical formula")
+
+
+        return tuple(elements)
+
 
 
 class Atom(Element):
@@ -111,6 +172,18 @@ class Structure:
 
     def __iter__(self) -> Iterator[Atom]:
         return iter(self.__atoms)
+
+    def __reversed__(self) -> Iterator[Atom]:
+        return reversed(self.__atoms)
+
+    def __contains__(self, value : Atom) -> bool:
+        return value in self.__atoms
+
+    def index(self, value : Atom) -> int:
+        return self.__atoms.index(value)
+
+    def count(self, value : AtomicNumber) -> int:
+        return [atom.z for atom in self.__atoms].count(value)
 
     def __repr__(self) -> str:
         self_text = str(self).replace("\n", "\n\t")
@@ -225,7 +298,7 @@ class Structure:
         with open(file_path) as xyz_file:
             return Structure.from_xyz_str(xyz_file.read(), charge)
 
-    def to_xyz(self) -> tempfile._TemporaryFileWrapper:
+    def to_temp_xyz(self) -> tempfile._TemporaryFileWrapper:
         file = tempfile.NamedTemporaryFile(
             mode = "w+",
             prefix="phaast_xyz_",
@@ -239,6 +312,11 @@ class Structure:
 
 
         return file
+
+    def to_xyz(self, name : str) -> None:
+        file = open(name, "w+")
+        file.write(self.to_xyz_str())
+        file.close()
 
     @staticmethod
     def from_xyz_str(s : str, charge : int) -> 'Structure':
@@ -264,7 +342,7 @@ class Structure:
         return "\n".join(lines)
 
     def plot(self) -> None:
-        with self.to_xyz() as xyz_file:
+        with self.to_temp_xyz() as xyz_file:
             subprocess.run(
                 [
                     "jmol",
