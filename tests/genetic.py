@@ -12,6 +12,13 @@ def run():
         charge = 2,
     )
 
+    computer = Computer(
+        cpu_count_limit = 0,
+        memory_limit = 0,
+        calculators = [XTB],
+        structure_type = base,
+    )
+
     filter_list = FilterList(
         FilterMode.EXCLUDE,
         ((1,1),),
@@ -22,17 +29,10 @@ def run():
     structs = structure.creator.generate_random_structures(
         base,
         1000,
-        4,
+        6,
         0.15,
         seed,
         filter_list,
-    )
-
-    computer = Computer(
-        cpu_count_limit = 8,
-        memory_limit = 0,
-        calculators = [XTB],
-        structure_type = base,
     )
 
     genetic = Genetic(
