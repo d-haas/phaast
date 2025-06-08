@@ -18,6 +18,7 @@ class XTB(Calculator):
                     capture_output = True,
                 )
                 xtb_path = which_xtb.stdout.strip(b"\n")
+                xtb_path = os.path.abspath("./calculators/xtb/xtb-dist/bin/xtb")
 
                 if not xtb_path:
                     raise ValueError(
@@ -59,6 +60,7 @@ class XTB(Calculator):
                     capture_output = True,
                 )
                 xtb_path = which_xtb.stdout.strip(b"\n")
+                xtb_path = os.path.abspath("./calculators/xtb/xtb-dist/bin/xtb")
 
                 if not xtb_path:
                     raise ValueError(
@@ -97,6 +99,7 @@ class XTB(Calculator):
                     capture_output = True,
                 )
                 xtb_path = which_xtb.stdout.strip(b"\n")
+                xtb_path = os.path.abspath("./calculators/xtb/xtb-dist/bin/xtb")
 
                 if not xtb_path:
                     raise ValueError(
