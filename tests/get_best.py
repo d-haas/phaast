@@ -1,10 +1,9 @@
-from structure import Atom, Base, Structure
+from structure import Base, Structure
 import structure.creator
 from calculators.xtb import XTB
 from multiprocessing.dummy import Pool
 
 def run():
-    computer = Computer()
 
     base = Base(
         "C6H6",

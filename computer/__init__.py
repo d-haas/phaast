@@ -3,7 +3,7 @@ import multiprocessing
 from multiprocessing.dummy import Pool
 from typing import Iterable
 from calculators import Calculator
-from structure import Base, Molecule, Structure
+from structure import Atom, Base, Molecule, Structure
 import math
 
 class BaseComputer(ABC):
@@ -47,7 +47,7 @@ class Computer(BaseComputer):
                 math.floor(
                     self.memory_limit/max(
                         *[
-                            calculator.measure_optimization_memory_usage(structure_type)
+                            calculator.measure_optimization_memory_usage(Structure([Atom(element.z) for element in structure_type]))
                             for _ in range(10)
                         ]
                     )
