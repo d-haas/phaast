@@ -5,12 +5,14 @@ from structure import Molecule, Structure
 
 
 class Calculator(ABC):
-    @staticmethod
     @abstractmethod
-    def optimize(structure : Structure) -> Molecule | None:
-        pass
+    def optimize(self, structure : Structure) -> Molecule | None:...
 
-    @staticmethod
     @abstractmethod
-    def measure_optimization_memory_usage(structure : Structure) -> int:
-        pass
+    def measure_optimization_memory_usage(self, structure : Structure) -> int:...
+
+    @abstractmethod
+    def measure_optimization_time(self, structure : Structure) -> float:...
+
+    @abstractmethod
+    def __hash__(self) -> int:...

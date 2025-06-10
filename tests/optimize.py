@@ -14,7 +14,9 @@ def run():
         ],
         charge = 2,
     )
-    optimized = XTB.optimize(struct)
+    optimized = None
+    while not optimized:
+        optimized = XTB.optimize(struct)
 
     print(f"Struct is: {struct.to_xyz_str()}")
 
