@@ -91,6 +91,16 @@ class Genetic(SurfaceExplorator):
 
         return [mol for mol in self.computer.optimize(XTB, mutants) if mol is not None]
 
+    def remove_unfeasible(self) -> None:
+        min_energy : float = min([mol.energy for mol in self.population])
+        max_energy : float = max([mol.energy for mol in self.population])
+        median_energy : float = (min_energy + max_energy)/2
+
+        for i in reversed(range(len(self.population))):
+            if self.population[i].energy > median_energy:
+                del self.population[i]
+
+
     def get_best_energy(self) -> None:
         new_best_energy : float = min([mol.energy for mol in self.population])
         if new_best_energy < self.best_energy:
@@ -103,7 +113,8 @@ class Genetic(SurfaceExplorator):
         self.cycle_counter+= 1
 
         self.remove_duplicates()
-        print(f"After removing duplicates, population now has {len(self.population)} molecules.")
+        self.remove_unfeasible()
+        print(f"After removing duplicates and unfeasible, population now has {len(self.population)} molecules.")
 
         children : list[Molecule] = self.reproduce()
         mutants : list[Molecule] = self.mutate()
