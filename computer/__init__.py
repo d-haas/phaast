@@ -13,7 +13,7 @@ class BaseComputer(ABC):
     max_processes : dict[Calculator, int] # Calculators that will be used the for software
 
     @abstractmethod
-    def optimize(self, calculator : type[Calculator], structures : Iterable[Structure]) -> list[Molecule]:
+    def optimize(self, calculator : Calculator, structures : Iterable[Structure]) -> list[Molecule]:
         pass
 
 class Computer(BaseComputer):

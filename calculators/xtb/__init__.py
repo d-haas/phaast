@@ -80,7 +80,7 @@ class XTB(Calculator):
                 )
 
                 if os.path.exists(dir+"/xtbopt.xyz"):
-                    molecule = Molecule.from_xyz(dir+"/xtbopt.xyz", structure.charge)
+                    molecule = Molecule.from_xyz(dir+"/xtbopt.xyz")
                 else:
                     print("Could not return molecule, no file in path")
                     print(f"Only {glob.glob(dir+'/*')}")

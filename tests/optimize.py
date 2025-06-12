@@ -12,17 +12,17 @@ def run():
             Atom(1, Vector( 1.3,-0.6,0)),
             Atom(1, Vector( 1.3, 0.6,0)),
         ],
-        charge = 2,
     )
     optimized = None
+    calc = XTB(charge = 2)
     while not optimized:
-        optimized = XTB.optimize(struct)
+        optimized = calc.optimize(struct)
 
     print(f"Struct is: {struct.to_xyz_str()}")
 
     print(f"Optimized is: {optimized.to_xyz_str()}")
 
-    print(f"Memory usage was close to: {XTB.measure_optimization_memory_usage(struct)}")
+    print(f"Memory usage was close to: {calc.measure_optimization_memory_usage(struct)}")
 
     print(f"\nThe difference between them is {struct.compare_geometry(optimized)}")
 

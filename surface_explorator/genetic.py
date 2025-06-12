@@ -3,7 +3,6 @@ from typing import Iterable
 from math import ceil, floor
 
 from calculators import Calculator
-from calculators.xtb import XTB
 from computer import Computer
 from structure import Molecule, Structure
 
@@ -24,6 +23,7 @@ class Genetic(SurfaceExplorator):
     best_energy : float
     best_energy_loops : int
     cycle_counter : int
+    calculator : Calculator
 
     @check_types
     def __init__(
@@ -33,11 +33,13 @@ class Genetic(SurfaceExplorator):
         energy_threshold : float,
         geometry_threshold : float,
         children_mutant_ratio : float,
+        calculator : Calculator,
     ):
         self.computer = computer
+        self.calculator = calculator
         self.population : list[Molecule] = [
             mol for mol
-            in self.computer.optimize(XTB, list(structures))
+            in self.computer.optimize(self.calculator, list(structures))
             if mol is not None
         ]
         self.population_size = len(self.population)
@@ -57,7 +59,7 @@ class Genetic(SurfaceExplorator):
                 # Compare energies
                 if abs(self.population[i].energy-self.population[j].energy) <= self.energy_threshold:
                     # Then compare geometries
-                    if Structure.compare_geometry(self.population[i], self.population[j]) > self.geometry_threshold:
+                    if self.population[i].compare_geometry(self.population[j]) > self.geometry_threshold:
                         del self.population[j]
 
     def reproduce(self) -> list[Molecule]:
@@ -76,7 +78,7 @@ class Genetic(SurfaceExplorator):
                 structure.recombiner.plane_mating(mother, father)
             )
 
-        return [mol for mol in self.computer.optimize(XTB, children) if mol is not None]
+        return [mol for mol in self.computer.optimize(self.calculator, children) if mol is not None]
 
     def mutate(self) -> list[Molecule]:
         remaining_population : int = self.population_size - len(self.population)
@@ -89,7 +91,7 @@ class Genetic(SurfaceExplorator):
                 structure.mutator.mut_random(mutant, 0.5)
             )
 
-        return [mol for mol in self.computer.optimize(XTB, mutants) if mol is not None]
+        return [mol for mol in self.computer.optimize(self.calculator, mutants) if mol is not None]
 
     def remove_unfeasible(self) -> None:
         min_energy : float = min([mol.energy for mol in self.population])
@@ -129,6 +131,8 @@ class Genetic(SurfaceExplorator):
         mutants : list[Molecule] = self.mutate()
         self.population+= children
         self.population+= mutants
+
+        self.remove_duplicates()
 
         self.get_best_energy()
         return self.best_energy_loops <=8

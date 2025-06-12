@@ -83,4 +83,4 @@ def generate_random_structure(
         if random_available_position:
             universe.include_atom(random_available_position, atom)
 
-    return Structure(atoms, charge = base.charge)
+    return Structure(atoms)

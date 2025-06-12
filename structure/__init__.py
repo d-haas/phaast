@@ -47,15 +47,12 @@ class Element:
 
 class Base:
     elements : tuple[Element, ...]
-    charge : int
 
-    def __init__(self, elements : Iterable[Element] | str, charge = 0):
+    def __init__(self, elements : Iterable[Element] | str):
         if isinstance(elements, str):
             self.elements = self.parse_formula(elements)
         else:
             self.elements = tuple(elements)
-
-        self.charge = charge
 
     def __iter__(self) -> Iterator[Element]:
         return iter(self.elements)
@@ -157,11 +154,9 @@ class Structure:
     Main class for representing molecular/cluster
     structure geometry
     """
-    __charge : int
     __atoms : tuple[Atom, ...]
     @check_types
-    def __init__(self, atoms : Iterable[Atom], charge : int = 0):
-        self.__charge = charge
+    def __init__(self, atoms : Iterable[Atom]):
         self.__atoms = tuple(atoms)
 
     def __getitem__(self, key : int) -> Atom:
@@ -219,10 +214,6 @@ class Structure:
             else:
                 r[atom.z] = 1
         return r
-
-    @property
-    def charge(self) -> int:
-        return self.__charge
 
     @property
     def cm(self) -> Vector:
@@ -294,9 +285,9 @@ class Structure:
         return s
     
     @staticmethod
-    def from_xyz(file_path : str, charge : int) -> 'Structure':
+    def from_xyz(file_path : str) -> 'Structure':
         with open(file_path) as xyz_file:
-            return Structure.from_xyz_str(xyz_file.read(), charge)
+            return Structure.from_xyz_str(xyz_file.read())
 
     def to_temp_xyz(self) -> tempfile._TemporaryFileWrapper:
         file = tempfile.NamedTemporaryFile(
@@ -319,7 +310,7 @@ class Structure:
         file.close()
 
     @staticmethod
-    def from_xyz_str(s : str, charge : int) -> 'Structure':
+    def from_xyz_str(s : str) -> 'Structure':
         atoms : list[Atom] = []
 
         for line in s.splitlines()[2:]:
@@ -327,7 +318,7 @@ class Structure:
                 Atom.from_xyz_str(line)
             )
 
-        return Structure(atoms, charge)
+        return Structure(atoms)
 
     def to_xyz_str(self) -> str:
         lines : list[str] = [
@@ -364,7 +355,7 @@ class Structure:
         )
 
     def to_bytes(self) -> bytes:
-        r = struct.pack(b"Ii", len(self), self.__charge)
+        r = struct.pack(b"I", len(self))
 
         for atom in self.__atoms:
             r+= atom.to_bytes()
@@ -378,21 +369,21 @@ class Molecule(Structure):
     """
     energy : float
 
-    def __init__(self, atoms: Iterable[Atom], charge : int, energy : float):
-        super().__init__(atoms,  charge)
+    def __init__(self, atoms: Iterable[Atom], energy : float):
+        super().__init__(atoms)
         self.energy = energy
 
     @staticmethod
-    def from_xyz(file_path: str, charge : int) -> 'Molecule':
+    def from_xyz(file_path: str) -> 'Molecule':
         """
         Create a Molecule from a xyz file 
         """
         with open(file_path) as file:
             s : str = file.read()
-            return Molecule.from_xyz_str(s, charge)
+            return Molecule.from_xyz_str(s)
 
     @staticmethod
-    def from_xyz_str(s : str, charge : int) -> 'Molecule':
+    def from_xyz_str(s : str) -> 'Molecule':
         """
         Create a Molecule from a xyz string
         (this operation is exclusive to xtb geometry
@@ -400,15 +391,14 @@ class Molecule(Structure):
         """
         lines = s.splitlines()
         energy = float(lines[1].split()[1])
-        struct = Structure.from_xyz_str(s, charge)
+        struct = Structure.from_xyz_str(s)
         return Molecule(
             struct,
-            charge,
             energy,
         )
 
     def to_bytes(self) -> bytes:
-        r = struct.pack(b"Iid", len(self), self.__charge, self.energy)
+        r = struct.pack(b"Id", len(self), self.energy)
 
         for atom in self:
             r+= atom.to_bytes()

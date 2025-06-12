@@ -9,13 +9,17 @@ from surface_explorator.genetic import Genetic
 def run():
     base = Base(
         "C6H6",
+    )
+
+    calc = XTB(
         charge = 2,
+        threads = 2,
     )
 
     computer = Computer(
         cpu_count_limit = 0,
         memory_limit = 0,
-        calculators = [XTB],
+        calculators = [calc],
         structure_type = base,
     )
 
@@ -28,8 +32,8 @@ def run():
 
     structs = structure.creator.generate_random_structures(
         base,
-        1000,
-        6,
+        2000,
+        8,
         0.15,
         seed,
         filter_list,
@@ -39,8 +43,9 @@ def run():
         structures = structs,
         computer = computer,
         energy_threshold = 1.0,
-        geometry_threshold = 0.87,
+        geometry_threshold = 0.88,
         children_mutant_ratio = 1.0,
+        calculator = calc,
     )
 
     print("Starting cycles")
@@ -51,6 +56,11 @@ def run():
         genetic.population,
         key = lambda mol: mol.energy,
     )
+    best_list = list(enumerate(best[0:min(len(best),10)]))
 
-    for i, mol in enumerate(best[0:min(len(best),10)]):
+    for i, mol in best_list:
+        print(f"Got molecule {i} with energy {mol.energy}")
+        if i<len(best_list)-1:
+            print(f"\tSimilarity with next is {mol.compare_geometry(best_list[i+1][1])}")
+
         mol.to_xyz(f"out_{i}.xyz")

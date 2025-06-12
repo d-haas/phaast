@@ -7,6 +7,9 @@ def run():
 
     base = Base(
         "C6H6",
+    )
+
+    calc = XTB(
         charge = 2,
     )
 
@@ -19,7 +22,7 @@ def run():
     )
 
     molecules = [
-        XTB.optimize(struct)
+        calc.optimize(struct)
         for struct in structs
     ]
     molecules = [mol for mol in molecules if mol]
