@@ -13,7 +13,7 @@ def run():
 
     calc = XTB(
         charge = 2,
-        threads = 2,
+        threads = 4,
     )
 
     computer = Computer(
@@ -33,7 +33,7 @@ def run():
     structs = structure.creator.generate_random_structures(
         base,
         2000,
-        8,
+        computer,
         0.15,
         seed,
         filter_list,

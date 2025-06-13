@@ -1,6 +1,7 @@
 from typing import Optional, Sequence
+from computer import Computer
 from structure import Atom, Base, Structure
-import multiprocessing, random
+import random
 from multiprocessing.dummy import Pool
 
 from structure.constants import *
@@ -13,7 +14,7 @@ from structure.creator.filter_list import FilterList
 def generate_random_structures(
     base: Base,
     N: int,
-    p_num: int = 0,
+    computer : Computer,
     cell_size: float = 0.1,
     seed: int | None = None,
     filter_list: Optional[FilterList] = None,
@@ -23,13 +24,6 @@ def generate_random_structures(
     Use seed as parameter for future reproducibility
     (same seed with same base and N structures will result in the same initial set)
     """
-    # Validade thread number used
-    if p_num == 0:
-        p_num = multiprocessing.cpu_count()
-    elif p_num < 0:
-        raise ValueError(
-            f"Number of processes selected ({p_num}) is not a valid number, using 1 instead"
-        )
 
     # Set new RNG based on a predetermined seed or not
     main_rng: random.Random = random.Random() if seed is None else random.Random(seed)
@@ -37,19 +31,12 @@ def generate_random_structures(
     # Create a list of seeds from the rng to be used by each structure generation process
     single_seeds: list[int] = main_rng.sample(range(0, 2 * N), N)
 
-    if p_num == 1:
-        # Execute sequentially if there's only one process
-        structures = [
-            generate_random_structure(base, cell_size, single_seeds[0], filter_list)
-            for _ in range(N)
-        ]
-    else:
-        # Use poll of N processes to accelerate structure creation
-        with Pool(p_num) as p:
-            structures = p.starmap(
-                generate_random_structure,
-                [(base, cell_size, s) for s in single_seeds],
-            )
+    # Use poll of N processes to accelerate structure creation
+    with Pool(computer.cpu_count_limit) as p:
+        structures = p.starmap(
+            generate_random_structure,
+            [(base, cell_size, s, filter_list) for s in single_seeds],
+        )
 
     return structures
 
