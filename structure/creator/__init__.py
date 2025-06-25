@@ -8,8 +8,6 @@ from structure.constants import *
 from structure.creator.dot_universe import DotUniverse
 from structure.creator.filter_list import FilterList
 
-
-
 #@check_types
 def generate_random_structures(
     base: Base,

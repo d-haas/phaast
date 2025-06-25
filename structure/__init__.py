@@ -14,6 +14,9 @@ class Element:
     """
     z : AtomicNumber
     def __init__(self, atomic_number : AtomicNumber):
+        """
+        Sets only atomic number for element
+        """
         self.z = atomic_number
 
     @property
@@ -49,42 +52,74 @@ class Base:
     elements : tuple[Element, ...]
 
     def __init__(self, elements : Iterable[Element] | str):
+        """
+        Create base (alias to chemical composition)
+        of a molecule
+        """
         if isinstance(elements, str):
             self.elements = self.parse_formula(elements)
         else:
             self.elements = tuple(elements)
 
     def __iter__(self) -> Iterator[Element]:
+        # Iterate over Base
         return iter(self.elements)
 
     def parse_formula(self, formula : str) -> tuple[Element, ...]:
+        """
+        Parse composition string formula
+        """
+        # Raise error if formula is invalid
+        # (empty or not alphanumeric)
         if not formula:
             raise ValueError("Formula is empty")
         elif not formula.isalnum():
             raise ValueError("Formula is not alphanumeric")
 
+        # Set element list for storage
         elements : list[Element] = []
+
+        # Create temporary variable to store
+        # chemical term, such as O3
         temp_term : str = ""
 
+        # While there's still a formula string
         while formula:
+            # If first character is a letter
             if formula[0].isalpha():
+                """
+                Iterate over formula and while letters are
+                found, add them to temp_term. Then, test if
+                it matches any chemical element, add it
+                to the element list and remove it from the
+                formula string
+                """
                 for c in formula:
                     if c.isalpha():
                         temp_term+= c
                     else:
                         break
+
                 if temp_term in AtomicNumbers:
                     elements.append(
                         Element(AtomicNumbers[temp_term])
                     )
                     formula = formula.replace(temp_term, "", 1)
                     temp_term = ""
+
                 else:
                     raise KeyError(
                         f"No element with symbol \"{temp_term}\""
                     )
 
+            # If first char is a number
             elif formula[0].isdigit():
+                """
+                Iterate over formula and while numbers are
+                found, add them to temp_term. Then, multiply the
+                last element by the number written in temp_term
+                and remove it from the formula string
+                """
                 for c in formula:
                     if c.isdigit():
                         temp_term+= c
@@ -104,6 +139,10 @@ class Base:
 
 
 class Atom(Element):
+    """
+    Atom class that represents an atom
+    in space
+    """
     pos : Vector
     def __init__(self, atomic_number : AtomicNumber, pos : Optional[Vector] = None):
         super().__init__(atomic_number)
@@ -116,6 +155,9 @@ class Atom(Element):
         return f"{self.symbol} ({', '.join([str(round(self.pos[i], 1)) for i in range(3)])})"
 
     def copy(self) -> Self:
+        """
+        Return a deep copy of itself
+        """
         return self.__class__(
             self.z,
             self.pos.copy(),
@@ -123,6 +165,9 @@ class Atom(Element):
 
     @staticmethod
     def from_xyz_str(line) -> 'Atom':
+        """
+        Import atom from xyz formated line
+        """
         s : str = line.replace("\t", "")
 
         parsed_line : list[str] = s.split()
@@ -138,9 +183,15 @@ class Atom(Element):
 
 
     def to_xyz_str(self) -> str:
+        """
+        Export atom as xyz formated line
+        """
         return f"{self.symbol} {self.pos.x} {self.pos.y} {self.pos.z}"
 
     def to_bytes(self) -> bytes:
+        """
+        Convert atom data to bytes
+        """
         return struct.pack(
             b"Iddd",
             self.z,
@@ -178,6 +229,10 @@ class Structure:
         return self.__atoms.index(value)
 
     def count(self, value : AtomicNumber) -> int:
+        """
+        Count how many atoms of a given
+        atomic number are in the structure
+        """
         return [atom.z for atom in self.__atoms].count(value)
 
     def __repr__(self) -> str:
@@ -188,6 +243,10 @@ class Structure:
         return "\n".join((str(atom) for atom in self.__atoms))
 
     def is_equal_to(self, other : Self) -> bool:
+        """
+        Test if two structures are equal 
+        (composition-wise)
+        """
         if len(self)==len(other):
             other_count = other.element_count()
             for z, quantity in self.element_count().items():
@@ -247,49 +306,60 @@ class Structure:
         atoms_num : int = len(self) # Number of atoms in structure
 
         #Check if number of atoms is the same in both structures
-        assert atoms_num == len(other), "Both structure should have the same number of atoms"
+        assert self == other, "Both structure should have the same number of atoms"
 
-        ####################################################################################
-        ### SUM DISTANCES BETWEEN ATOMS OF EACH STRUCTURE AND STORE IT IN A ORDERED LIST ###
-        ### FOR EACH STRUCTURE                                                           ###
-        ####################################################################################
-        self_dists : list[float] = []
+        """
+        Sum distances between atoms of each structure and
+        store it in a ordered list for each structure
+        """
+        self_dists : dict[tuple[AtomicNumber, AtomicNumber], list[float]] = {}
         for atom_i, atom_j in itertools.combinations(self.__atoms, 2):
+            dict_key = (atom_i.z, atom_j.z) if atom_j.z>atom_i.z else (atom_j.z, atom_i.z)
+            if not dict_key in self_dists:
+                self_dists[dict_key] = []
             diff : Vector = atom_i.pos - atom_j.pos
             bisect.insort(
-                self_dists,
+                self_dists[dict_key],
                 diff.mod_sqr,
             )
-        other_dists : list[float] = []
+        other_dists : dict[tuple[AtomicNumber, AtomicNumber], list[float]] = {}
         for atom_i, atom_j in itertools.combinations(other.__atoms, 2):
+            dict_key = (atom_i.z, atom_j.z) if atom_j.z>atom_i.z else (atom_j.z, atom_i.z)
+            if not dict_key in other_dists:
+                other_dists[dict_key] = []
             diff = atom_i.pos - atom_j.pos
             bisect.insort(
-                other_dists,
+                other_dists[dict_key],
                 diff.mod_sqr,
             )
 
-        ### Get difference between each distance in each molecule (squared) ###
-        distances_squared_diff : list[float] = [
-            (self_dist - other_dist)**2
-            for self_dist, other_dist
-            in zip(
-                self_dists,
-                other_dists
-            )
-        ]
+        # Get difference between each distance in each molecule (squared)
+        sum_distances_squared_diff : float = 0
+        for dict_key in self_dists:
+            sum_distances_squared_diff+= sum([
+                (i - j)**2
+                for i, j
+                in zip(self_dists[dict_key], other_dists[dict_key])
+            ])
 
         # Calculate final value of Grigoryan-Springborn algorithm
-        q : float = ( ( 2/(atoms_num*(atoms_num-1)) ) * sum(distances_squared_diff) )**.5
+        q : float = ( ( 2/(atoms_num*(atoms_num-1)) ) * sum_distances_squared_diff )**.5
         s : float = 1 / ( 1 + q )
 
         return s
     
     @staticmethod
     def from_xyz(file_path : str) -> 'Structure':
+        """
+        Create structure from xyz file
+        """
         with open(file_path) as xyz_file:
             return Structure.from_xyz_str(xyz_file.read())
 
     def to_temp_xyz(self) -> tempfile._TemporaryFileWrapper:
+        """
+        Export structure to temporary xyz file
+        """
         file = tempfile.NamedTemporaryFile(
             mode = "w+",
             prefix="phaast_xyz_",
@@ -305,12 +375,18 @@ class Structure:
         return file
 
     def to_xyz(self, name : str) -> None:
+        """
+        Export structure to xyz file
+        """
         file = open(name, "w+")
         file.write(self.to_xyz_str())
         file.close()
 
     @staticmethod
     def from_xyz_str(s : str) -> 'Structure':
+        """
+        Create structure from xyz formated string
+        """
         atoms : list[Atom] = []
 
         for line in s.splitlines()[2:]:
@@ -321,6 +397,9 @@ class Structure:
         return Structure(atoms)
 
     def to_xyz_str(self) -> str:
+        """
+        Export structure to xyz formated string
+        """
         lines : list[str] = [
             str(len(self)),
             "",
@@ -332,11 +411,14 @@ class Structure:
 
         return "\n".join(lines)
 
-    def plot(self) -> None:
+    def plot(self, jmol_path = "jmol") -> None:
+        """
+        Open the structure in jmol (if available)
+        """
         with self.to_temp_xyz() as xyz_file:
             subprocess.run(
                 [
-                    "jmol",
+                    jmol_path,
                     xyz_file.name,
                 ],
                 capture_output = False,
@@ -346,6 +428,9 @@ class Structure:
 
 
     def copy(self) -> Self:
+        """
+        Return a deep copy of itself
+        """
         return self.__class__(
             (
                 atom.copy()
@@ -355,6 +440,9 @@ class Structure:
         )
 
     def to_bytes(self) -> bytes:
+        """
+        Convert structure data to bytes
+        """
         r = struct.pack(b"I", len(self))
 
         for atom in self.__atoms:
@@ -385,9 +473,7 @@ class Molecule(Structure):
     @staticmethod
     def from_xyz_str(s : str) -> 'Molecule':
         """
-        Create a Molecule from a xyz string
-        (this operation is exclusive to xtb geometry
-        optimization output xyz file)
+        Create a Molecule from a xyz formated string
         """
         lines = s.splitlines()
         energy = float(lines[1].split()[1])
@@ -398,6 +484,9 @@ class Molecule(Structure):
         )
 
     def to_bytes(self) -> bytes:
+        """
+        Convert molecule data to bytes
+        """
         r = struct.pack(b"Id", len(self), self.energy)
 
         for atom in self:
