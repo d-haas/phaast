@@ -7,7 +7,7 @@ from structure.creator.filter_list import FilterList, FilterMode
 from surface_explorator.genetic import Genetic
 
 def run():
-    for run_num in range(100):
+    for run_num in range(10):
         base = Base(
             "C6H6",
         )
@@ -25,7 +25,7 @@ def run():
         )
 
         filter_list = FilterList(
-            FilterMode.EXCLUDE,
+            FilterMode.NONE,
             ((1,1),),
         )
 
@@ -33,7 +33,7 @@ def run():
 
         structs = structure.creator.generate_random_structures(
             base,
-            2000,
+            7000,
             computer,
             0.15,
             seed,
