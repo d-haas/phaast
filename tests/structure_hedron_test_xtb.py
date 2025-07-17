@@ -9,7 +9,7 @@ import itertools
 
 def run():
     base = Base("C6H6")
-    Structures_numbers : tuple[int, ...] = (128,)
+    Structures_numbers : tuple[int, ...] = (64,)
     Processes_numbers : tuple[int, ...] = (8,)
 
     calc = XTB(
@@ -37,35 +37,14 @@ def run():
 
         start = time.perf_counter_ns()
 
-        _ = structure.creator.generate_random_structures(
-            base,
-            struct_num,
-            computer,
-            0.15,
-            2345678,
-        )
-
-        end = time.perf_counter_ns()
-        total_s = (end - start)/1e9
-        per_struct_ms = ((end - start)/1e6)/struct_num
-        time_data.append(
-            (
-                "Mesh",
-                p_num,
-                struct_num,
-                round(total_s, 2),
-                round(per_struct_ms, 2),
-            )
-        )
-
-        start = time.perf_counter_ns()
-
-        _ = structure.creator.generate_random_structures_hedron(
+        population = structure.creator.generate_random_structures_hedron(
             base,
             struct_num,
             computer,
             2345678,
         )
+
+        computer.optimize(calc, population)
 
         end = time.perf_counter_ns()
         total_s = (end - start)/1e9

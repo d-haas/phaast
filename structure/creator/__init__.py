@@ -7,9 +7,10 @@ from multiprocessing.dummy import Pool
 from structure.constants import *
 from structure.creator.dot_universe import DotUniverse
 from structure.creator.filter_list import FilterList
+from structure.creator.hedron_universe import HedronNumber, HedronUniverse
 
 #@check_types
-def generate_random_structures(
+def generate_random_structures_mesh(
     base: Base,
     N: int,
     computer : Computer,
@@ -39,7 +40,7 @@ def generate_random_structures(
     return structures
 
 
-def generate_random_structure(
+def generate_random_structure_mesh(
     base: Base,
     cell_size: float = 0.1,
     seed: int | None = None,
@@ -63,9 +64,67 @@ def generate_random_structure(
         filter_list,
     )
 
-    for atom in atoms:
+    while atoms:
+        atom = atoms.pop(0)
         random_available_position = universe.get_random_available_position(atom.z, rng)
         if random_available_position:
             universe.include_atom(random_available_position, atom)
+        else:
+            atoms.append(atom)
+            
 
     return Structure(atoms)
+
+def generate_random_structure_hedron(
+    base: Base,
+    n_vertices: HedronNumber = 4,
+    seed: int | None = None,
+    filter_list: Optional[FilterList] = None,
+) -> Structure:
+
+    # Get random generator
+    rng = random.Random(seed)
+
+    atoms = [Atom(element.z) for element in base.elements]
+    rng.shuffle(atoms)
+
+    universe = HedronUniverse(
+        n_vertices = n_vertices,
+        filter_list = filter_list,
+    )
+
+    while atoms:
+        atom = atoms.pop(0)
+        random_available_position = universe.get_random_available_position(atom.z, rng)
+        if random_available_position:
+            universe.include_atom(random_available_position, atom)
+        else:
+            atoms.append(atom)
+            
+
+    return Structure(atoms)
+
+def generate_random_structures_hedron(
+    base: Base,
+    N: int,
+    computer : Computer,
+    seed: int | None = None,
+    filter_list: Optional[FilterList] = None,
+) -> Sequence[Structure]:
+
+    main_rng: random.Random = random.Random() if seed is None else random.Random(seed)
+
+    # Create a list of seeds from the rng to be used by each structure generation process
+    single_seeds: list[int] = main_rng.sample(range(0, 2 * N), N)
+
+    # Use poll of N processes to accelerate structure creation
+    with Pool(computer.cpu_count_limit) as p:
+        structures = p.starmap(
+            generate_random_structure_hedron,
+            [(base, 4, s, filter_list) for s in single_seeds],
+        )
+
+    return structures
+
+generate_random_structure = generate_random_structure_mesh
+generate_random_structures = generate_random_structures_mesh
