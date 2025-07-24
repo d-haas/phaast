@@ -96,13 +96,13 @@ def generate_random_structure_hedron(
     while atoms:
         atom = atoms.pop(0)
         random_available_position = universe.get_random_available_position(atom.z, rng)
-        if random_available_position:
+        if random_available_position is not None:
             universe.include_atom(random_available_position, atom)
         else:
             atoms.append(atom)
             
 
-    return Structure(atoms)
+    return Structure(universe.atom_population)
 
 def generate_random_structures_hedron(
     base: Base,

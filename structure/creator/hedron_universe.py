@@ -3,7 +3,7 @@
 import random
 from typing import Optional
 from structure import Atom
-from structure.constants import *
+from structure.constants import AtomicNumber, AtomicRadi
 import cython
 from structure.creator.filter_list import *
 
@@ -41,7 +41,6 @@ HedronPositions : dict[HedronNumber, list[Vector]] = {
     20 : [],
 }
 
-@cython.cclass
 class HedronUniverse:
     """
     A base class to define the cell-separated universe
@@ -60,7 +59,6 @@ class HedronUniverse:
         self.atom_population : list[Atom] = []
         self.bond_filter = filter_list if filter_list else FilterList(FilterMode.NONE, ())
 
-    @cython.ccall
     def check_available_position(self, pos : Vector, atomic_number : AtomicNumber) -> cython.int:
         result : cython.int = False
         atomic_radius : cython.double = AtomicRadi[atomic_number]
@@ -82,7 +80,6 @@ class HedronUniverse:
 
         return result
 
-    @cython.ccall
     def get_available_positions(self, atomic_number : AtomicNumber) -> list[Vector]:
         positions : list[Vector] = []
 
@@ -95,7 +92,6 @@ class HedronUniverse:
 
         return positions
 
-    @cython.ccall
     def get_random_available_position(self, atomic_number : AtomicNumber, rand_gen : None | random.Random = None) -> Vector | None:
         rng = rand_gen if rand_gen else random.Random()
         if self.atom_population:
@@ -107,7 +103,6 @@ class HedronUniverse:
         else:
             return Vector()
 
-    @cython.ccall
     def include_atom(self, pos : Vector, atom : Atom):
         # Caching radius for faster access
         atom.pos = pos

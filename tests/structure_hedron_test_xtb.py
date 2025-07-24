@@ -3,18 +3,18 @@ from tabulate import tabulate #type: ignore
 from calculators.xtb import XTB
 from computer import Computer
 from structure.creator.filter_list import FilterList, FilterMode
-from structure import Base
+from structure import Base, Molecule
 import structure.creator
 import itertools
 
 def run():
     base = Base("C6H6")
-    Structures_numbers : tuple[int, ...] = (64,)
+    Structures_numbers : tuple[int, ...] = (10000,)
     Processes_numbers : tuple[int, ...] = (8,)
 
     calc = XTB(
         charge = 2,
-        threads = 4,
+        threads = 1,
     )
 
     computer = Computer(
@@ -30,8 +30,9 @@ def run():
     )
 
 
-    time_data : list[tuple[str, int, int, float, float]] = []
+    time_data : list[tuple[str, int, int, int, int, float, float]] = []
 
+    converged : list[Molecule] = []
     print(f"Have we got GIL? {'Yes' if sys._is_gil_enabled() else 'No'}!!")
     for p_num, struct_num in itertools.product(Processes_numbers, Structures_numbers):
 
@@ -39,12 +40,12 @@ def run():
 
         population = structure.creator.generate_random_structures_hedron(
             base,
-            struct_num,
+            10000,
             computer,
             2345678,
         )
 
-        computer.optimize(calc, population)
+        converged = computer.optimize(calc, population)
 
         end = time.perf_counter_ns()
         total_s = (end - start)/1e9
@@ -54,6 +55,8 @@ def run():
                 "Hedron",
                 p_num,
                 struct_num,
+                len(population),
+                len(converged),
                 round(total_s, 2),
                 round(per_struct_ms, 2),
             )
@@ -68,10 +71,17 @@ def run():
                 "Generator",
                 "Threads",
                 "Structures",
-                "Cell size (Å)",
+                "Generated number",
+                "Converged number",
                 "Total time (s)",
                 "Time per structure (ms)",
             ],
         )
     )
 
+    best = sorted(
+        converged,
+        key = lambda mol : mol.energy,
+    )
+    for i in best[0:min(10,len(best))]:
+        i.plot()

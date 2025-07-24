@@ -11,7 +11,12 @@ extensions = [
         name="structure.creator.dot_universe",
         sources=["./structure/creator/dot_universe.py"],
         include_dirs = ["./structure/creator/filter_list.py"]
-    )
+    ),
+    Extension(
+        name="structure.creator.hedron_universe",
+        sources=["./structure/creator/hedron_universe.py"],
+        include_dirs = ["./structure/creator/filter_list.py"]
+    ),
 ]
 
 setup(

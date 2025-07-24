@@ -49,6 +49,10 @@ class XTB(Calculator):
         return args
 
     def optimize(self, structure : Structure) -> Molecule | None:
+        if not len(structure):
+            raise ValueError(
+                "Structure is empty, is this some kind of joke?",
+            )
         with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
                 which_xtb = subprocess.run(
@@ -82,8 +86,8 @@ class XTB(Calculator):
                 if os.path.exists(dir+"/xtbopt.xyz"):
                     molecule = Molecule.from_xyz(dir+"/xtbopt.xyz")
                 else:
-                    print("Could not return molecule, no file in path")
-                    print(f"Only {glob.glob(dir+'/*')}")
+                    #print("Could not return molecule, no file in path")
+                    #print(f"Only {glob.glob(dir+'/*')}")
                     molecule = None
 
         return molecule
