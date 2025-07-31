@@ -306,7 +306,7 @@ class Structure:
         atoms_num : int = len(self) # Number of atoms in structure
 
         #Check if number of atoms is the same in both structures
-        assert self == other, "Both structure should have the same number of atoms"
+        assert self.is_equal_to(other), "Both structure should have the same number of atoms"
 
         """
         Sum distances between atoms of each structure and
