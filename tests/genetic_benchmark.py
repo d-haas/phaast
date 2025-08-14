@@ -60,8 +60,8 @@ def run():
     #struct_nums = (5000, 10000, 15000, 20000)
     #geometry_thresholds = (0.5, 0.6, 0.7, 0.8, 0.9)
     #children_mutant_ratios = (0.0, 0.5, 1.0, 2.0, 100000.0)
-    struct_nums = (5000, 10000, 15000, 20000)
-    geometry_thresholds = (0.9,)
+    struct_nums = (10000, 15000, 20000)
+    geometry_threshold = 0.9
     children_mutant_ratios = (0.0, 0.5, 1.0, 2.0, 100000.0)
 
     table_columns : list[str] = [
@@ -70,20 +70,16 @@ def run():
         "Child-to-mut ratio",
         "Execution time (s)",
         "Std dev (time)",
-    ] + [
-        f"Success rate ({round(geometry, 1)})"
-        for geometry
-        in geometry_thresholds
+        f"Success rate ({geometry_threshold})",
     ]
 
     table_rows : list[tuple[float,...]] = []
 
-    for struct_num, geometry_threshold, children_mutant_ratio in itertools.product(
+    for struct_num, children_mutant_ratio in itertools.product(
         struct_nums,
-        geometry_thresholds,
         children_mutant_ratios
     ):
-        successes = {i : 0 for i in geometry_thresholds}
+        successes = 0
         times = []
         for _ in range(10):
             start = time.monotonic_ns()
@@ -115,9 +111,8 @@ def run():
             best_list = best[0 : min(len(best), 50)]
 
             for mol in best_list:
-                for geometry_value in successes:
-                    if benzene_dication.compare_geometry(mol) >= geometry_value:
-                        successes[geometry_value]+= 1
+                if benzene_dication.compare_geometry(mol) >= geometry_threshold:
+                    successes+= 1
 
         table_rows.append(
             (
@@ -125,13 +120,8 @@ def run():
                 geometry_threshold,
                 children_mutant_ratio,
                 statistics.mean(times),
-                statistics.stdev(times)
-            ) + tuple(
-                (
-                    successes[i]/10
-                    for i
-                    in sorted(successes.keys())
-                )
+                statistics.stdev(times),
+                successes,
             )
         )
         print(
