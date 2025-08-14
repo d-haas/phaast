@@ -46,7 +46,7 @@ class HedronUniverse:
     A base class to define the cell-separated universe
     used to place and model each element of the population
     """
-    atom_population : list[Atom]
+    atom_population : list[tuple[Atom, Literal[1,-1]]]
     bond_filter : FilterList
     n_vertices : HedronNumber
 
@@ -56,7 +56,7 @@ class HedronUniverse:
         filter_list : Optional[FilterList] = None,
     ):
         self.n_vertices = n_vertices
-        self.atom_population : list[Atom] = []
+        self.atom_population = []
         self.bond_filter = filter_list if filter_list else FilterList(FilterMode.NONE, ())
 
     def check_available_position(self, pos : Vector, atomic_number : AtomicNumber) -> cython.int:
@@ -64,7 +64,7 @@ class HedronUniverse:
         atomic_radius : cython.double = AtomicRadi[atomic_number]
 
         if self.atom_population:
-            for atom in self.atom_population:
+            for atom, _ in self.atom_population:
                 dist_squared : cython.double = (atom.pos - pos).mod_sqr
                 radius_sum : cython.double = AtomicRadi[atom.z] + atomic_radius
                 radius_sum_squared : cython.double = (radius_sum)**2 - 0.05 #Added margin for error
@@ -80,19 +80,24 @@ class HedronUniverse:
 
         return result
 
-    def get_available_positions(self, atomic_number : AtomicNumber) -> list[Vector]:
-        positions : list[Vector] = []
+    def get_available_positions(self, atomic_number : AtomicNumber) -> list[tuple[Vector, Literal[1,-1]]]:
+        positions : list[tuple[Vector, Literal[1,-1]]] = []
 
-        for atom in self.atom_population:
+        for atom, hedron_scale in self.atom_population:
             radius : cython.double = AtomicRadi[atomic_number] + atom.radius
             for point in HedronPositions[self.n_vertices]:
-                new_position = atom.pos + point*radius
+                new_position = atom.pos + point*radius*hedron_scale
                 if self.check_available_position(new_position, atomic_number):
-                    positions.append(new_position)
+                    positions.append(
+                        (
+                            new_position,
+                            -hedron_scale,
+                        ),
+                    )
 
         return positions
 
-    def get_random_available_position(self, atomic_number : AtomicNumber, rand_gen : None | random.Random = None) -> Vector | None:
+    def get_random_available_position(self, atomic_number : AtomicNumber, rand_gen : None | random.Random = None) -> tuple[Vector, Literal[1,-1]] | None:
         rng = rand_gen if rand_gen else random.Random()
         if self.atom_population:
             positions = self.get_available_positions(atomic_number)
@@ -101,9 +106,14 @@ class HedronUniverse:
             else:
                 return None
         else:
-            return Vector()
+            return Vector(), 1
 
-    def include_atom(self, pos : Vector, atom : Atom):
+    def include_atom(self, pos : Vector, atom : Atom, hedron_scale : Literal[1,-1]):
         # Caching radius for faster access
         atom.pos = pos
-        self.atom_population.append(atom)
+        self.atom_population.append(
+            (
+                atom,
+                hedron_scale,
+            )
+        )
