@@ -46,7 +46,7 @@ class HedronUniverse:
     A base class to define the cell-separated universe
     used to place and model each element of the population
     """
-    atom_population : list[tuple[Atom, Literal[1,-1]]]
+    atom_population : list[tuple[Atom, float]]
     bond_filter : FilterList
     n_vertices : HedronNumber
 
@@ -80,8 +80,8 @@ class HedronUniverse:
 
         return result
 
-    def get_available_positions(self, atomic_number : AtomicNumber) -> list[tuple[Vector, Literal[1,-1]]]:
-        positions : list[tuple[Vector, Literal[1,-1]]] = []
+    def get_available_positions(self, atomic_number : AtomicNumber) -> list[tuple[Vector, float]]:
+        positions : list[tuple[Vector, float]] = []
 
         for atom, hedron_scale in self.atom_population:
             radius : cython.double = AtomicRadi[atomic_number] + atom.radius
@@ -97,7 +97,7 @@ class HedronUniverse:
 
         return positions
 
-    def get_random_available_position(self, atomic_number : AtomicNumber, rand_gen : None | random.Random = None) -> tuple[Vector, Literal[1,-1]] | None:
+    def get_random_available_position(self, atomic_number : AtomicNumber, rand_gen : None | random.Random = None) -> tuple[Vector, float] | None:
         rng = rand_gen if rand_gen else random.Random()
         if self.atom_population:
             positions = self.get_available_positions(atomic_number)
@@ -106,9 +106,9 @@ class HedronUniverse:
             else:
                 return None
         else:
-            return Vector(), 1
+            return Vector(), 1.0
 
-    def include_atom(self, pos : Vector, atom : Atom, hedron_scale : Literal[1,-1]):
+    def include_atom(self, pos : Vector, atom : Atom, hedron_scale : float):
         # Caching radius for faster access
         atom.pos = pos
         self.atom_population.append(
