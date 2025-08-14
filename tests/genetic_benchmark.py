@@ -61,7 +61,7 @@ def run():
     #geometry_thresholds = (0.5, 0.6, 0.7, 0.8, 0.9)
     #children_mutant_ratios = (0.0, 0.5, 1.0, 2.0, 100000.0)
     struct_nums = (5000, 10000, 15000, 20000)
-    geometry_thresholds = (0.5, 0.6, 0.7, 0.8, 0.9)
+    geometry_thresholds = (0.9,)
     children_mutant_ratios = (0.0, 0.5, 1.0, 2.0, 100000.0)
 
     table_columns : list[str] = [
