@@ -23,13 +23,15 @@ def run():
 
     computer = Computer(
         cpu_count_limit = 0,
-        memory_limit = 0,
-        calculators = [calc],
-        structure_type = base,
+        #memory_limit = 0,
+        #calculators = [calc],
+        #structure_type = base,
     )
 
+    computer.add_calculator("xtb", calc)
+
     benzene_dication : Molecule = computer.optimize(
-        calc,
+        "xtb",
         [
             Structure.from_xyz_str(
                 """12
@@ -87,6 +89,7 @@ def run():
                 base,
                 struct_num,
                 computer,
+                20,
                 seed,
                 filter_list,
             )
@@ -97,7 +100,7 @@ def run():
                 energy_threshold = 1.0,
                 geometry_threshold = geometry_threshold,
                 children_mutant_ratio = children_mutant_ratio,
-                calculator = calc,
+                calculator = "xtb",
             )
             end = time.monotonic_ns()
             delta_time = end - start/1e9

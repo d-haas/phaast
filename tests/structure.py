@@ -19,10 +19,12 @@ def run():
 
     computer = Computer(
         cpu_count_limit = 0,
-        memory_limit = 0,
-        calculators = [calc],
-        structure_type = base,
+        #memory_limit = 0,
+        #calculators = [calc],
+        #structure_type = base,
     )
+
+    computer.add_calculator("xtb", calc)
 
     filter_list = FilterList(
         FilterMode.EXCLUDE,
@@ -43,6 +45,7 @@ def run():
             computer,
             0.15,
             2345678,
+            filter_list = filter_list,
         )
 
         end = time.perf_counter_ns()
@@ -50,7 +53,7 @@ def run():
         per_struct_ms = ((end - start)/1e6)/struct_num
         time_data.append(
             (
-                "Mesh",
+                "Mesh (0.15 Å)",
                 p_num,
                 struct_num,
                 round(total_s, 2),
@@ -64,7 +67,9 @@ def run():
             base,
             struct_num,
             computer,
+            20,
             2345678,
+            filter_list = filter_list,
         )
 
         end = time.perf_counter_ns()
@@ -89,7 +94,6 @@ def run():
                 "Generator",
                 "Threads",
                 "Structures",
-                "Cell size (Å)",
                 "Total time (s)",
                 "Time per structure (ms)",
             ],
