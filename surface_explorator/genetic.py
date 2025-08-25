@@ -3,7 +3,6 @@ from typing import Iterable, Optional, cast
 from math import ceil, floor
 from bisect import insort
 
-from calculators import Calculator
 from computer import Computer
 from structure import Atom, Molecule, Structure
 from vec import Vector
@@ -137,7 +136,7 @@ def mut_permute(structure : Structure, num_permutations : int | None = None, rng
 class Genetic(SurfaceExplorator):
     population_size : int
     population : list[Molecule]
-    calculator : Calculator
+    calculator : str
     computer : Computer
     energy_threshold : float
     geometry_threshold : float
@@ -145,7 +144,10 @@ class Genetic(SurfaceExplorator):
     best_energy : float
     best_energy_loops : int
     cycle_counter : int
-    calculator : Calculator
+    end_criteria_loop_num : int
+    mut_rand_permute_ratio : float
+    mut_rand_max_displacement : float
+    permute_num_permutations : int
 
     @check_types
     def __init__(
@@ -154,8 +156,12 @@ class Genetic(SurfaceExplorator):
         computer : Computer,
         energy_threshold : float,
         geometry_threshold : float,
-        children_mutant_ratio : float,
-        calculator : Calculator,
+        calculator : str,
+        children_mutant_ratio : float = 1.0,
+        end_criteria_loop_num : int = 9,
+        mut_rand_permute_ratio : float = 1.0,
+        mut_rand_max_displacement : float = 1.0,
+        permute_num_permutations : int = 0
     ):
         self.computer = computer
         self.calculator = calculator
@@ -165,15 +171,18 @@ class Genetic(SurfaceExplorator):
             if mol is not None
         ]
         self.population_size = len(self.population)
-
         self.energy_threshold = energy_threshold
         self.geometry_threshold = geometry_threshold
-
         self.children_mutant_ratio = children_mutant_ratio
-
         self.best_energy = min([mol.energy for mol in self.population])
         self.best_energy_loops = 0
+        self.end_criteria_loop_num = end_criteria_loop_num
         self.cycle_counter = 0
+
+        ### Mutation parameters ###
+        self.mut_rand_permute_ratio = mut_rand_permute_ratio
+        self.mut_rand_max_displacement = mut_rand_max_displacement
+        self.permute_num_permutations = permute_num_permutations
 
     def remove_duplicates(self) -> None:
         for i in reversed(range(len(self.population))):
@@ -206,11 +215,25 @@ class Genetic(SurfaceExplorator):
         remaining_population : int = self.population_size - len(self.population)
         remaining_population*= floor(1/(self.children_mutant_ratio+1))
 
+        remaining_random : int = ceil(self.mut_rand_permute_ratio/(self.mut_rand_permute_ratio+1))
+        remaining_permute : int = floor(1/(self.mut_rand_permute_ratio+1))
+
         mutants : list[Structure] = []
 
-        for mutant in random.sample(mutants, remaining_population):
+        for mutant in random.sample(self.population, remaining_random):
             mutants.append(
-                mut_random(mutant, 0.5)
+                mut_random(
+                    mutant,
+                    self.mut_rand_max_displacement,
+                )
+            )
+
+        for mutant in random.sample(self.population, remaining_permute):
+            mutants.append(
+                mut_permute(
+                    mutant,
+                    len(mutant)//2 if self.permute_num_permutations>=0 else self.permute_num_permutations,
+                )
             )
 
         return [mol for mol in self.computer.optimize(self.calculator, mutants) if mol is not None]
@@ -257,7 +280,7 @@ class Genetic(SurfaceExplorator):
         self.remove_duplicates()
 
         self.get_best_energy()
-        return self.best_energy_loops <=8
+        return self.best_energy_loops < self.end_criteria_loop_num
 
     def save(self, file : str) -> None:
         print(file)
