@@ -76,40 +76,38 @@ class HedronUniverse:
         self.bond_filter = filter_list if filter_list else FilterList(FilterMode.NONE, ())
 
     def check_available_position(self, pos : Vector, atomic_number : AtomicNumber) -> cython.int:
-        result : cython.int = False
         atomic_radius : cython.double = AtomicRadi[atomic_number]
 
         if self.atom_population:
             for atom, _ in self.atom_population:
                 dist_squared : cython.double = (atom.pos - pos).mod_sqr
                 radius_sum : cython.double = AtomicRadi[atom.z] + atomic_radius
-                radius_sum_squared : cython.double = (radius_sum)**2 - 0.05 #Added margin for error
+                radius_sum_squared : cython.double = (radius_sum)**2 - 0.005 #Added margin for error
                 if dist_squared < radius_sum_squared:
                     # Atom would be "inside the delimited field of bonding"
                     return False
-                # If atomic bonding is permitted
-                elif self.bond_filter.is_permited(atomic_number, atom.z):
-                    # Atom is in "ideal distance for bonding"
-                    result = True
+
+            return True
+
         else:
             return True
 
-        return result
 
     def get_available_positions(self, atomic_number : AtomicNumber) -> list[tuple[Vector, float]]:
         positions : list[tuple[Vector, float]] = []
 
         for atom, hedron_scale in self.atom_population:
-            radius : cython.double = AtomicRadi[atomic_number] + atom.radius
-            for point in HedronPositions[self.n_vertices]:
-                new_position = atom.pos + point*radius*hedron_scale
-                if self.check_available_position(new_position, atomic_number):
-                    positions.append(
-                        (
-                            new_position,
-                            -hedron_scale,
-                        ),
-                    )
+            if self.bond_filter.is_permited(atomic_number, atom.z):
+                radius : cython.double = AtomicRadi[atomic_number] + atom.radius
+                for point in HedronPositions[self.n_vertices]:
+                    new_position = atom.pos + point*radius*hedron_scale
+                    if self.check_available_position(new_position, atomic_number):
+                        positions.append(
+                            (
+                                new_position,
+                                -hedron_scale,
+                            ),
+                        )
 
         return positions
 
