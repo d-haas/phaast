@@ -3,7 +3,7 @@ import tempfile
 from typing import Optional
 from calculators import Calculator
 from structure import Molecule, Structure
-import os, glob
+import os
 
 
 class XTB(Calculator):
@@ -86,8 +86,6 @@ class XTB(Calculator):
                 if os.path.exists(dir+"/xtbopt.xyz"):
                     molecule = Molecule.from_xyz(dir+"/xtbopt.xyz")
                 else:
-                    #print("Could not return molecule, no file in path")
-                    #print(f"Only {glob.glob(dir+'/*')}")
                     molecule = None
 
         return molecule

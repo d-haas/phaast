@@ -11,9 +11,6 @@ from typing import Iterable
 from calculators import Calculator
 from structure import Molecule, Structure
 import socket
-import struct
-#from structure import Atom, Base
-#import math
 
 class BaseComputer(ABC):
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)

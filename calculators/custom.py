@@ -12,8 +12,8 @@ class CustomCalculator(Calculator):
         name : str,
         command_layout : str,
         output_name : str,
-        input_format : str,
-        output_format : str,
+        #input_format : str,
+        #output_format : str,
         **kwargs : Any,
     ):
         self.command = command_layout
