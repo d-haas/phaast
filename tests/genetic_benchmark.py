@@ -64,22 +64,21 @@ def run():
     #children_mutant_ratios = (0.0, 0.5, 1.0, 2.0, 100000.0)
     struct_nums = (10000, 15000, 20000)
     geometry_threshold = 0.9
-    children_mutant_ratios = (0.0, 0.5, 1.0, 2.0, 100000.0)
+    mut_max_displacements = (1.0, 1.5, 2.0, 3.0)
 
     table_columns : list[str] = [
         "Struct num",
-        "Geometry threshold",
-        "Child-to-mut ratio",
+        "Mut max displacement",
         "Execution time (s)",
         "Std dev (time)",
-        f"Success rate ({geometry_threshold})",
+        f"Success rate",
     ]
 
     table_rows : list[tuple[float,...]] = []
 
-    for struct_num, children_mutant_ratio in itertools.product(
+    for struct_num, mut_max_displacement in itertools.product(
         struct_nums,
-        children_mutant_ratios
+        mut_max_displacements
     ):
         successes = 0
         times = []
@@ -99,11 +98,11 @@ def run():
                 computer = computer,
                 energy_threshold = 1.0,
                 geometry_threshold = geometry_threshold,
-                children_mutant_ratio = children_mutant_ratio,
+                mut_rand_max_displacement = mut_max_displacement,
                 calculator = "xtb",
             )
             end = time.monotonic_ns()
-            delta_time = end - start/1e9
+            delta_time = (end - start)/1e9
             times.append(delta_time)
 
             best = sorted(
@@ -120,8 +119,7 @@ def run():
         table_rows.append(
             (
                 struct_num,
-                geometry_threshold,
-                children_mutant_ratio,
+                mut_max_displacement,
                 statistics.mean(times),
                 statistics.stdev(times),
                 successes,
