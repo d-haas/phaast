@@ -2,7 +2,11 @@ from typing import Optional, Sequence
 from computer import Computer
 from structure import Atom, Base, Structure
 import random
-from multiprocessing.dummy import Pool
+import sys
+if sys._is_gil_enabled():
+    from multiprocessing import Pool
+else:
+    from multiprocessing.dummy import Pool
 
 from structure.constants import *
 from structure.creator.dot_universe import DotUniverse

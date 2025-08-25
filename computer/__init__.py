@@ -1,6 +1,11 @@
 from abc import ABC, abstractmethod
-import multiprocessing
-from multiprocessing.dummy import Pool
+import multiprocessing, sys
+
+if sys._is_gil_enabled():
+    from multiprocessing import Pool
+else:
+    from multiprocessing.dummy import Pool
+
 import threading
 from typing import Iterable
 from calculators import Calculator
