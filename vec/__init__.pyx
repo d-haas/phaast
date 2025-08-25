@@ -5,6 +5,10 @@ from typing import Any, Iterator, Union, overload
 
 from libc.math cimport sqrt
 
+def create_vector(x : float, y : float , z : float) -> "Vector":
+    return Vector(x, y, z)
+
+@cython.auto_pickle(True)
 cdef class Vector:
     cdef public double x, y, z
 
@@ -243,3 +247,6 @@ cdef class Vector:
 
     def __setstate__(self, state : tuple[float, float, float]) -> None:
         self.x, self.y, self.z = state
+
+    def __reduce__(self):
+        return (create_vector, (self.x, self.y, self.z))
