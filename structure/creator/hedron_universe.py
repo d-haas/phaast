@@ -7,39 +7,55 @@ from structure.constants import AtomicNumber, AtomicRadi
 import cython
 from structure.creator.filter_list import *
 
-from utils.typecheck import check_types
 from vec import Vector
 
+GOLDEN_RATIO = (1 + 5**.5)/2
+
 HedronNumber = Literal[4,6,8,12,20]
-HedronPositions : dict[HedronNumber, list[Vector]] = {
-    4  : [
-        Vector( 1, 1, 1).normalized(),
-        Vector(-1,-1, 1).normalized(),
-        Vector(-1, 1,-1).normalized(),
-        Vector( 1,-1,-1).normalized(),
-    ],
-    6  : [
-        Vector(-1, 0, 0),
-        Vector( 1, 0, 0),
-        Vector( 0,-1, 0),
-        Vector( 0, 1, 0),
-        Vector( 0, 0,-1),
-        Vector( 0, 0, 1),
-    ],
-    8  : [
-        Vector(-1,-1,-1).normalized(),
-        Vector( 1,-1,-1).normalized(),
-        Vector(-1, 1,-1).normalized(),
-        Vector( 1, 1,-1).normalized(),
-        Vector(-1,-1, 1).normalized(),
-        Vector( 1,-1, 1).normalized(),
-        Vector(-1, 1, 1).normalized(),
-        Vector( 1, 1, 1).normalized(),
-    ],
-    # For now lets just use 4, 6 and 8 vertices polyhedra
-    12 : [],
-    20 : [],
-}
+HedronPositions : dict[HedronNumber, list[Vector]] = {}
+HedronPositions[4] = [
+    Vector( 1, 1, 1).normalized(),
+    Vector(-1,-1, 1).normalized(),
+    Vector(-1, 1,-1).normalized(),
+    Vector( 1,-1,-1).normalized(),
+]
+HedronPositions[6] = [
+    Vector(-1, 0, 0),
+    Vector( 1, 0, 0),
+    Vector( 0,-1, 0),
+    Vector( 0, 1, 0),
+    Vector( 0, 0,-1),
+    Vector( 0, 0, 1),
+]
+HedronPositions[8] = [
+    Vector(-1,-1,-1).normalized(),
+    Vector( 1,-1,-1).normalized(),
+    Vector(-1, 1,-1).normalized(),
+    Vector( 1, 1,-1).normalized(),
+    Vector(-1,-1, 1).normalized(),
+    Vector( 1,-1, 1).normalized(),
+    Vector(-1, 1, 1).normalized(),
+    Vector( 1, 1, 1).normalized(),
+]
+
+HedronPositions[12] = []
+
+HedronPositions[20] = HedronPositions[8] + [
+    Vector( GOLDEN_RATIO, 1/GOLDEN_RATIO, 0).normalized(),
+    Vector( GOLDEN_RATIO,-1/GOLDEN_RATIO, 0).normalized(),
+    Vector(-GOLDEN_RATIO, 1/GOLDEN_RATIO, 0).normalized(),
+    Vector(-GOLDEN_RATIO,-1/GOLDEN_RATIO, 0).normalized(),
+
+    Vector( 0, GOLDEN_RATIO, 1/GOLDEN_RATIO).normalized(),
+    Vector( 0, GOLDEN_RATIO,-1/GOLDEN_RATIO).normalized(),
+    Vector( 0,-GOLDEN_RATIO, 1/GOLDEN_RATIO).normalized(),
+    Vector( 0,-GOLDEN_RATIO,-1/GOLDEN_RATIO).normalized(),
+
+    Vector( 1/GOLDEN_RATIO, 0, GOLDEN_RATIO).normalized(),
+    Vector( 1/GOLDEN_RATIO, 0,-GOLDEN_RATIO).normalized(),
+    Vector(-1/GOLDEN_RATIO, 0, GOLDEN_RATIO).normalized(),
+    Vector(-1/GOLDEN_RATIO, 0,-GOLDEN_RATIO).normalized(),
+]
 
 class HedronUniverse:
     """
