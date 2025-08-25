@@ -112,6 +112,7 @@ def generate_random_structures_hedron(
     base: Base,
     N: int,
     computer : Computer,
+    n_vertices: HedronNumber = 4,
     seed: int | None = None,
     filter_list: Optional[FilterList] = None,
 ) -> Sequence[Structure]:
@@ -125,7 +126,7 @@ def generate_random_structures_hedron(
     with Pool(computer.cpu_count_limit) as p:
         structures = p.starmap(
             generate_random_structure_hedron,
-            [(base, 4, s, filter_list) for s in single_seeds],
+            [(base, n_vertices, s, filter_list) for s in single_seeds],
         )
 
     return structures
