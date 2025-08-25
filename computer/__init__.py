@@ -37,6 +37,9 @@ class Computer(BaseComputer):
         assert isinstance(cpu_count_limit, int) and 0<=cpu_count_limit<=max_core_count, "core_count_limit should be an int and between 0 and the number of cores available"
         self.cpu_count_limit = max_core_count if cpu_count_limit == 0 else cpu_count_limit
 
+        #Set calculators dictionary
+        self.calculators = {}
+
         # Set memory limit based on physical memory accessible on pc
         """
         assert isinstance(memory_limit, int) and 0<=memory_limit, "Memory limit should be 0 or above"
@@ -98,6 +101,7 @@ class RemoteComputerClient(BaseComputer):
         self.socket.send(
             b"\1" + b"\0"*8,
         )
+        return 0
 
 class RemoteComputerServer(Computer):
     def __init__(
