@@ -154,11 +154,11 @@ class Atom(Element):
     def __str__(self) -> str:
         return f"{self.symbol} ({', '.join([str(round(self.pos[i], 1)) for i in range(3)])})"
 
-    def copy(self) -> Self:
+    def copy(self) -> "Atom":
         """
         Return a deep copy of itself
         """
-        return self.__class__(
+        return Atom(
             self.z,
             self.pos.copy(),
         )
@@ -427,16 +427,16 @@ class Structure:
             )
 
 
-    def copy(self) -> Self:
+    def copy(self) -> "Structure":
         """
         Return a deep copy of itself
         """
-        return self.__class__(
-            (
+        return Structure(
+            [
                 atom.copy()
                 for atom
                 in self.__atoms
-            ),
+            ],
         )
 
     def to_bytes(self) -> bytes:
