@@ -70,23 +70,24 @@ def plane_mating(struct1 : Structure, struct2 : Structure, rand_gen : random.Ran
 
 
 def imut_random(structure : Structure, max_displacement : float = 1.0, rng : None | random.Random = None) -> None:
-    for atom in structure:
-        if rng:
-            displacement = Vector(
-                *[
-                    (rng.random()-0.5)
-                    for _ in range(3)
-                ]
-            ).normalized() * max_displacement
-        else:
-            displacement = Vector(
-                *[
-                    (random.random()-0.5)
-                    for _ in range(3)
-                ]
-            ).normalized() * max_displacement
+    if rng:
+        displacement = Vector(
+            *[
+                (rng.random()-0.5)
+                for _ in range(3)
+            ]
+        ).normalized() * max_displacement
+        atom = rng.choice(structure)
+    else:
+        displacement = Vector(
+            *[
+                (random.random()-0.5)
+                for _ in range(3)
+            ]
+        ).normalized() * max_displacement
+        atom = random.choice(structure)
 
-        atom.pos+= displacement
+    atom.pos+= displacement
 
 def mut_random(structure : Structure, max_displacement : float = 0.1, rng : Optional[random.Random] = None) -> Structure:
     new_structure : Structure = structure.copy()
