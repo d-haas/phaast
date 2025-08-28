@@ -57,14 +57,16 @@ def run():
         ((1,1),),
     )
 
-    seed = None #2345678
+    seed = 2345678
 
     #struct_nums = (5000, 10000, 15000, 20000)
     #geometry_thresholds = (0.5, 0.6, 0.7, 0.8, 0.9)
     #children_mutant_ratios = (0.0, 0.5, 1.0, 2.0, 100000.0)
-    struct_nums = (10000, 15000, 20000)
+    struct_nums = (10000, 15000, 20000, 30000)
     geometry_threshold = 0.9
     mut_max_displacements = (1.0, 1.5, 2.0, 3.0)
+    mut_rand_permute_ratios = (0.0, 0.5, 1.0, 2.0, 20000.0)
+
 
     table_columns : list[str] = [
         "Struct num",
@@ -76,9 +78,10 @@ def run():
 
     table_rows : list[tuple[float,...]] = []
 
-    for struct_num, mut_max_displacement in itertools.product(
+    for struct_num, mut_max_displacement, mut_rand_permute_ratio in itertools.product(
         struct_nums,
-        mut_max_displacements
+        mut_max_displacements,
+        mut_rand_permute_ratios,
     ):
         successes = 0
         times = []
@@ -99,6 +102,8 @@ def run():
                 energy_threshold = 1.0,
                 geometry_threshold = geometry_threshold,
                 mut_rand_max_displacement = mut_max_displacement,
+                mut_rand_permute_ratio = mut_rand_permute_ratio,
+                end_criteria_loop_num = 20,
                 calculator = "xtb",
             )
             end = time.monotonic_ns()
