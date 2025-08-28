@@ -348,37 +348,6 @@ class Structure:
 
         return s
 
-    def is_bonded(self, bonding_tolerance : float = 0.1) -> bool:
-        if len(self.__atoms)<2: return False
-
-        bonded_atoms : list[Atom] = [self.__atoms[0]]
-        stray_atoms : list[Atom] = list(self.__atoms[1:])
-        adopted_atoms : list[Atom] = []
-
-        while True:
-            for bonded in bonded_atoms:
-                for stray in reversed(stray_atoms):
-                    # Check if distance between bonded and stray is equal or lower than bonding distance
-                    if (bonded.pos - stray.pos).mod_sqr <= (bonded.radius + stray.radius)**2 + bonding_tolerance:
-                        adopted_atoms.append(stray)
-                        stray_atoms.remove(stray)
-
-            # Atoms will be adopted (going to bonded group)
-            if adopted_atoms:
-                # There's still strays remaining
-                if stray_atoms:
-                    # Adopt atoms to bonded group
-                    for adopted in adopted_atoms:
-                        bonded_atoms.append(adopted)
-                        adopted_atoms.remove(adopted)
-                # There's no more stray atom (everyone is bonded)
-                else:
-                    # Atom is definitelly bonded
-                    return True
-            # There's no atom up for adoption
-            else:
-                if stray_atoms: #That IF is actually not necessary, but who knows ¯\_(ツ)_/¯
-                    return False
 
 
 
@@ -499,8 +468,40 @@ class Molecule(Structure):
         super().__init__(atoms)
         self.energy = energy
 
+    def is_bonded(self, bonding_tolerance : float = 0.1) -> bool:
+        if len(self.__atoms)<2: return False
+
+        bonded_atoms : list[Atom] = [self.__atoms[0]]
+        stray_atoms : list[Atom] = list(self.__atoms[1:])
+        adopted_atoms : list[Atom] = []
+
+        while True:
+            for bonded in bonded_atoms:
+                for stray in reversed(stray_atoms):
+                    # Check if distance between bonded and stray is equal or lower than bonding distance
+                    if (bonded.pos - stray.pos).mod_sqr <= (bonded.radius + stray.radius)**2 + bonding_tolerance:
+                        adopted_atoms.append(stray)
+                        stray_atoms.remove(stray)
+
+            # Atoms will be adopted (going to bonded group)
+            if adopted_atoms:
+                # There's still strays remaining
+                if stray_atoms:
+                    # Adopt atoms to bonded group
+                    for adopted in adopted_atoms:
+                        bonded_atoms.append(adopted)
+                        adopted_atoms.remove(adopted)
+                # There's no more stray atom (everyone is bonded)
+                else:
+                    # Atom is definitelly bonded
+                    return True
+            # There's no atom up for adoption
+            else:
+                if stray_atoms: #That IF is actually not necessary, but who knows ¯\_(ツ)_/¯
+                    return False
+
     @staticmethod
-    def from_xyz(file_path: str) -> 'Molecule':
+    def from_xyz(file_path: str) -> "Molecule":
         """
         Create a Molecule from a xyz file 
         """
@@ -509,7 +510,7 @@ class Molecule(Structure):
             return Molecule.from_xyz_str(s)
 
     @staticmethod
-    def from_xyz_str(s : str) -> 'Molecule':
+    def from_xyz_str(s : str) -> "Molecule":
         """
         Create a Molecule from a xyz formated string
         """
