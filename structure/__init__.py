@@ -151,6 +151,17 @@ class Atom(Element):
         else:
             self.pos = Vector()
 
+    def is_touching(self, other : Self, bonding_tolerance : float = 0) -> bool:
+        """
+        Checks if bonding radius of both atoms
+        are touching or overlapping
+        
+        bonding_tolerance is added as a tolerance variable
+        to increase the radius of either one of the atoms
+        """
+        return (self.pos - other.pos).mod_sqr <= (self.radius + other.radius)**2 + bonding_tolerance
+
+
     def __str__(self) -> str:
         return f"{self.symbol} ({', '.join([str(round(self.pos[i], 1)) for i in range(3)])})"
 
@@ -347,13 +358,6 @@ class Structure:
         s : float = 1 / ( 1 + q )
 
         return s
-
-
-
-
-
-
-
     
     @staticmethod
     def from_xyz(file_path : str) -> 'Structure':
