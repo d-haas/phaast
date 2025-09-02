@@ -38,7 +38,22 @@ HedronPositions[8] = [
     Vector( 1, 1, 1).normalized(),
 ]
 
-HedronPositions[12] = []
+HedronPositions[12] = [
+    Vector(0, 1, GOLDEN_RATIO).normalized(),
+    Vector(0, 1,-GOLDEN_RATIO).normalized(),
+    Vector(0,-1, GOLDEN_RATIO).normalized(),
+    Vector(0,-1,-GOLDEN_RATIO).normalized(),
+
+    Vector( 1, GOLDEN_RATIO, 0).normalized(),
+    Vector( 1,-GOLDEN_RATIO, 0).normalized(),
+    Vector(-1, GOLDEN_RATIO, 0).normalized(),
+    Vector(-1,-GOLDEN_RATIO, 0).normalized(),
+
+    Vector( GOLDEN_RATIO, 0, 1).normalized(),
+    Vector( GOLDEN_RATIO, 0,-1).normalized(),
+    Vector(-GOLDEN_RATIO, 0, 1).normalized(),
+    Vector(-GOLDEN_RATIO, 0,-1).normalized(),
+]
 
 HedronPositions[20] = HedronPositions[8] + [
     Vector( GOLDEN_RATIO, 1/GOLDEN_RATIO, 0).normalized(),
@@ -75,15 +90,11 @@ class HedronUniverse:
         self.atom_population = []
         self.bond_filter = filter_list if filter_list else FilterList(FilterMode.NONE, ())
 
-    def check_available_position(self, pos : Vector, atomic_number : AtomicNumber) -> cython.int:
-        atomic_radius : cython.double = AtomicRadi[atomic_number]
+    def check_available_position(self, new_atom : Atom) -> cython.int:
 
         if self.atom_population:
             for atom, _ in self.atom_population:
-                dist_squared : cython.double = (atom.pos - pos).mod_sqr
-                radius_sum : cython.double = AtomicRadi[atom.z] + atomic_radius
-                radius_sum_squared : cython.double = (radius_sum)**2 - 0.005 #Added margin for error
-                if dist_squared < radius_sum_squared:
+                if new_atom.is_touching(atom, bonding_tolerance=-0.005): #dist_squared < radius_sum_squared:
                     # Atom would be "inside the delimited field of bonding"
                     return False
 
@@ -101,7 +112,8 @@ class HedronUniverse:
                 radius : cython.double = AtomicRadi[atomic_number] + atom.radius
                 for point in HedronPositions[self.n_vertices]:
                     new_position = atom.pos + point*radius*hedron_scale
-                    if self.check_available_position(new_position, atomic_number):
+                    new_atom = Atom(atomic_number, new_position)
+                    if self.check_available_position(new_atom):
                         positions.append(
                             (
                                 new_position,
