@@ -12,13 +12,28 @@ from utils.typecheck import check_types
 from utils.custom_iter import distinct_pairs
 
 def plane_mating(struct1 : Structure, struct2 : Structure, rand_gen : random.Random | None = None) -> Structure:
+    """
+    Make a in-between structure from two other structures
+
+    This method creates a random plane centered in the center
+    of mass of each structure and get most of the atoms "above"
+    for structure 1 and "below" for structure 2, still preserving
+    the stoichiometry
+    """
+
+    # Ensure both structures have the same stoichiometry
     assert struct1.is_equal_to(struct2), "Structures are not compatible"
 
+    # Create a new random number generator, if it wasn't given
     rng : random.Random = rand_gen if rand_gen else random.Random()
 
+    # Create a normalized vector in a random direction to represent
+    # the normal vector to the plane
     plane_ortho_vec : Vector = Vector(
         *[rng.random()-.5 for _ in range(3)],
     ).normalized()
+    # Invert the vector to create the same plane with opposite
+    # normal for the other structure
     inv_plane_ortho_vec : Vector = -plane_ortho_vec
 
     ##########################################################
@@ -26,6 +41,8 @@ def plane_mating(struct1 : Structure, struct2 : Structure, rand_gen : random.Ran
     ##########################################################
 
     # For structure 1
+    # Order atoms by distance to the plane, giving positive
+    # values if they are above the plane and negative otherwise
     struct1_atom_dist_pairs : list[tuple[Atom, float]] = []
     cm1 = struct1.cm # Structure 1 center of mass
     for atom in struct1:
@@ -37,6 +54,7 @@ def plane_mating(struct1 : Structure, struct2 : Structure, rand_gen : random.Ran
         )
 
     # And structure 2
+    # Same for structure 1 but with above and below inverted
     struct2_atom_dist_pairs : list[tuple[Atom, float]] = []
     cm2 = struct2.cm # Structure 2 center of mass
     for atom in struct2:
