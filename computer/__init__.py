@@ -28,9 +28,6 @@ class Computer(BaseComputer):
     def __init__(
         self,
         cpu_count_limit : int = 0,
-        #memory_limit : int,
-        #calculators : Iterable[Calculator],
-        #structure_type : Base,
     ):
         # Set core count on computer automatically if it was not set
         max_core_count = multiprocessing.cpu_count()
@@ -40,40 +37,7 @@ class Computer(BaseComputer):
         #Set calculators dictionary
         self.calculators = {}
 
-        # Set memory limit based on physical memory accessible on pc
-        """
-        assert isinstance(memory_limit, int) and 0<=memory_limit, "Memory limit should be 0 or above"
-        if memory_limit == 0:
-            with open("/proc/meminfo") as mem_info_file:
-                for line in mem_info_file.readlines():
-                    if "MemTotal:" in line:
-                        memory_limit = int(line.split()[1])
-            if memory_limit == 0:
-                raise Exception("Could not find MemTotal in /proc/mem_info")
-        self.memory_limit = memory_limit
-        """
-
-        # Get maximum memory consumed per structure optimization
-        """
-        self.max_processes = {}
-        for calculator in calculators:
-            self.max_processes[calculator] = min(
-                math.floor(
-                    self.memory_limit/max(
-                        *[
-                            calculator.measure_optimization_memory_usage(
-                                Structure([Atom(element.z) for element in structure_type]),
-                            )
-                            for _ in range(10)
-                        ]
-                    )
-                ),
-                self.cpu_count_limit,
-            )
-        """
-
     def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule]:
-        #with Pool(self.max_processes[calculator]) as pool:
         with Pool(self.cpu_count_limit) as pool:
             molecules : list[Molecule | None] = pool.map(
                 self.calculators[calculator_key].optimize,
