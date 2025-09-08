@@ -43,6 +43,9 @@ class Element:
         return AtomicRadi[self.z]
 
     def __str__(self) -> str:
+        """
+        str(Atom) implementation
+        """
         return self.symbol
 
     def __repr__(self) -> str:
@@ -62,7 +65,9 @@ class Base:
             self.elements = tuple(elements)
 
     def __iter__(self) -> Iterator[Element]:
-        # Iterate over Base
+        """
+        Iterate over Base
+        """
         return iter(self.elements)
 
     def parse_formula(self, formula : str) -> tuple[Element, ...]:
@@ -321,7 +326,10 @@ class Structure:
 
         """
         Sum distances between atoms of each structure and
-        store it in a ordered list for each structure
+        store it in a ordered list for each structure for
+        each combination of two elements
+
+        Thanks Amanda
         """
         self_dists : dict[tuple[AtomicNumber, AtomicNumber], list[float]] = {}
         for atom_i, atom_j in itertools.combinations(self.__atoms, 2):
@@ -378,10 +386,9 @@ class Structure:
         )
 
         file.write(self.to_xyz_str())
-        # For some GD reason, the files needs to be read before xtb uses it
-        # (????)
+        # For some GD reason, the files needs to be read
+        # before xtb uses it (TF????)
         file.read()
-
 
         return file
 
@@ -473,6 +480,12 @@ class Molecule(Structure):
         self.energy = energy
 
     def is_bonded(self, bonding_tolerance : float = 0.1) -> bool:
+        """
+        Test of molecule is in a bonded state
+
+        Which means testing if this object is
+        only a single molecule
+        """
         if len(self)<2: return False
 
         infected_atoms : list[Atom] = [self[0]]
