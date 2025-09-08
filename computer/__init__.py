@@ -7,7 +7,7 @@ else:
     from multiprocessing.dummy import Pool
 
 import threading
-from typing import Iterable
+from typing import Iterable, overload
 from calculators import Calculator
 from structure import Molecule, Structure
 import socket
@@ -37,14 +37,28 @@ class Computer(BaseComputer):
         #Set calculators dictionary
         self.calculators = {}
 
-    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule]:
-        with Pool(self.cpu_count_limit) as pool:
-            molecules : list[Molecule | None] = pool.map(
-                self.calculators[calculator_key].optimize,
-                structures,
-            )
+    @overload
+    def optimize(self, calculator_key : str, structures : Structure) -> Molecule | None:...
+    @overload
+    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule]:...
+    def optimize(self, calculator_key : str, structures : Structure | Iterable[Structure]) -> Molecule | None | list[Molecule]:
+        """
+        Execute Structures optimization for a list of Structures
+        turning them into a list of Molecules
 
-        return [mol for mol in molecules if mol]
+        If a single Structure is given as as argument,
+        only a single molecule will be returned
+        """
+        if isinstance(structures, Structure):
+            return self.calculators[calculator_key].optimize(structures)
+
+        else:
+            with Pool(self.cpu_count_limit) as pool:
+                molecules : list[Molecule | None] = pool.map(
+                    self.calculators[calculator_key].optimize,
+                    structures,
+                )
+            return [mol for mol in molecules if mol]
 
     def add_calculator(self, key : str, calculator : Calculator) -> None:
         self.calculators[key] = calculator
