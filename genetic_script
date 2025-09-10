@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+import argparse
+import time
+
+from calculators.xtb import XTB
+from computer import Computer
+from structure import Base
+import structure.creator
+from surface_explorator.genetic import Genetic
+
+arg_parser = argparse.ArgumentParser(
+    prog="P.H.A.A.S.T",
+    description="A heuristic-algorithm-driven software made for global minima search",
+    epilog="Thanks for choosing Phaast",
+)
+
+arg_parser.add_argument(
+    "stoichiometry",
+    help = "The structure composition (example = C6H6)",
+)
+
+arg_parser.add_argument(
+    "output_prefix",
+    help = "Prefix of the output files (a prefix of \"OUTPUT\" will result in files named OUTPUT0, OUTPUT1, ...)",
+)
+
+arg_parser.add_argument(
+    "--return_number",
+    type = int,
+    default = 10,
+    help = "Number of least energy molecules to return at the end of the algorithm",
+)
+
+arg_parser.add_argument(
+    "-pop",
+    "--population_size",
+    type = int,
+    default = 10000,
+    help = "Number of molecules in the population (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-c",
+    "--charge",
+    type = int,
+    default = 0,
+    help = "Structure's charge (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-t", "--threads",
+    type = int,
+    default = 0,
+    help = "Number of threads to be used by the algorithm (default = number of threads on cpu)",
+)
+
+arg_parser.add_argument(
+    "-xtbt", "--xtb-threads",
+    type = int,
+    default = 1,
+    help = "Number of threads to be used by each -t xtb instance (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-et",
+    "--energy_threshold",
+    type = float,
+    default = float("inf"),
+    help = "Maximum energy difference [in hartree] so molecules are considered alike (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-gt",
+    "--geometry_threshold",
+    type = float,
+    default = 0.9,
+    help = "Maximum geometry difference so molecules are considered the same so one of them is discarded [must be a value between 0 and 1] (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-gcmp",
+    "--generation_children_mutant_proportion",
+    nargs = 3,
+    type = float,
+    default = "1 1 1",
+    help = "Proportion between new molecules, children and mutants created every new generation (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-mdpp",
+    "--mutation_displacement_permutation_proportion",
+    nargs = 2,
+    type = float,
+    default = "1 1",
+    help = "Proportion in mutation between atomic displacement and atomic permutation (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-mdm",
+    "--mutation_displacement_maximum",
+    type = float,
+    default = 1,
+    help = "Maximum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-mdn",
+    "--mutation_displacement_number",
+    type = int,
+    default = 1,
+    help = "Number of atoms to move in mutations of atomic displacement (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-mpn",
+    "--mutation_permutation_number",
+    type = int,
+    default = 0,
+    help = "Number of permutations in mutations of that type (default = half the number of atoms",
+)
+
+arg_parser.add_argument(
+    "-loops"
+    "--end_loop_number",
+    default = 11,
+    type = int,
+    help = "Number of loops the algorithm will run with the least energy molecule until a new one is found, terminating it (default = %(default)s)",
+)
+
+"""
+arg_parser.add_argument(
+    '-v',
+    '--verbose',
+    action='store_true',
+)
+"""
+
+args = arg_parser.parse_args()
+print(f"Args: {args}")
+
+base = Base(args.stoichiometry)
+
+calc = XTB(
+    charge = args.c,
+    threads = args.xtbt,
+)
+
+computer = Computer(
+    cpu_count_limit = args.threads,
+)
+
+computer.add_calculator("xtb", calc)
+
+seed = 2345678
+
+start = time.monotonic_ns()
+
+structs = structure.creator.generate_random_structures_hedron(
+    base,
+    args.population_size,
+    computer,
+    20,
+    seed,
+)
+
+genetic = Genetic(
+    structures = structs,
+    computer = computer,
+    calculator = "xtb",
+
+    energy_threshold = args.energy_threshold,
+    geometry_threshold = args.geometry_threshold,
+
+    generation_children_mutant_proportion = tuple(args.gcmp),
+    mut_displacement_permutation_proportion = tuple(args.mdpp),
+
+    mut_displacement_number = args.mdn,
+    mut_displacement_max = args.mdm,
+    permute_num_permutations = args.mpn,
+
+    end_loop_number = args.end_loop_number,
+)
+
+end = time.monotonic_ns()
+delta_time = (end - start)/1e9
+
+best = sorted(
+    genetic.population,
+    key = lambda mol: mol.energy,
+)
+
+best_list = best[0 : min(len(best), args.return_number)]
+
+for i, mol in enumerate(best_list):
+    mol.to_xyz(f"{args.output_prefix}{i}")
