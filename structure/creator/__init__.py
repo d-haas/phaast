@@ -3,6 +3,7 @@ from computer import Computer
 from structure import Atom, Base, Structure
 import random
 import sys
+
 if sys._is_gil_enabled():
     from multiprocessing import Pool
 else:
@@ -59,9 +60,12 @@ def generate_random_structure_mesh(
     # Get random generator
     rng = random.Random(seed)
 
+    # Create list of atoms based on stoichiometry
     atoms = [Atom(element.z) for element in base.elements]
+    # Randomly shuffle it
     rng.shuffle(atoms)
 
+    # Create dot universe
     universe = DotUniverse(
         cell_size,
         max((atom.radius for atom in atoms)),
@@ -69,14 +73,21 @@ def generate_random_structure_mesh(
     )
 
     while atoms:
+        # Get first atom and remove it from the list
         atom = atoms.pop(0)
+
+        # Get random position to put the atom
         random_available_position = universe.get_random_available_position(atom.z, rng)
+        
+        # Put it in the universe if there are positions available
         if random_available_position:
             universe.include_atom(random_available_position, atom)
+        # Else, put it in the end of the list
         else:
             atoms.append(atom)
             
 
+    # Return structure of atoms in the universe
     return Structure(atoms)
 
 def generate_random_structure_hedron(

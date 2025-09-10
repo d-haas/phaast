@@ -1,9 +1,7 @@
 from __future__ import annotations
 from typing import Literal, TypeAlias
 
-"""
-List of all atomicnumbers supported by the algorithm
-"""
+# List of all atomicnumbers supported by the algorithm
 AtomicNumber : TypeAlias = Literal[
       1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,
      13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,
@@ -17,6 +15,7 @@ AtomicNumber : TypeAlias = Literal[
     109, 110, 111, 112, 113, 114, 115, 116, 117, 118,
 ]
 
+# Convertion from atomic number to atomic symbol dictionary
 AtomicSymbols : dict[AtomicNumber, str] = {
     1   : "H",
     2   : "He",
@@ -138,10 +137,12 @@ AtomicSymbols : dict[AtomicNumber, str] = {
     118 : "Uuo",
 }
 
+# Same as the dictionary above, but with atomic symbol as dictionary key and number as value
 AtomicNumbers : dict[str, AtomicNumber] = {
     v: k for k, v in AtomicSymbols.items()
 }
 
+# Atomic number to covalent radi conversion dictionary
 AtomicRadi : dict[AtomicNumber, float] = {
 	1   : 0.32,
 	2   : 0.46,
@@ -263,6 +264,7 @@ AtomicRadi : dict[AtomicNumber, float] = {
 	118 : 1.57,
 }
 
+# Atomic number to atomic mass conversion dictionary
 AtomicMass : dict[AtomicNumber ,float] = {
 	1   : 1.008,
 	2   : 4.002602,
