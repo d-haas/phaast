@@ -155,18 +155,25 @@ def mut_permute(structure : Structure, num_permutations : int | None = None, rng
 class Genetic(SurfaceExplorator):
     population_size : int
     population : list[Molecule]
+    end_loop_number : int
+
     calculator : str
     computer : Computer
+
     energy_threshold : float
     geometry_threshold : float
-    children_mutant_ratio : float
+
+    generation_children_mutant_proportion : tuple[float, float, float]
+    children_mutant_proportion : tuple[float, float]
+    mut_displacement_permutation_proportion : tuple[float, float]
+
+    mut_displacement_number : int
+    mut_displacement_max : float
+    mut_num_permutations : int
+
+    cycle_counter : int
     best_energy : float
     best_energy_loops : int
-    cycle_counter : int
-    end_criteria_loop_num : int
-    mut_rand_permute_ratio : float
-    mut_rand_max_displacement : float
-    permute_num_permutations : int
 
     @check_types
     def __init__(
@@ -176,11 +183,15 @@ class Genetic(SurfaceExplorator):
         energy_threshold : float,
         geometry_threshold : float,
         calculator : str,
-        children_mutant_ratio : float = 1.0,
-        end_criteria_loop_num : int = 9,
-        mut_rand_permute_ratio : float = 1.0,
-        mut_rand_max_displacement : float = 1.0,
-        permute_num_permutations : int = 0
+
+        generation_children_mutant_proportion : tuple[float, float, float] = (1.0, 1.0, 1.0),
+        mut_displacement_permutation_proportion : tuple[float, float] = (1.0, 1.0),
+
+        mut_displacement_number : int = 1,
+        mut_displacement_max : float = 1.0,
+        permute_num_permutations : int = 0,
+
+        end_loop_number : int = 9,
     ):
         self.computer = computer
         self.calculator = calculator
@@ -192,16 +203,22 @@ class Genetic(SurfaceExplorator):
         self.population_size = len(self.population)
         self.energy_threshold = energy_threshold
         self.geometry_threshold = geometry_threshold
-        self.children_mutant_ratio = children_mutant_ratio
-        self.best_energy = min([mol.energy for mol in self.population])
-        self.best_energy_loops = 0
-        self.end_criteria_loop_num = end_criteria_loop_num
-        self.cycle_counter = 0
+
+        self.generation_children_mutant_proportion = generation_children_mutant_proportion
 
         ### Mutation parameters ###
-        self.mut_rand_permute_ratio = mut_rand_permute_ratio
-        self.mut_rand_max_displacement = mut_rand_max_displacement
+        self.mut_displacement_permutation_proportion = mut_displacement_permutation_proportion
+
+        self.mut_displacement_number = mut_displacement_number
+        self.mut_displacement_max = mut_displacement_max
         self.permute_num_permutations = permute_num_permutations
+
+        # Generation parameters
+        self.end_loop_number = end_loop_number
+        self.cycle_counter = 0
+        self.best_energy = min([mol.energy for mol in self.population])
+        self.best_energy_loops = 0
+
 
     def remove_duplicates(self) -> None:
         for i in reversed(range(len(self.population))):
@@ -214,7 +231,7 @@ class Genetic(SurfaceExplorator):
 
     def reproduce(self) -> list[Molecule]:
         remaining_population : int = self.population_size - len(self.population)
-        remaining_population*= ceil(self.children_mutant_ratio/(self.children_mutant_ratio+1))
+        remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[1]/sum(self.generation_children_mutant_proportion))
 
         children : list[Structure] = []
 
@@ -232,18 +249,18 @@ class Genetic(SurfaceExplorator):
 
     def mutate(self) -> list[Molecule]:
         remaining_population : int = self.population_size - len(self.population)
-        remaining_population*= floor(1/(self.children_mutant_ratio+1))
+        remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[2]/sum(self.generation_children_mutant_proportion))
 
-        remaining_random : int = ceil(self.mut_rand_permute_ratio/(self.mut_rand_permute_ratio+1))
-        remaining_permute : int = floor(1/(self.mut_rand_permute_ratio+1))
+        remaining_displacement : int = floor(remaining_population * self.mut_displacement_permutation_proportion[0]/sum(self.mut_displacement_permutation_proportion))
+        remaining_permute : int = floor(remaining_population * self.mut_displacement_permutation_proportion[1]/sum(self.mut_displacement_permutation_proportion))
 
         mutants : list[Structure] = []
 
-        for mutant in random.sample(self.population, remaining_random):
+        for mutant in random.sample(self.population, remaining_displacement):
             mutants.append(
                 mut_random(
                     mutant,
-                    self.mut_rand_max_displacement,
+                    self.mut_displacement_max,
                 )
             )
 
