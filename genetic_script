@@ -6,6 +6,7 @@ from calculators.xtb import XTB
 from computer import Computer
 from structure import Base
 import structure.creator
+from structure.creator.filter_list import FilterList, FilterMode
 from surface_explorator.genetic import Genetic
 
 arg_parser = argparse.ArgumentParser(
@@ -28,7 +29,7 @@ arg_parser.add_argument(
     "--return_number",
     type = int,
     default = 10,
-    help = "Number of least energy molecules to return at the end of the algorithm",
+    help = "Number of least energy molecules to return at the end of the algorithm (default = %(default)s)",
 )
 
 arg_parser.add_argument(
@@ -82,8 +83,8 @@ arg_parser.add_argument(
     "--generation_children_mutant_proportion",
     nargs = 3,
     type = float,
-    default = "1 1 1",
-    help = "Proportion between new molecules, children and mutants created every new generation (default = %(default)s)",
+    default = [1, 1, 1],
+    help = "Proportion between new molecules, children and mutants created every new generation (default = 1 1 1)",
 )
 
 arg_parser.add_argument(
@@ -91,8 +92,8 @@ arg_parser.add_argument(
     "--mutation_displacement_permutation_proportion",
     nargs = 2,
     type = float,
-    default = "1 1",
-    help = "Proportion in mutation between atomic displacement and atomic permutation (default = %(default)s)",
+    default = [1, 1],
+    help = "Proportion in mutation between atomic displacement and atomic permutation (default = 1 1)",
 )
 
 arg_parser.add_argument(
@@ -120,7 +121,7 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
-    "-loops"
+    "-loops",
     "--end_loop_number",
     default = 11,
     type = int,
@@ -141,8 +142,8 @@ print(f"Args: {args}")
 base = Base(args.stoichiometry)
 
 calc = XTB(
-    charge = args.c,
-    threads = args.xtbt,
+    charge = args.charge,
+    threads = args.xtb_threads,
 )
 
 computer = Computer(
@@ -155,28 +156,25 @@ seed = 2345678
 
 start = time.monotonic_ns()
 
-structs = structure.creator.generate_random_structures_hedron(
-    base,
-    args.population_size,
-    computer,
-    20,
-    seed,
-)
+filter_list = FilterList(FilterMode.EXCLUDE, ((1,1),))
+
+structure_generator = lambda base, n, comp : structure.creator.generate_random_structures_hedron(base, n, comp, 20, filter_list = filter_list)
 
 genetic = Genetic(
-    structures = structs,
+    base = base,
+    population_size = args.population_size,
     computer = computer,
     calculator = "xtb",
 
     energy_threshold = args.energy_threshold,
     geometry_threshold = args.geometry_threshold,
 
-    generation_children_mutant_proportion = tuple(args.gcmp),
-    mut_displacement_permutation_proportion = tuple(args.mdpp),
+    generation_children_mutant_proportion = tuple(args.generation_children_mutant_proportion),
+    mut_displacement_permutation_proportion = tuple(args.mutation_displacement_permutation_proportion),
 
-    mut_displacement_number = args.mdn,
-    mut_displacement_max = args.mdm,
-    permute_num_permutations = args.mpn,
+    mut_displacement_number = args.mutation_displacement_number,
+    mut_displacement_max = args.mutation_displacement_maximum,
+    mut_permutation_num = args.mutation_permutation_number,
 
     end_loop_number = args.end_loop_number,
 )
@@ -190,6 +188,8 @@ best = sorted(
 )
 
 best_list = best[0 : min(len(best), args.return_number)]
+
+print(f"The process is finished. Elapsed time: {round(delta_time)} s")
 
 for i, mol in enumerate(best_list):
     mol.to_xyz(f"{args.output_prefix}{i}")
