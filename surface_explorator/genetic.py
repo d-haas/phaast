@@ -338,7 +338,6 @@ class Genetic(SurfaceExplorator):
 
         self.remove_duplicates()
         self.remove_unfeasible()
-        print(f"After removing duplicates and unfeasible, population now has {len(self.population)} molecules.")
 
         children : list[Molecule] = self.reproduce()
         mutants : list[Molecule] = self.mutate()
