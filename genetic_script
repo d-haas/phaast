@@ -194,6 +194,12 @@ genetic = Genetic(
     end_loop_number = args.end_loop_number,
 )
 
+while genetic.loop():
+    print(f"========================================")
+    print(f"Generation {genetic.cycle_counter} done")
+    print(f"Best energy is {genetic.best_energy}")
+    print(f"========================================")
+
 end = time.monotonic_ns()
 delta_time = (end - start)/1e9
 
