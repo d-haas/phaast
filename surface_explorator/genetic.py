@@ -1,10 +1,11 @@
 import random
-from typing import Iterable, Optional, cast
-from math import ceil, floor
+from typing import Callable, Optional, Sequence, cast
+from math import floor
 from bisect import insort
 
 from computer import Computer
-from structure import Atom, Molecule, Structure
+from structure import Atom, Base, Molecule, Structure
+from structure.creator import generate_random_structures_hedron
 from vec import Vector
 
 from surface_explorator import SurfaceExplorator
@@ -159,6 +160,8 @@ class Genetic(SurfaceExplorator):
 
     calculator : str
     computer : Computer
+    structure_generator : Callable[[Base, int, Computer], Sequence[Structure]]
+    base : Base
 
     energy_threshold : float
     geometry_threshold : float
@@ -169,38 +172,52 @@ class Genetic(SurfaceExplorator):
 
     mut_displacement_number : int
     mut_displacement_max : float
-    mut_num_permutations : int
+    mut_permutation_num : int
 
     cycle_counter : int
     best_energy : float
     best_energy_loops : int
 
-    @check_types
     def __init__(
         self,
-        structures : Iterable[Structure | Molecule],
+        base : Base,
+        population_size : int,
         computer : Computer,
         energy_threshold : float,
         geometry_threshold : float,
         calculator : str,
+
+        structure_generator : Callable[[Base, int, Computer], Sequence[Structure]] = lambda base, n, comp : generate_random_structures_hedron(base, n, comp, 20),
 
         generation_children_mutant_proportion : tuple[float, float, float] = (1.0, 1.0, 1.0),
         mut_displacement_permutation_proportion : tuple[float, float] = (1.0, 1.0),
 
         mut_displacement_number : int = 1,
         mut_displacement_max : float = 1.0,
-        permute_num_permutations : int = 0,
+        mut_permutation_num : int = 0,
 
         end_loop_number : int = 9,
     ):
         self.computer = computer
         self.calculator = calculator
-        self.population : list[Molecule] = [
-            mol for mol
-            in self.computer.optimize(self.calculator, list(structures))
-            if mol is not None
-        ]
+        if population_size < 100:
+            raise ValueError(
+                "Population size is too small",
+            )
+        self.base = base
+        self.structure_generator = structure_generator
+        self.population_size = population_size
+        self.population : list[Molecule] = self.computer.optimize(
+            self.calculator,
+            self.structure_generator(
+                self.base,
+                self.population_size,
+                self.computer,
+            ),
+        )
+
         self.population_size = len(self.population)
+
         self.energy_threshold = energy_threshold
         self.geometry_threshold = geometry_threshold
 
@@ -211,7 +228,7 @@ class Genetic(SurfaceExplorator):
 
         self.mut_displacement_number = mut_displacement_number
         self.mut_displacement_max = mut_displacement_max
-        self.permute_num_permutations = permute_num_permutations
+        self.mut_permutation_num = mut_permutation_num
 
         # Generation parameters
         self.end_loop_number = end_loop_number
@@ -228,6 +245,21 @@ class Genetic(SurfaceExplorator):
                     # Then compare geometries
                     if self.population[i].compare_geometry(self.population[j]) > self.geometry_threshold:
                         del self.population[j]
+
+    def generate(self) -> list[Molecule]:
+        remaining_population : int = self.population_size - len(self.population)
+        remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[0]/sum(self.generation_children_mutant_proportion))
+
+        generated : list[Molecule] = self.computer.optimize(
+            self.calculator,
+            self.structure_generator(
+                self.base,
+                remaining_population,
+                self.computer,
+            ),
+        )
+
+        return generated
 
     def reproduce(self) -> list[Molecule]:
         remaining_population : int = self.population_size - len(self.population)
@@ -268,7 +300,7 @@ class Genetic(SurfaceExplorator):
             mutants.append(
                 mut_permute(
                     mutant,
-                    len(mutant)//2 if self.permute_num_permutations>=0 else self.permute_num_permutations,
+                    len(mutant)//2 if self.mut_permutation_num>=0 else self.mut_permutation_num,
                 )
             )
 
@@ -310,13 +342,16 @@ class Genetic(SurfaceExplorator):
 
         children : list[Molecule] = self.reproduce()
         mutants : list[Molecule] = self.mutate()
+        generated : list[Molecule] = self.generate()
+
         self.population+= children
         self.population+= mutants
+        self.population+= generated
 
         self.remove_duplicates()
 
         self.get_best_energy()
-        return self.best_energy_loops < self.end_criteria_loop_num
+        return self.best_energy_loops < self.end_loop_number
 
     def save(self, file : str) -> None:
         print(file)
