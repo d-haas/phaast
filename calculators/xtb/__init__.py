@@ -13,6 +13,7 @@ class XTB(Calculator):
     cycles : Optional[int]
     iterations : Optional[int]
     threads : int
+    xtb_path : str
     def __init__(
         self,
         charge : Optional[int] = 0,
@@ -21,6 +22,7 @@ class XTB(Calculator):
         cycles : Optional[int] = None,
         iterations : Optional[int] = None,
         threads : int = 1,
+        xtb_path : str = "xtb",
     ):
         self.charge = charge
         self.etemp = etemp
@@ -28,6 +30,7 @@ class XTB(Calculator):
         self.cycles = cycles
         self.iterations = iterations
         self.threads = threads
+        self.xtb_path = xtb_path
 
     def __hash__(self) -> int:
         return hash("XTB")
@@ -55,15 +58,7 @@ class XTB(Calculator):
             )
         with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
-                which_xtb = subprocess.run(
-                    [
-                        "which",
-                        "./calculators/xtb/xtb-dist/bin/xtb",
-                    ],
-                    capture_output = True,
-                )
-                xtb_path = which_xtb.stdout.strip(b"\n")
-                xtb_path = os.path.abspath("./calculators/xtb/xtb-dist/bin/xtb")
+                xtb_path = os.path.abspath(self.xtb_path)
 
                 if not xtb_path:
                     raise ValueError(
@@ -93,15 +88,7 @@ class XTB(Calculator):
     def measure_optimization_memory_usage(self, structure : Structure) -> int:
         with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
-                which_xtb = subprocess.run(
-                    [
-                        "which",
-                        "./calculators/xtb/xtb-dist/bin/xtb",
-                    ],
-                    capture_output = True,
-                )
-                xtb_path = which_xtb.stdout.strip(b"\n")
-                xtb_path = os.path.abspath("./calculators/xtb/xtb-dist/bin/xtb")
+                xtb_path = os.path.abspath(self.xtb_path)
 
                 if not xtb_path:
                     raise ValueError(
@@ -131,15 +118,7 @@ class XTB(Calculator):
     def measure_optimization_time(self, structure : Structure) -> float:
         with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
-                which_xtb = subprocess.run(
-                    [
-                        "which",
-                        "./calculators/xtb/xtb-dist/bin/xtb",
-                    ],
-                    capture_output = True,
-                )
-                xtb_path = which_xtb.stdout.strip(b"\n")
-                xtb_path = os.path.abspath("./calculators/xtb/xtb-dist/bin/xtb")
+                xtb_path = os.path.abspath(self.xtb_path)
 
                 if not xtb_path:
                     raise ValueError(

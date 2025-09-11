@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import time
+import os
 
-from calculators.xtb import XTB
-from computer import Computer
-from structure import Base
-import structure.creator
-from structure.creator.filter_list import FilterList, FilterMode
-from surface_explorator.genetic import Genetic
 
 arg_parser = argparse.ArgumentParser(
     prog="P.H.A.A.S.T",
@@ -60,6 +55,13 @@ arg_parser.add_argument(
     type = int,
     default = 1,
     help = "Number of threads to be used by each -t xtb instance (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "--xtb_path",
+    type = str,
+    default = "xtb",
+    help = "Path to be used for the xtb binary (default = %(default)s)",
 )
 
 arg_parser.add_argument(
@@ -139,11 +141,24 @@ arg_parser.add_argument(
 args = arg_parser.parse_args()
 print(f"Args: {args}")
 
+actual_cwd = os.getcwd()
+os.chdir(
+    "/".join(__file__.split("/")[:-1])
+)
+
+from calculators.xtb import XTB
+from computer import Computer
+from structure import Base
+import structure.creator
+from structure.creator.filter_list import FilterList, FilterMode
+from surface_explorator.genetic import Genetic
+
 base = Base(args.stoichiometry)
 
 calc = XTB(
     charge = args.charge,
     threads = args.xtb_threads,
+    xtb_path = args.xtb_path,
 )
 
 computer = Computer(
@@ -190,6 +205,8 @@ best = sorted(
 best_list = best[0 : min(len(best), args.return_number)]
 
 print(f"The process is finished. Elapsed time: {round(delta_time)} s")
+
+os.chdir(actual_cwd)
 
 for i, mol in enumerate(best_list):
     mol.to_xyz(f"{args.output_prefix}{i}")
