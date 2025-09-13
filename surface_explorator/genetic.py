@@ -229,12 +229,15 @@ class Genetic(SurfaceExplorator):
 
         self.generation_children_mutant_proportion = generation_children_mutant_proportion
 
+        ###########################
         ### Mutation parameters ###
+        ###########################
         self.mut_displacement_permutation_proportion = mut_displacement_permutation_proportion
 
-        self.mut_displacement_number = mut_displacement_number
-        self.mut_displacement_max = mut_displacement_max
-        self.mut_permutation_num = mut_permutation_num
+        # Added explicit type conversion to manage vector multiplication errors
+        self.mut_displacement_number = int(mut_displacement_number)
+        self.mut_displacement_max = float(mut_displacement_max)
+        self.mut_permutation_num = int(mut_permutation_num)
 
         # Generation parameters
         self.end_loop_number = end_loop_number
