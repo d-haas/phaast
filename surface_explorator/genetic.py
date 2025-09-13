@@ -1,7 +1,13 @@
 import random
+import sys
 from typing import Callable, Optional, Sequence, cast
 from math import floor
 from bisect import insort
+
+if sys._is_gil_enabled():
+    from multiprocessing import Pool
+else:
+    from multiprocessing.dummy import Pool
 
 from computer import Computer
 from structure import Atom, Base, Molecule, Structure
@@ -237,14 +243,29 @@ class Genetic(SurfaceExplorator):
         self.best_energy_loops = 0
 
 
+    def is_pop_index_duplicate(self, i : int) -> bool:
+        for j in range(i+1, len(self.population)):
+            # Compare energies
+            if abs(self.population[i].energy-self.population[j].energy) <= self.energy_threshold:
+                # Then compare geometries
+                if self.population[i].compare_geometry(self.population[j]) > self.geometry_threshold:
+                    return True
+
+        return False
+
     def remove_duplicates(self) -> None:
-        for i in reversed(range(len(self.population))):
-            for j in reversed(range(i+1, len(self.population))):
-                # Compare energies
-                if abs(self.population[i].energy-self.population[j].energy) <= self.energy_threshold:
-                    # Then compare geometries
-                    if self.population[i].compare_geometry(self.population[j]) > self.geometry_threshold:
-                        del self.population[j]
+        with Pool(self.computer.cpu_count_limit) as pool:
+            remove_mask : list[bool]  = pool.map(
+                self.is_pop_index_duplicate,
+                range(len(self.population)),
+            )
+
+        self.population = [
+            mol for mol, is_duplicate
+            in zip(self.population, remove_mask)
+            if not is_duplicate
+        ]
+
 
     def generate(self) -> list[Molecule]:
         remaining_population : int = self.population_size - len(self.population)
