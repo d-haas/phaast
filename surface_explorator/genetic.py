@@ -15,7 +15,6 @@ from structure.creator import generate_random_structures_hedron
 from vec import Vector
 
 from surface_explorator import SurfaceExplorator
-from utils.typecheck import check_types
 from utils.custom_iter import distinct_pairs
 
 def plane_mating(struct1 : Structure, struct2 : Structure, rand_gen : random.Random | None = None) -> Structure:

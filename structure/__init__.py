@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import Iterable, Iterator, Optional, Self
 from structure.constants import *
 import itertools, bisect
-from utils.typecheck import check_types
 from vec import Vector
 import subprocess, tempfile
 import struct
@@ -231,7 +230,7 @@ class Structure:
     structure geometry
     """
     __atoms : tuple[Atom, ...]
-    @check_types
+
     def __init__(self, atoms : Iterable[Atom]):
         self.__atoms = tuple(atoms)
 
