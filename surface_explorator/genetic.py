@@ -158,6 +158,32 @@ def mut_permute(structure : Structure, num_permutations : int | None = None, rng
 
     return new_structure
 
+def is_pop_index_duplicate(
+    population : list[Molecule],
+    start_i : int,
+    cpu_num : int,
+    energy_threshold : float,
+    geometry_threshold : float,
+) -> list[bool]:
+
+    results : list[bool] = []
+
+    for i in range(start_i, len(population), cpu_num):
+        is_duplicate : bool = False
+        for j in range(i+1, len(population)):
+            # Compare energies
+            if abs(population[i].energy-population[j].energy) <= energy_threshold:
+                # Then compare geometries
+                if population[i].compare_geometry(population[j]) > geometry_threshold:
+                    is_duplicate = True
+                    break
+        results.append(is_duplicate)
+
+    if len(results) % cpu_num:
+        results+= [False]*(cpu_num - (len(results) % cpu_num))
+
+    return results
+
 class Genetic(SurfaceExplorator):
     population_size : int
     population : list[Molecule]
@@ -245,6 +271,7 @@ class Genetic(SurfaceExplorator):
         self.best_energy_loops = 0
 
 
+    """
     def is_pop_index_duplicate(self, i : int) -> bool:
         for j in range(i+1, len(self.population)):
             # Compare energies
@@ -254,12 +281,27 @@ class Genetic(SurfaceExplorator):
                     return True
 
         return False
+    """
 
     def remove_duplicates(self) -> None:
         with Pool(self.computer.cpu_count_limit) as pool:
-            remove_mask : list[bool]  = pool.map(
-                self.is_pop_index_duplicate,
-                range(len(self.population)),
+            remove_masks : list[list[bool]]  = pool.starmap(
+                is_pop_index_duplicate,
+                [
+                    (
+                        self.population,
+                        i,
+                        self.computer.cpu_count_limit,
+                        self.energy_threshold,
+                        self.geometry_threshold,
+                    )
+                    for i in range(self.computer.cpu_count_limit)
+                ],
+            )
+
+            remove_mask : list[bool] = sum(
+                (list(element) for element in zip(*remove_masks)),
+                start = [],
             )
 
         self.population = [
@@ -377,4 +419,5 @@ class Genetic(SurfaceExplorator):
 
     def save(self, file : str) -> None:
         print(file)
+        # Do later
         pass
