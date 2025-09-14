@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Iterable, Iterator, Optional, Self
 from structure.constants import *
 import itertools, bisect
@@ -142,6 +143,8 @@ class Base:
         return tuple(elements)
 
 
+def create_atom(atomic_number : AtomicNumber, pos : Vector) -> Atom:
+    return Atom(atomic_number, pos)
 
 class Atom(Element):
     """
@@ -215,6 +218,12 @@ class Atom(Element):
             self.pos.y,
             self.pos.z,
         )
+    
+    def __reduce__(self):
+        return (create_atom, (self.z, self.pos))
+
+def create_structure(atoms : Iterable[Atom]) -> Structure:
+    return Structure(atoms)
 
 class Structure:
     """
@@ -468,6 +477,12 @@ class Structure:
 
         return r
 
+    def __reduce__(self):
+        return (create_structure, (self.__atoms,))
+
+def create_molecule(atoms : Iterable[Atom], energy : float) -> Molecule:
+    return Molecule(atoms, energy)
+
 class Molecule(Structure):
     """
     A class representing a molecule, inheriting from Structure.
@@ -552,3 +567,6 @@ class Molecule(Structure):
             r+= atom.to_bytes()
 
         return r
+
+    def __reduce__(self):
+        return (create_molecule, (tuple(self), self.energy))
