@@ -5,10 +5,8 @@ from tabulate import tabulate
 import statistics
 from computer import Computer
 from structure import Base, Molecule, Structure
-import structure.creator
 from calculators.xtb import XTB
 
-from structure.creator.filter_list import FilterList, FilterMode
 from surface_explorator.genetic import Genetic
 
 def run():
@@ -52,12 +50,12 @@ def run():
         ]
     )[0]
 
+    """
     filter_list = FilterList(
         FilterMode.EXCLUDE,
         ((1,1),),
     )
-
-    seed = 2345678
+    """
 
     #struct_nums = (5000, 10000, 15000, 20000)
     #geometry_thresholds = (0.5, 0.6, 0.7, 0.8, 0.9)
@@ -65,7 +63,7 @@ def run():
     struct_nums = (10000, 15000, 20000, 30000)
     geometry_threshold = 0.9
     mut_max_displacements = (1.0, 1.5, 2.0, 3.0)
-    mut_rand_permute_ratios = (0.0, 0.5, 1.0, 2.0, 20000.0)
+    mut_rand_permute_ratios = ((1, 0), (2, 1), (1,1), (1, 2), (0, 1))
 
 
     table_columns : list[str] = [
@@ -87,23 +85,16 @@ def run():
         times = []
         for _ in range(10):
             start = time.monotonic_ns()
-            structs = structure.creator.generate_random_structures_hedron(
-                base,
-                struct_num,
-                computer,
-                20,
-                seed,
-                filter_list,
-            )
 
             genetic = Genetic(
-                structures = structs,
+                base = base,
+                population_size = struct_num,
                 computer = computer,
                 energy_threshold = 1.0,
                 geometry_threshold = geometry_threshold,
-                mut_rand_max_displacement = mut_max_displacement,
-                mut_rand_permute_ratio = mut_rand_permute_ratio,
-                end_criteria_loop_num = 20,
+                mut_displacement_max = mut_max_displacement,
+                mut_displacement_permutation_proportion = mut_rand_permute_ratio,
+                end_loop_number = 20,
                 calculator = "xtb",
             )
             end = time.monotonic_ns()
