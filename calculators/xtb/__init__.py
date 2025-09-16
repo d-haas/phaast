@@ -1,12 +1,18 @@
 import subprocess
 import tempfile
-from typing import Optional
+from typing import Literal, Optional, TypeAlias
 from calculators import Calculator
 from structure import Molecule, Structure
 import os
 
+OptimizationLevel : TypeAlias = Literal[
+    "crude", "sloppy", "loose", "lax",
+    "normal",
+    "tight", "vtight", "extreme",
+]
 
 class XTB(Calculator):
+    opt_level : OptimizationLevel
     charge : Optional[int]
     etemp : Optional[int]
     gfn : Optional[int]
@@ -16,6 +22,7 @@ class XTB(Calculator):
     xtb_path : str
     def __init__(
         self,
+        opt_level : OptimizationLevel = "normal",
         charge : Optional[int] = 0,
         etemp : Optional[int] = 300,
         gfn : Optional[int] = 2,
@@ -24,6 +31,7 @@ class XTB(Calculator):
         threads : int = 1,
         xtb_path : str = "xtb",
     ):
+        self.opt_level = opt_level
         self.charge = charge
         self.etemp = etemp
         self.gfn = gfn
@@ -69,7 +77,7 @@ class XTB(Calculator):
                     [
                         xtb_path,
                         input_xyz_file.name,
-                        "--opt",
+                        "--opt", str(self.opt_level),
                         "-P", str(self.threads),
                     ] + self.get_args(),
                     cwd = dir,
