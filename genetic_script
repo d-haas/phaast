@@ -70,7 +70,7 @@ arg_parser.add_argument(
     "-et",
     "--energy_threshold",
     type = float,
-    default = float("inf"),
+    default = 1e-3,
     help = "Maximum energy difference [in hartree] so molecules are considered alike (default = %(default)s)",
 )
 
