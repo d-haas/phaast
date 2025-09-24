@@ -320,60 +320,6 @@ class Structure:
         else:
             raise Exception("No atoms in structure")
 
-    def compare_geometry(self, other : Self) -> float:
-        """
-        Compare different structures using the
-        Grigoryan-Springborn algorithm
-        DOI: 10.1140/epjd/e2005-00141-6
-        Equation (1)
-        """
-        atoms_num : int = len(self) # Number of atoms in structure
-
-        #Check if number of atoms is the same in both structures
-        assert self.is_equal_to(other), "Both structure should have the same number of atoms"
-
-        """
-        Sum distances between atoms of each structure and
-        store it in a ordered list for each structure for
-        each combination of two elements
-
-        Thanks Amanda
-        """
-        self_dists : dict[tuple[AtomicNumber, AtomicNumber], list[float]] = {}
-        for atom_i, atom_j in itertools.combinations(self.__atoms, 2):
-            dict_key = (atom_i.z, atom_j.z) if atom_j.z>atom_i.z else (atom_j.z, atom_i.z)
-            if not dict_key in self_dists:
-                self_dists[dict_key] = []
-            diff : Vector = atom_i.pos - atom_j.pos
-            bisect.insort(
-                self_dists[dict_key],
-                diff.mod_sqr,
-            )
-        other_dists : dict[tuple[AtomicNumber, AtomicNumber], list[float]] = {}
-        for atom_i, atom_j in itertools.combinations(other.__atoms, 2):
-            dict_key = (atom_i.z, atom_j.z) if atom_j.z>atom_i.z else (atom_j.z, atom_i.z)
-            if not dict_key in other_dists:
-                other_dists[dict_key] = []
-            diff = atom_i.pos - atom_j.pos
-            bisect.insort(
-                other_dists[dict_key],
-                diff.mod_sqr,
-            )
-
-        # Get difference between each distance in each molecule (squared)
-        sum_distances_squared_diff : float = 0
-        for dict_key in self_dists:
-            sum_distances_squared_diff+= sum([
-                (i - j)**2
-                for i, j
-                in zip(self_dists[dict_key], other_dists[dict_key])
-            ])
-
-        # Calculate final value of Grigoryan-Springborn algorithm
-        q : float = ( ( 2/(atoms_num*(atoms_num-1)) ) * sum_distances_squared_diff )**.5
-        s : float = 1 / ( 1 + q )
-
-        return s
     
     @staticmethod
     def from_xyz(file_path : str) -> 'Structure':
@@ -533,6 +479,22 @@ class Molecule(Structure):
         else:
             return True
 
+    def compare_geometry(self, other : Self, algorithm : ComparisonAlgorithm = ComparisonAlgorithm.GRIGORYAN_SPRINGBORN, **kwargs) -> float:
+        return comparison_functions_dict[algorithm](self, other, **kwargs)
+
+    def get_bondings_lenghts(self, bonding_tolerance : float = 0.1) -> dict[tuple[AtomicNumber, AtomicNumber], list[float]]:
+        result = {}
+
+        for atom_i in self:
+            for atom_j in self:
+                if atom_i.is_touching(atom_j, bonding_tolerance):
+                    dict_key = (min(atom_i.z, atom_j.z), max(atom_i.z, atom_j.z))
+                    if dict_key in result:
+                        result[dict_key].append((atom_i.pos - atom_j.pos).mod_sqr)
+                    else:
+                        result[dict_key] = [(atom_i.pos - atom_j.pos).mod_sqr]
+
+        return result
 
     @staticmethod
     def from_xyz(file_path: str) -> "Molecule":
