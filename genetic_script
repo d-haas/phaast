@@ -2,12 +2,14 @@
 import argparse
 import time
 import os
+from typing import Literal
 
 
 arg_parser = argparse.ArgumentParser(
     prog="P.H.A.A.S.T",
     description="A heuristic-algorithm-driven software made for global minima search",
     epilog="Thanks for choosing Phaast",
+    formatter_class = argparse.RawTextHelpFormatter,
 )
 
 arg_parser.add_argument(
@@ -130,13 +132,28 @@ arg_parser.add_argument(
     help = "Number of loops the algorithm will run with the least energy molecule until a new one is found, terminating it (default = %(default)s)",
 )
 
-"""
 arg_parser.add_argument(
-    '-v',
-    '--verbose',
-    action='store_true',
+    "--comparison_algorithm",
+    default = "haas_oliveira",
+    type = str,
+    help = """Algorithm to be used for structures comparison, the recomendes usage is:
+\t- \"grigoryan_springborn\" for clusters;
+\t- \"haas_oliveira\" for organic and general shaped structures (check --comparison_bonding_tolerance too);
+(default = %(default)s)""",
 )
-"""
+
+arg_parser.add_argument(
+    "--comparison_bonding_tolerance",
+    default = 0.25,
+    type = float,
+    help = "Distance tolerable so two atoms can be considered bonded within the haas_oliveira molecule comparison algorithm",
+)
+
+arg_parser.add_argument(
+    "-v",
+    "--verbose",
+    action="store_true",
+)
 
 args = arg_parser.parse_args()
 print(f"Args: {args}")
