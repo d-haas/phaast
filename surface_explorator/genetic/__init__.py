@@ -51,7 +51,7 @@ class Individual(Molecule):
 
 class Genetic(SurfaceExplorator):
     population_size : int
-    population      : list[Molecule]
+    population      : list[Individual]
     end_loop_number : int
 
     calculator          : str
@@ -117,14 +117,18 @@ class Genetic(SurfaceExplorator):
         self.base = base
         self.structure_generator = structure_generator
         self.population_size = population_size
-        self.population : list[Molecule] = self.computer.optimize(
-            self.calculator,
-            self.structure_generator(
-                self.base,
-                self.population_size,
-                self.computer,
-            ),
-        )
+        self.population : list[Individual] = [
+            Individual(mol) for mol
+            in self.computer.optimize(
+                self.calculator,
+                self.structure_generator(
+                    self.base,
+                    self.population_size,
+                    self.computer,
+                ),
+            )
+        ]
+
 
         self.population_size = len(self.population)
 
@@ -153,6 +157,7 @@ class Genetic(SurfaceExplorator):
         #Statistics variables (start with prefix "total")
         self.total_optimizations          = self.population_size
         self.total_converged              = len(self.population)
+        self.total_unfeasible_removed     = 0
         self.total_duplicates_removed     = 0
         self.total_mutations              = 0
         self.total_mutations_displacement = 0
@@ -199,22 +204,25 @@ class Genetic(SurfaceExplorator):
         self.population = new_population
 
 
-    def generate(self) -> list[Molecule]:
+    def generate(self) -> list[Individual]:
         remaining_population : int = self.population_size - len(self.population)
         remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[0]/sum(self.generation_children_mutant_proportion))
 
-        generated : list[Molecule] = self.computer.optimize(
-            self.calculator,
-            self.structure_generator(
-                self.base,
-                remaining_population,
-                self.computer,
-            ),
-        )
+        generated : list[Individual] = [
+            Individual(mol) for mol
+            in self.computer.optimize(
+                self.calculator,
+                self.structure_generator(
+                    self.base,
+                    remaining_population,
+                    self.computer,
+                ),
+            )
+        ]
 
         return generated
 
-    def reproduce(self) -> list[Molecule]:
+    def reproduce(self) -> list[Individual]:
         remaining_population : int = self.population_size - len(self.population)
         remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[1]/sum(self.generation_children_mutant_proportion))
 
@@ -223,38 +231,35 @@ class Genetic(SurfaceExplorator):
             for mother, father
             in distinct_pairs(self.population)
         ]
-        remaining_population = min(remaining_population, len(parents))
 
         children : list[Structure] = []
 
-        for mother, father in random.sample(
+        for mother, father in random.choices(
             parents,
-            remaining_population,
+            k = remaining_population,
         ):
             children.append(
                 plane_mating(mother, father)
             )
 
-        children_molecules = [mol for mol in self.computer.optimize(self.calculator, children) if mol is not None]
+        children_individuals = [Individual(mol) for mol in self.computer.optimize(self.calculator, children) if mol is not None]
 
         self.total_optimizations+= remaining_population
-        self.total_converged+= len(children_molecules)
-        self.total_mating+= len(children_molecules)
+        self.total_converged+= len(children_individuals)
+        self.total_mating+= len(children_individuals)
 
-        return children_molecules
+        return children_individuals
 
-    def mutate(self) -> list[Molecule]:
+    def mutate(self) -> list[Individual]:
         # Get the number of individuals that will be choosen to mutate
         remaining_population : int = self.population_size - len(self.population)
         remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[2]/sum(self.generation_children_mutant_proportion))
 
         # Get actual number of individuals that will be choosen to have their atoms displaced
         remaining_displacement : int = floor(remaining_population * self.mut_displacement_permutation_proportion[0]/sum(self.mut_displacement_permutation_proportion))
-        remaining_displacement = min(remaining_displacement, len(self.population))
 
         # Get actual number of individuals that will be choosen to have their atoms permutates (switch positions)
         remaining_permute : int = floor(remaining_population * self.mut_displacement_permutation_proportion[1]/sum(self.mut_displacement_permutation_proportion))
-        remaining_permute = min(remaining_permute, len(self.population))
 
         mutants : list[Structure] = []
 
@@ -281,7 +286,7 @@ class Genetic(SurfaceExplorator):
                 )
             )
 
-        mutant_molecules : list[Molecule] = [mol for mol in self.computer.optimize(self.calculator, mutants) if mol is not None]
+        mutant_molecules : list[Individual] = [Individual(mol) for mol in self.computer.optimize(self.calculator, mutants) if mol is not None]
 
         self.total_optimizations+= remaining_displacement + remaining_permute
         self.total_converged+= len(mutant_molecules)
@@ -294,11 +299,16 @@ class Genetic(SurfaceExplorator):
         max_energy : float = max([mol.energy for mol in self.population])
         median_energy : float = (min_energy + max_energy)/2
 
+        pop_size_before = len(self.population)
+
         self.population = [
             mol for mol in self.population
             if mol.energy<= median_energy
         ]
 
+        pop_size_after = len(self.population)
+
+        self.total_unfeasible_removed+= pop_size_before - pop_size_after
 
     def get_best_energy(self) -> None:
         new_best_energy : float = min([mol.energy for mol in self.population])
@@ -311,12 +321,12 @@ class Genetic(SurfaceExplorator):
     def loop(self) -> bool:
         self.cycle_counter+= 1
 
-        self.remove_duplicates()
         self.remove_unfeasible()
+        self.remove_duplicates()
 
-        children : list[Molecule] = self.reproduce()
-        mutants : list[Molecule] = self.mutate()
-        generated : list[Molecule] = self.generate()
+        children : list[Individual] = self.reproduce()
+        mutants : list[Individual] = self.mutate()
+        generated : list[Individual] = self.generate()
 
         self.population+= children
         self.population+= mutants
