@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import Iterable, Iterator, Optional, Self
+from typing import Any, Callable, Iterable, Iterator, Optional, Self
 from structure.constants import *
-import itertools, bisect
+from structure.geometry import ComparisonAlgorithm, comparison_functions_dict
 from vec import Vector
 import subprocess, tempfile
 import struct
@@ -476,7 +476,7 @@ class Structure:
 
         return r
 
-    def __reduce__(self):
+    def __reduce__(self) -> tuple[ Callable[..., Structure], tuple[Any, ...] ]:
         return (create_structure, (self.__atoms,))
 
 def create_molecule(atoms : Iterable[Atom], energy : float) -> Molecule:
@@ -567,5 +567,5 @@ class Molecule(Structure):
 
         return r
 
-    def __reduce__(self):
+    def __reduce__(self) -> tuple[ Callable[..., Molecule], tuple[Any, ...] ]:
         return (create_molecule, (tuple(self), self.energy))
