@@ -20,7 +20,7 @@ def run():
         filter_list = filter,
     )
 
-    mut_a = mut_random(struct_a, 2.0)
+    mut_a = mut_random(struct_a, 1, 2.0)
 
     subplot(struct_a)
     subplot(mut_a)

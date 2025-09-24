@@ -40,7 +40,7 @@ def run():
     #struct_nums = (5000, 10000, 15000, 20000)
     #geometry_thresholds = (0.5, 0.6, 0.7, 0.8, 0.9)
     #children_mutant_ratios = (0.0, 0.5, 1.0, 2.0, 100000.0)
-    struct_nums = (10000, 15000, 20000)
+    struct_nums = (2500, 5000, 10000)
     cpu_nums = (4, 8, 16)
     geometry_threshold = 0.9
 
@@ -48,7 +48,8 @@ def run():
         "Struct num",
         "Cpu num",
         "Creation time (s)",
-        "Duplicate removal time (s)",
+        "Duplicate removal time GS(s)",
+        "Duplicate removal time HO(s)",
     ]
 
     table_rows : list[tuple[float,...]] = []
