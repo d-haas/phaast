@@ -6,7 +6,7 @@ if sys._is_gil_enabled():
 else:
     from multiprocessing.dummy import Pool
 
-import threading
+#import threading
 from typing import Iterable, overload
 from calculators import Calculator
 from structure import Molecule, Structure
@@ -81,6 +81,7 @@ class RemoteComputerClient(BaseComputer):
         )
         return 0
 
+"""
 class RemoteComputerServer(Computer):
     def __init__(
         self,
@@ -107,3 +108,4 @@ class RemoteComputerServer(Computer):
         while True:
             data : bytes = connection.recv(9)
             pass
+"""
