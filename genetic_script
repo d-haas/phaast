@@ -5,6 +5,7 @@ import os
 from typing import Literal
 
 
+
 arg_parser = argparse.ArgumentParser(
     prog="P.H.A.A.S.T",
     description="A heuristic-algorithm-driven software made for global minima search",
@@ -165,10 +166,11 @@ os.chdir(
 
 from calculators.xtb import XTB
 from computer import Computer
-from structure import Base
+from structure import Base, Molecule
 import structure.creator
 from structure.creator.filter_list import FilterList, FilterMode
 from surface_explorator.genetic import Genetic
+from structure.geometry import grigoryan_springborn, haas_oliveira
 
 base = Base(args.stoichiometry)
 
@@ -192,6 +194,21 @@ filter_list = FilterList(FilterMode.EXCLUDE, ((1,1),))
 
 structure_generator = lambda base, n, comp : structure.creator.generate_random_structures_hedron(base, n, comp, 20, filter_list = filter_list)
 
+def haas_oliveira_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
+    return haas_oliveira(mol1, mol2, bonding_tolerance = args.comparison_bonding_tolerance)
+
+
+match args.comparison_algorithm:
+    case "haas_oliveira":
+        comparison_algorithm = haas_oliveira_comparator
+    case "grigoryan_springborn":
+        comparison_algorithm = grigoryan_springborn
+    case _:
+        raise ValueError(
+            f"Incompatible comparison_algorithm: {args.comparison_algorithm}"
+        )
+        
+
 genetic = Genetic(
     base = base,
     population_size = args.population_size,
@@ -199,7 +216,9 @@ genetic = Genetic(
     calculator = "xtb",
 
     energy_threshold = args.energy_threshold,
+
     geometry_threshold = args.geometry_threshold,
+    comparison_algorithm = comparison_algorithm,
 
     generation_children_mutant_proportion = tuple(args.generation_children_mutant_proportion),
     mut_displacement_permutation_proportion = tuple(args.mutation_displacement_permutation_proportion),
@@ -227,9 +246,11 @@ best = sorted(
 
 best_list = best[0 : min(len(best), args.return_number)]
 
-print(f"The process is finished. Elapsed time: {round(delta_time)} s")
+print(f"The process is done. Elapsed time: {round(delta_time)} s")
+print(f"Total optimizations: {genetic.total_optimizations}")
+print(f"Total converged: {genetic.total_converged}")
 
 os.chdir(actual_cwd)
 
 for i, mol in enumerate(best_list):
-    mol.to_xyz(f"{args.output_prefix}{i}")
+    mol.to_xyz(f"{args.output_prefix}{i}.xyz")
