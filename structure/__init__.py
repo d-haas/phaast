@@ -529,5 +529,5 @@ class Molecule(Structure):
 
         return r
 
-    def __reduce__(self) -> tuple[ Callable[..., Molecule], tuple[Any, ...] ]:
+    def __reduce__(self) -> tuple[ Callable[..., Molecule], tuple[tuple[Atom, ...], float] ]:
         return (create_molecule, (tuple(self), self.energy))

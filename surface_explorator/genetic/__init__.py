@@ -1,9 +1,10 @@
 import random
 import sys
-from typing import Any, Callable, Sequence
+from types import NoneType
+from typing import Any, Callable, Iterable, Sequence, overload
 from math import floor
 
-from structure.geometry import haas_oliveira
+from structure.geometry import grigoryan_springborn, haas_oliveira
 from surface_explorator.genetic.utils import mut_permute, mut_random, plane_mating
 
 if sys._is_gil_enabled():
@@ -12,7 +13,7 @@ else:
     from multiprocessing.dummy import Pool
 
 from computer import Computer
-from structure import Base, Molecule, Structure
+from structure import Atom, Base, Molecule, Structure
 from structure.creator import generate_random_structures_hedron
 
 from surface_explorator import SurfaceExplorator
@@ -26,7 +27,7 @@ def is_pop_index_duplicate(
     comparison_algorithm : Callable[[Molecule, Molecule], float],
 ) -> bool:
 
-    for j in range(i, len(population)):
+    for j in range(i+1, len(population)):
         # Compare energies
         if abs(population[i].energy-population[j].energy) <= energy_threshold:
             # Then compare geometries
@@ -35,19 +36,30 @@ def is_pop_index_duplicate(
 
     return False
 
-def create_individual(molecule : Molecule, generations_alive : int) -> "Individual":
-    ind = Individual(molecule)
+def create_individual(atoms : Iterable[Atom], energy : float, generations_alive : int) -> "Individual":
+    ind = Individual(atoms, energy)
     ind.generations_alive = generations_alive
     return ind
 
 class Individual(Molecule):
     generations_alive : int
-    def __init__(self, molecule : Molecule):
-        super().__init__(molecule, molecule.energy)
+
+    @overload
+    def __init__(self, atoms_or_mol : Iterable[Atom], energy : float): ...
+    @overload
+    def __init__(self, atoms_or_mol : Molecule): ...
+    def __init__(self, atoms_or_mol : Iterable[Atom] | Molecule, energy : float | None = None):
+        if isinstance(atoms_or_mol, Molecule):
+            super().__init__(atoms_or_mol, atoms_or_mol.energy)
+        elif isinstance(energy, float):
+            super().__init__(atoms_or_mol, energy)
+        else:
+            raise ValueError("No energy was given")
         self.generations_alive = 0
 
     def __reduce__(self) -> tuple[ Callable[..., "Individual"], tuple[Any, ...] ]:
-        return (create_individual, (super(), self.generations_alive))
+        return (create_individual, super().__reduce__()[1] + (self.generations_alive,))
+
 
 class Genetic(SurfaceExplorator):
     population_size : int
@@ -94,7 +106,7 @@ class Genetic(SurfaceExplorator):
         calculator : str,
 
         structure_generator : Callable[[Base, int, Computer], Sequence[Structure]] = lambda base, n, comp : generate_random_structures_hedron(base, n, comp, 20),
-        comparison_algorithm : Callable[[Molecule, Molecule], float] = lambda mol1, mol2 : haas_oliveira(mol1, mol2, bonding_tolerance=0.2501),
+        comparison_algorithm : Callable[[Molecule, Molecule], float] = grigoryan_springborn,
 
         generation_children_mutant_proportion : tuple[float, float, float] = (1.0, 1.0, 1.0),
         mut_displacement_permutation_proportion : tuple[float, float] = (1.0, 1.0),
