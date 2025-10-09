@@ -135,11 +135,12 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     "--comparison_algorithm",
-    default = "haas_oliveira",
+    default = "mixed",
     type = str,
     help = """Algorithm to be used for structures comparison, the recomendes usage is:
 \t- \"grigoryan_springborn\" for clusters;
 \t- \"haas_oliveira\" for organic and general shaped structures (check --comparison_bonding_tolerance too);
+\t- \"mixed\" for both at the same time (sqrt(grigoryan_springborg * haas_oliveira);
 (default = %(default)s)""",
 )
 
@@ -197,12 +198,17 @@ structure_generator = lambda base, n, comp : structure.creator.generate_random_s
 def haas_oliveira_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
     return haas_oliveira(mol1, mol2, bonding_tolerance = args.comparison_bonding_tolerance)
 
+def mixed_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
+    return (haas_oliveira_comparator(mol1, mol2) * grigoryan_springborn(mol1, mol2))**.5
+
 
 match args.comparison_algorithm:
     case "haas_oliveira":
         comparison_algorithm = haas_oliveira_comparator
     case "grigoryan_springborn":
         comparison_algorithm = grigoryan_springborn
+    case "mixed":
+        comparison_algorithm = mixed_comparator
     case _:
         raise ValueError(
             f"Incompatible comparison_algorithm: {args.comparison_algorithm}"
