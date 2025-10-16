@@ -19,22 +19,6 @@ from structure.creator import generate_random_structures_hedron
 from surface_explorator import SurfaceExplorator
 from utils.custom_iter import distinct_pairs
 
-def is_pop_index_duplicate(
-    population : list[Molecule],
-    i : int,
-    energy_threshold : float,
-    geometry_threshold : float,
-    comparison_algorithm : Callable[[Molecule, Molecule], float],
-) -> bool:
-
-    for j in range(i+1, len(population)):
-        # Compare energies
-        if abs(population[i].energy-population[j].energy) <= energy_threshold:
-            # Then compare geometries
-            if comparison_algorithm(population[i], population[j]) > geometry_threshold:
-                return True
-
-    return False
 
 def create_individual(atoms : Iterable[Atom], energy : float, generations_alive : int) -> "Individual":
     ind = Individual(atoms, energy)
@@ -60,6 +44,22 @@ class Individual(Molecule):
     def __reduce__(self) -> tuple[ Callable[..., "Individual"], tuple[Any, ...] ]:
         return (create_individual, super().__reduce__()[1] + (self.generations_alive,))
 
+def is_pop_index_duplicate(
+    population : list[Individual],
+    i : int,
+    energy_threshold : float,
+    geometry_threshold : float,
+    comparison_algorithm : Callable[[Molecule, Molecule], float],
+) -> bool:
+
+    for j in range(i+1, len(population)):
+        # Compare energies
+        if abs(population[i].energy-population[j].energy) <= energy_threshold:
+            # Then compare geometries
+            if comparison_algorithm(population[i], population[j]) > geometry_threshold:
+                return True
+
+    return False
 
 class Genetic(SurfaceExplorator):
     population_size : int
@@ -190,6 +190,22 @@ class Genetic(SurfaceExplorator):
     """
 
     def remove_duplicates(self) -> None:
+
+        def is_pop_index_duplicate(
+            population : list[Individual],
+            i : int,
+        ) -> bool:
+
+            if population[i].generations_alive <= self.minimum_lifetime:
+                for j in range(i+1, len(population)):
+                    # Compare energies
+                    if abs(population[i].energy-population[j].energy) <= self.energy_threshold:
+                        # Then compare geometries
+                        if self.comparison_algorithm(population[i], population[j]) > self.geometry_threshold:
+                            return True
+
+            return False
+
         with Pool(self.computer.cpu_count_limit) as pool:
             remove_mask : list[bool]  = pool.starmap(
                 is_pop_index_duplicate,
