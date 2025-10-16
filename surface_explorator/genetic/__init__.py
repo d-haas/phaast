@@ -1,6 +1,5 @@
 import random
 import sys
-from types import NoneType
 from typing import Any, Callable, Iterable, Sequence, overload
 from math import floor
 
