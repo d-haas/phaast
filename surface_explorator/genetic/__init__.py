@@ -80,6 +80,7 @@ class Genetic(SurfaceExplorator):
 
     mut_displacement_number : int
     mut_displacement_max    : float
+    mut_displacement_steps  : int
     mut_permutation_num     : int
 
     cycle_counter     : int
@@ -112,6 +113,7 @@ class Genetic(SurfaceExplorator):
 
         mut_displacement_number : int = 1,
         mut_displacement_max : float = 1.0,
+        mut_displacement_steps : int = 1,
         mut_permutation_num : int = 0,
 
         minimum_lifetime : int = -1,
@@ -159,6 +161,7 @@ class Genetic(SurfaceExplorator):
         # Added explicit type conversion to manage vector multiplication errors
         self.mut_displacement_number = int(mut_displacement_number)
         self.mut_displacement_max    = float(mut_displacement_max)
+        self.mut_displacement_steps  = int(mut_displacement_steps)
         self.mut_permutation_num     = int(mut_permutation_num)
 
         # Generation parameters
@@ -295,15 +298,16 @@ class Genetic(SurfaceExplorator):
 
         for mutant in random.choices(
             self.population,
-            k = remaining_displacement,
+            k = int(remaining_displacement/self.mut_displacement_steps),
         ):
-            mutants.append(
-                mut_random(
-                    mutant,
-                    self.mut_displacement_number,
-                    self.mut_displacement_max,
+            for step in range(1, self.mut_displacement_steps+1):
+                mutants.append(
+                    mut_random(
+                        mutant,
+                        self.mut_displacement_number,
+                        self.mut_displacement_max * step / self.mut_displacement_steps,
+                    )
                 )
-            )
 
         for mutant in random.choices(
             self.population,

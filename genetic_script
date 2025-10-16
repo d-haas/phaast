@@ -105,8 +105,16 @@ arg_parser.add_argument(
     "-mdm",
     "--mutation_displacement_maximum",
     type = float,
-    default = 1,
+    default = 1.0,
     help = "Maximum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-mds",
+    "--mutation_displacement_steps",
+    type = float,
+    default = 1,
+    help = "Number of steps per displacement in mutations (default = %(default)s)",
 )
 
 arg_parser.add_argument(
@@ -231,6 +239,7 @@ genetic = Genetic(
 
     mut_displacement_number = args.mutation_displacement_number,
     mut_displacement_max = args.mutation_displacement_maximum,
+    mut_displacement_steps = args.mutation_displacement_steps,
     mut_permutation_num = args.mutation_permutation_number,
 
     end_loop_number = args.end_loop_number,
