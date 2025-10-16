@@ -95,7 +95,6 @@ class Genetic(SurfaceExplorator):
     total_mutations_permutation  : int
     total_mating                 : int
 
-
     def __init__(
         self,
         base : Base,
@@ -236,7 +235,7 @@ class Genetic(SurfaceExplorator):
 
 
     def generate(self) -> list[Individual]:
-        remaining_population : int = self.population_size - len(self.population)
+        remaining_population : int = self.population_size# - len(self.population)
         remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[0]/sum(self.generation_children_mutant_proportion))
 
         generated : list[Individual] = [
@@ -254,7 +253,7 @@ class Genetic(SurfaceExplorator):
         return generated
 
     def reproduce(self) -> list[Individual]:
-        remaining_population : int = self.population_size - len(self.population)
+        remaining_population : int = self.population_size# - len(self.population)
         remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[1]/sum(self.generation_children_mutant_proportion))
 
         parents = [
@@ -283,7 +282,7 @@ class Genetic(SurfaceExplorator):
 
     def mutate(self) -> list[Individual]:
         # Get the number of individuals that will be choosen to mutate
-        remaining_population : int = self.population_size - len(self.population)
+        remaining_population : int = self.population_size# - len(self.population)
         remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[2]/sum(self.generation_children_mutant_proportion))
 
         # Get actual number of individuals that will be choosen to have their atoms displaced
@@ -341,6 +340,12 @@ class Genetic(SurfaceExplorator):
 
         self.total_unfeasible_removed+= pop_size_before - pop_size_after
 
+    def remove_excess(self) -> None:
+        self.population = sorted(
+            self.population,
+            key = lambda ind : ind.energy,
+        )[0:min(len(self.population), self.population_size)]
+
     def get_best_energy(self) -> None:
         new_best_energy : float = min([mol.energy for mol in self.population])
         if new_best_energy < self.best_energy:
@@ -349,6 +354,7 @@ class Genetic(SurfaceExplorator):
         else:
             self.best_energy_loops+= 1
 
+    """
     def loop(self) -> bool:
         self.cycle_counter+= 1
 
@@ -367,6 +373,25 @@ class Genetic(SurfaceExplorator):
 
         self.get_best_energy()
         return self.best_energy_loops < self.end_loop_number
+    """
+
+    def loop(self) -> bool:
+        self.cycle_counter+= 1
+
+        children : list[Individual] = self.reproduce()
+        mutants : list[Individual] = self.mutate()
+        generated : list[Individual] = self.generate()
+
+        self.population+= children
+        self.population+= mutants
+        self.population+= generated
+
+        self.remove_duplicates()
+        self.remove_excess()
+
+        self.get_best_energy()
+        return self.best_energy_loops < self.end_loop_number
+
 
     def save(self, file : str) -> None:
         print(file)
