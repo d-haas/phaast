@@ -83,6 +83,7 @@ class Genetic(SurfaceExplorator):
     mut_permutation_num     : int
 
     cycle_counter     : int
+    minimum_lifetime  : int
     best_energy       : float
     best_energy_loops : int
 
@@ -113,6 +114,8 @@ class Genetic(SurfaceExplorator):
         mut_displacement_number : int = 1,
         mut_displacement_max : float = 1.0,
         mut_permutation_num : int = 0,
+
+        minimum_lifetime : int = -1,
 
         end_loop_number : int = 9,
     ):
@@ -162,6 +165,7 @@ class Genetic(SurfaceExplorator):
         # Generation parameters
         self.end_loop_number   = end_loop_number
         self.cycle_counter     = 0
+        self.minimum_lifetime  = minimum_lifetime
         self.best_energy       = min([mol.energy for mol in self.population])
         self.best_energy_loops = 0
 
