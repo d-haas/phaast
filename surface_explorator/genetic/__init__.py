@@ -182,34 +182,7 @@ class Genetic(SurfaceExplorator):
         self.total_mating                 = 0
 
 
-    """
-    def is_pop_index_duplicate(self, i : int) -> bool:
-        for j in range(i+1, len(self.population)):
-            # Compare energies
-            if abs(self.population[i].energy-self.population[j].energy) <= self.energy_threshold:
-                # Then compare geometries
-                if self.population[i].compare_geometry(self.population[j]) > self.geometry_threshold:
-                    return True
-
-        return False
-    """
-
     def remove_duplicates(self) -> None:
-
-        def is_pop_index_duplicate(
-            population : list[Individual],
-            i : int,
-        ) -> bool:
-
-            if population[i].generations_alive <= self.minimum_lifetime:
-                for j in range(i+1, len(population)):
-                    # Compare energies
-                    if abs(population[i].energy-population[j].energy) <= self.energy_threshold:
-                        # Then compare geometries
-                        if self.comparison_algorithm(population[i], population[j]) > self.geometry_threshold:
-                            return True
-
-            return False
 
         with Pool(self.computer.cpu_count_limit) as pool:
             remove_mask : list[bool]  = pool.starmap(
