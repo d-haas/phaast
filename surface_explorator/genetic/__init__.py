@@ -119,6 +119,8 @@ class Genetic(SurfaceExplorator):
         minimum_lifetime : int = -1,
 
         end_loop_number : int = 9,
+
+        bonding_tolerance : float = 0.25,
     ):
         """
         Define initial variables for genetic algorithm
@@ -180,6 +182,8 @@ class Genetic(SurfaceExplorator):
         self.total_mutations_displacement = 0
         self.total_mutations_permutation  = 0
         self.total_mating                 = 0
+
+        self.bonding_tolerance            = bonding_tolerance
 
 
     def remove_duplicates(self) -> None:
@@ -323,6 +327,12 @@ class Genetic(SurfaceExplorator):
             key = lambda ind : ind.energy,
         )[0:min(len(self.population), self.population_size)]
 
+    def remove_not_bonded(self) -> None:
+        self.population = [
+            ind for ind in self.population
+            if ind.is_bonded(self.bonding_tolerance)
+        ]
+
     def get_best_energy(self) -> None:
         new_best_energy : float = min([mol.energy for mol in self.population])
         if new_best_energy < self.best_energy:
@@ -347,6 +357,7 @@ class Genetic(SurfaceExplorator):
         self.population+= generated
 
         self.remove_duplicates()
+        self.remove_not_bonded()
 
         self.get_best_energy()
         return self.best_energy_loops < self.end_loop_number
@@ -365,6 +376,7 @@ class Genetic(SurfaceExplorator):
 
         self.remove_duplicates()
         self.remove_excess()
+        self.remove_not_bonded()
 
         self.get_best_energy()
         return self.best_energy_loops < self.end_loop_number
