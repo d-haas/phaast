@@ -1,17 +1,21 @@
 # cython: freethreading_compatible = True
 
+from surface_explorator.genetic.migration import Migrator
+
 import random
-from typing import Optional
-from structure import Atom
+from typing import Literal, Optional
+from computer import Computer
+from structure import Atom, Base, Structure
 from structure.constants import AtomicNumber, AtomicRadi
 import cython
-from structure.creator.filter_list import *
+from surface_explorator.genetic.migration.filter_list import *
 
 from vec import Vector
 
 GOLDEN_RATIO = (1 + 5**.5)/2
 
 HedronNumber = Literal[4,6,8,12,20]
+
 HedronPositions : dict[HedronNumber, list[Vector]] = {}
 HedronPositions[4] = [
     Vector( 1, 1, 1).normalized(),
@@ -143,3 +147,48 @@ class HedronUniverse:
                 hedron_scale,
             )
         )
+
+class HedronMigrator(Migrator):
+    base : Base
+    n_vertices : HedronNumber
+    filter_list : FilterList
+    computer : Computer
+    rng : random.Random
+
+    def __init__(self, base : Base, n_vertices : HedronNumber, filter_list : FilterList, rng : None | random.Random):
+        self.base = base
+
+        assert n_vertices in (4,6,8,12,20), "Number of vertices is not valid, must be in (4,6,8,12,20)"
+
+        self.n_vertices = n_vertices
+
+        self.filter_list = filter_list
+
+        if isinstance(rng, random.Random):
+            self.rng = rng
+        else:
+            self.rng = random.Random()
+
+    def __call__(
+        self,
+    ) -> Structure:
+
+
+        atoms = [Atom(element.z) for element in self.base.elements]
+        self.rng.shuffle(atoms)
+
+        universe = HedronUniverse(
+            n_vertices = self.n_vertices,
+            filter_list = self.filter_list,
+        )
+
+        while atoms:
+            atom = atoms.pop(0)
+            random_available_position = universe.get_random_available_position(atom.z, self.rng)
+            if random_available_position is not None:
+                random_available_position, hedron_scale = random_available_position
+                universe.include_atom(random_available_position, atom, hedron_scale)
+            else:
+                atoms.append(atom)
+                
+        return Structure([element[0] for element in universe.atom_population])

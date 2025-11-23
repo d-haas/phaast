@@ -1,64 +1,39 @@
 import random
-import sys
-from typing import Any, Callable, Iterable, Sequence, overload
+from typing import Callable, Iterable
 from math import floor
 
-from structure.geometry import grigoryan_springborn, haas_oliveira
-from surface_explorator.genetic.utils import mut_permute, mut_random, plane_mating
+from structure.geometry import grigoryan_springborn
 
-if sys._is_gil_enabled():
-    from multiprocessing import Pool
-else:
-    from multiprocessing.dummy import Pool
+from surface_explorator.genetic.migration import Migrator
+from surface_explorator.genetic.mutation import Mutator
+from surface_explorator.genetic.crossover import Crossover
+from surface_explorator.genetic.individual import Individual
+from surface_explorator.genetic.duplicate import remove_duplicates
 
 from computer import Computer
-from structure import Atom, Base, Molecule, Structure
-from structure.creator import generate_random_structures_hedron
+from structure import Base, Molecule, Structure
 
 from surface_explorator import SurfaceExplorator
 from utils.custom_iter import distinct_pairs
 
+class GeneticComputer(Computer):
+    def __init__(self, computer : Computer):
+        super().__init__(computer.cpu_count_limit)
 
-def create_individual(atoms : Iterable[Atom], energy : float, generations_alive : int) -> "Individual":
-    ind = Individual(atoms, energy)
-    ind.generations_alive = generations_alive
-    return ind
+    def mutate(self, structs : Structure, mutator : Mutator) -> list[Structure]:
+        return self.parallelize(
+            ((struct,) for struct in structs),
+            mutator,
+        )
 
-class Individual(Molecule):
-    generations_alive : int
+    def crossover(self, struct_pairs : Iterable[tuple[Structure, Structure]], crossover : Crossover) -> list[Structure]:
+        return self.parallelize(
+            struct_pairs,
+            crossover,
+        )
 
-    @overload
-    def __init__(self, atoms_or_mol : Iterable[Atom], energy : float): ...
-    @overload
-    def __init__(self, atoms_or_mol : Molecule): ...
-    def __init__(self, atoms_or_mol : Iterable[Atom] | Molecule, energy : float | None = None):
-        if isinstance(atoms_or_mol, Molecule):
-            super().__init__(atoms_or_mol, atoms_or_mol.energy)
-        elif isinstance(energy, float):
-            super().__init__(atoms_or_mol, energy)
-        else:
-            raise ValueError("No energy was given")
-        self.generations_alive = 0
-
-    def __reduce__(self) -> tuple[ Callable[..., "Individual"], tuple[Any, ...] ]:
-        return (create_individual, super().__reduce__()[1] + (self.generations_alive,))
-
-def is_pop_index_duplicate(
-    population : list[Individual],
-    i : int,
-    energy_threshold : float,
-    geometry_threshold : float,
-    comparison_algorithm : Callable[[Molecule, Molecule], float],
-) -> bool:
-
-    for j in range(i+1, len(population)):
-        # Compare energies
-        if abs(population[i].energy-population[j].energy) <= energy_threshold:
-            # Then compare geometries
-            if comparison_algorithm(population[i], population[j]) > geometry_threshold:
-                return True
-
-    return False
+    def migrate(self, num : int, migrator : Migrator) -> list[Structure]:
+        return self.parallelize(num, migrator)
 
 class Genetic(SurfaceExplorator):
     population_size : int
@@ -66,22 +41,17 @@ class Genetic(SurfaceExplorator):
     end_loop_number : int
 
     calculator          : str
-    computer            : Computer
-    structure_generator : Callable[[Base, int, Computer], Sequence[Structure]]
+    computer            : GeneticComputer
     base                : Base
 
     energy_threshold     : float
     geometry_threshold   : float
     comparison_algorithm : Callable[[Molecule, Molecule], float]
 
-    generation_children_mutant_proportion   : tuple[float, float, float]
-    children_mutant_proportion              : tuple[float, float]
-    mut_displacement_permutation_proportion : tuple[float, float]
-
-    mut_displacement_number : int
-    mut_displacement_max    : float
-    mut_displacement_steps  : int
-    mut_permutation_num     : int
+    mutations : list[tuple[float, Mutator]]
+    crossovers : list[tuple[float, Crossover]]
+    migrators : list[tuple[float, Migrator]]
+    operations_weight : float
 
     cycle_counter     : int
     minimum_lifetime  : int
@@ -105,16 +75,11 @@ class Genetic(SurfaceExplorator):
         geometry_threshold : float,
         calculator : str,
 
-        structure_generator : Callable[[Base, int, Computer], Sequence[Structure]] = lambda base, n, comp : generate_random_structures_hedron(base, n, comp, 20),
+        mutations : list[tuple[float, Mutator]],
+        crossovers : list[tuple[float, Crossover]],
+        migrators : list[tuple[float, Migrator]],
+
         comparison_algorithm : Callable[[Molecule, Molecule], float] = grigoryan_springborn,
-
-        generation_children_mutant_proportion : tuple[float, float, float] = (1.0, 1.0, 1.0),
-        mut_displacement_permutation_proportion : tuple[float, float] = (1.0, 1.0),
-
-        mut_displacement_number : int = 1,
-        mut_displacement_max : float = 1.0,
-        mut_displacement_steps : int = 1,
-        mut_permutation_num : int = 0,
 
         minimum_lifetime : int = -1,
 
@@ -125,46 +90,43 @@ class Genetic(SurfaceExplorator):
         """
         Define initial variables for genetic algorithm
         """
-        self.computer = computer
+        self.computer = GeneticComputer(computer)
         self.calculator = calculator
         if population_size < 100:
             raise ValueError(
                 "Population size is too small",
             )
         self.base = base
-        self.structure_generator = structure_generator
         self.population_size = population_size
-        self.population : list[Individual] = [
-            Individual(mol) for mol
-            in self.computer.optimize(
-                self.calculator,
-                self.structure_generator(
-                    self.base,
-                    self.population_size,
-                    self.computer,
-                ),
-            )
-        ]
+        self.population : list[Individual] = []
 
+        migrator_total_weight = sum([weight for weight, _ in migrators])
+        for weight, migrator in self.migrators:
+            generated_num = floor(self.population_size*weight/migrator_total_weight)
+            self.population+= [
+                Individual(mol) for mol
+                in computer.optimize(
+                    self.calculator,
+                    self.computer.migrate(
+                        generated_num,
+                        migrator,
+                    )
+                )
+            ]
 
         self.population_size = len(self.population)
+
+        self.mutations = mutations
+        self.crossovers = crossovers
+        self.migrators = migrators
+        self.operations_weight = sum([
+            weight for weight, _
+            in mutations+crossovers+migrators
+        ])
 
         self.energy_threshold     = energy_threshold
         self.geometry_threshold   = geometry_threshold
         self.comparison_algorithm = comparison_algorithm
-
-        self.generation_children_mutant_proportion = generation_children_mutant_proportion
-
-        ###########################
-        ### Mutation parameters ###
-        ###########################
-        self.mut_displacement_permutation_proportion = mut_displacement_permutation_proportion
-
-        # Added explicit type conversion to manage vector multiplication errors
-        self.mut_displacement_number = int(mut_displacement_number)
-        self.mut_displacement_max    = float(mut_displacement_max)
-        self.mut_displacement_steps  = int(mut_displacement_steps)
-        self.mut_permutation_num     = int(mut_permutation_num)
 
         # Generation parameters
         self.end_loop_number   = end_loop_number
@@ -179,153 +141,110 @@ class Genetic(SurfaceExplorator):
         self.total_unfeasible_removed     = 0
         self.total_duplicates_removed     = 0
         self.total_mutations              = 0
-        self.total_mutations_displacement = 0
-        self.total_mutations_permutation  = 0
         self.total_mating                 = 0
 
         self.bonding_tolerance            = bonding_tolerance
 
-
     def remove_duplicates(self) -> None:
 
-        with Pool(self.computer.cpu_count_limit) as pool:
-            remove_mask : list[bool]  = pool.starmap(
-                is_pop_index_duplicate,
-                [
-                    (
-                        self.population,
-                        i,
-                        self.energy_threshold,
-                        self.geometry_threshold,
-                        self.comparison_algorithm,
-                    )
-                    for i in range(len(self.population))
-                ],
-            )
+        self.population = remove_duplicates(
+            self.computer,
+            self.population,
+            self.energy_threshold,
+            self.geometry_threshold,
+            self.comparison_algorithm,
+        )
 
-        new_population = [
-            mol for mol, is_duplicate
-            in zip(self.population, remove_mask)
-            if not is_duplicate
-        ]
+    def migrate(self) -> list[Individual]:
+        migrated : list[Structure] = []
 
-        self.total_duplicates_removed = len(self.population) - len(new_population)
+        for weight, migrator in self.migrators:
+            op_num : int = floor(weight/self.operations_weight)
+            migrated+= self.computer.migrate(op_num, migrator)
 
-        self.population = new_population
-
-
-    def generate(self) -> list[Individual]:
-        remaining_population : int = self.population_size# - len(self.population)
-        remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[0]/sum(self.generation_children_mutant_proportion))
-
-        generated : list[Individual] = [
+        migrated_individuals = [
             Individual(mol) for mol
-            in self.computer.optimize(
-                self.calculator,
-                self.structure_generator(
-                    self.base,
-                    remaining_population,
-                    self.computer,
-                ),
-            )
+            in self.computer.optimize(self.calculator, migrated)
+            if mol is not None
         ]
 
-        return generated
+        self.total_optimizations+= len(migrated)
+        self.total_converged+= len(migrated_individuals)
+
+        return migrated_individuals
 
     def reproduce(self) -> list[Individual]:
-        remaining_population : int = self.population_size# - len(self.population)
-        remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[1]/sum(self.generation_children_mutant_proportion))
-
-        parents = [
-            (mother, father)
-            for mother, father
-            in distinct_pairs(self.population)
-        ]
-
         children : list[Structure] = []
 
-        for mother, father in random.choices(
-            parents,
-            k = remaining_population,
-        ):
-            children.append(
-                plane_mating(mother, father)
-            )
+        for weight, crossover in self.crossovers:
+            op_num : int = floor(weight/self.operations_weight)
 
-        children_individuals = [Individual(mol) for mol in self.computer.optimize(self.calculator, children) if mol is not None]
+            for mother, father in random.choices(
+                list(distinct_pairs(self.population)),
+                k = op_num,
+            ):
+                children.append(
+                    crossover(mother, father)
+                )
 
-        self.total_optimizations+= remaining_population
+        children_individuals = [
+            Individual(mol) for mol
+            in self.computer.optimize(self.calculator, children)
+            if mol is not None
+        ]
+
+        self.total_optimizations+= len(children)
         self.total_converged+= len(children_individuals)
-        self.total_mating+= len(children_individuals)
+        self.total_mating+= len(children)
 
         return children_individuals
 
     def mutate(self) -> list[Individual]:
-        # Get the number of individuals that will be choosen to mutate
-        remaining_population : int = self.population_size# - len(self.population)
-        remaining_population = floor(remaining_population * self.generation_children_mutant_proportion[2]/sum(self.generation_children_mutant_proportion))
-
-        # Get actual number of individuals that will be choosen to have their atoms displaced
-        remaining_displacement : int = floor(remaining_population * self.mut_displacement_permutation_proportion[0]/sum(self.mut_displacement_permutation_proportion))
-
-        # Get actual number of individuals that will be choosen to have their atoms permutates (switch positions)
-        remaining_permute : int = floor(remaining_population * self.mut_displacement_permutation_proportion[1]/sum(self.mut_displacement_permutation_proportion))
-
         mutants : list[Structure] = []
 
-        for mutant in random.choices(
-            self.population,
-            k = int(remaining_displacement/self.mut_displacement_steps),
-        ):
-            for step in range(1, self.mut_displacement_steps+1):
-                mutants.append(
-                    mut_random(
-                        mutant,
-                        self.mut_displacement_number,
-                        self.mut_displacement_max * step / self.mut_displacement_steps,
-                    )
-                )
+        for weight, mutation in self.mutations:
+            op_num : int = floor(weight/self.operations_weight)
 
-        for mutant in random.choices(
-            self.population,
-            k = remaining_permute,
-        ):
-            mutants.append(
-                mut_permute(
-                    mutant,
-                    len(mutant)//2 if self.mut_permutation_num<=0 else self.mut_permutation_num,
-                )
-            )
+            for mutant in random.choices(
+                self.population,
+                k = op_num,
+            ):
+                mutants.append(mutation(mutant))
 
-        mutant_molecules : list[Individual] = [Individual(mol) for mol in self.computer.optimize(self.calculator, mutants) if mol is not None]
+        mutant_molecules : list[Individual] = [
+            Individual(mol) for mol
+            in self.computer.optimize(self.calculator, mutants)
+            if mol is not None
+        ]
 
-        self.total_optimizations+= remaining_displacement + remaining_permute
+        self.total_optimizations+= len(mutants)
         self.total_converged+= len(mutant_molecules)
-        self.total_mutations+= len(mutant_molecules)
+        self.total_mutations+= len(mutants)
 
         return mutant_molecules
 
     def remove_unfeasible(self) -> None:
-        min_energy : float = min([mol.energy for mol in self.population])
-        max_energy : float = max([mol.energy for mol in self.population])
+        min_energy : float = min(
+            [mol.energy for mol in self.population]
+        )
+        max_energy : float = max(
+            [mol.energy for mol in self.population]
+        )
         median_energy : float = (min_energy + max_energy)/2
 
         pop_size_before = len(self.population)
 
+        for ind in self.population:
+            ind.generations_alive+= 1
+
         self.population = [
-            mol for mol in self.population
-            if mol.energy<= median_energy
+            ind for ind in self.population
+            if ind.energy <=median_energy and ind.generations_alive > self.minimum_lifetime
         ]
 
         pop_size_after = len(self.population)
 
         self.total_unfeasible_removed+= pop_size_before - pop_size_after
-
-    def remove_excess(self) -> None:
-        self.population = sorted(
-            self.population,
-            key = lambda ind : ind.energy,
-        )[0:min(len(self.population), self.population_size)]
 
     def remove_not_bonded(self) -> None:
         self.population = [
@@ -341,44 +260,22 @@ class Genetic(SurfaceExplorator):
         else:
             self.best_energy_loops+= 1
 
-    """
-    def loop(self) -> bool:
-        self.cycle_counter+= 1
-
-        self.remove_unfeasible()
-        self.remove_duplicates()
-
-        children : list[Individual] = self.reproduce()
-        mutants : list[Individual] = self.mutate()
-        generated : list[Individual] = self.generate()
-
-        self.population+= children
-        self.population+= mutants
-        self.population+= generated
-
-        self.remove_duplicates()
-        self.remove_not_bonded()
-
-        self.get_best_energy()
-        return self.best_energy_loops < self.end_loop_number
-    """
-
     def loop(self) -> bool:
         self.cycle_counter+= 1
 
         children : list[Individual] = self.reproduce()
         mutants : list[Individual] = self.mutate()
-        generated : list[Individual] = self.generate()
+        migrated : list[Individual] = self.migrate()
 
         self.population+= children
         self.population+= mutants
-        self.population+= generated
+        self.population+= migrated
 
         self.remove_duplicates()
-        self.remove_excess()
         self.remove_not_bonded()
 
         self.get_best_energy()
+
         return self.best_energy_loops < self.end_loop_number
 
 

@@ -1,12 +1,14 @@
 # cython: freethreading_compatible = True
 
+from surface_explorator.genetic.migration import Migrator
+
 import random
 from math import ceil
 from typing import Optional
-from structure import Atom
+from structure import Atom, Base, Structure
 from structure.constants import *
 import cython
-from structure.creator.filter_list import *
+from surface_explorator.genetic.migration.filter_list import *
 
 from utils.typecheck import check_types
 from vec import Vector
@@ -127,3 +129,57 @@ class DotUniverse:
 
         self.atom_population.append(atom)
 
+
+class MeshMigrator(Migrator):
+    base : Base
+    cell_size : float
+    filter_list : FilterList
+    rng : random.Random
+
+    def __init__(self, base : Base, cell_size : float, filter_list : FilterList, rng : None | random.Random = None):
+        self.base = base
+
+        self.cell_size = cell_size
+
+        self.filter_list = filter_list
+
+        if isinstance(rng, random.Random):
+            self.rng = rng
+        else:
+            self.rng = random.Random()
+
+    def __call__(self) -> Structure:
+        """
+        Generate a random structure with atoms in the base
+        Use seed as parameter for future reproducibility
+        (same seed with the same base will result in the same structure)
+        """
+
+        # Create list of atoms based on stoichiometry
+        atoms = [Atom(element.z) for element in self.base.elements]
+        # Randomly shuffle it
+        self.rng.shuffle(atoms)
+
+        # Create dot universe
+        universe = DotUniverse(
+            self.cell_size,
+            max((atom.radius for atom in atoms)),
+            self.filter_list,
+        )
+
+        while atoms:
+            # Get first atom and remove it from the list
+            atom = atoms.pop(0)
+
+            # Get random position to put the atom
+            random_available_position = universe.get_random_available_position(atom.z, self.rng)
+            
+            # Put it in the universe if there are positions available
+            if random_available_position:
+                universe.include_atom(random_available_position, atom)
+            # Else, put it in the end of the list
+            else:
+                atoms.append(atom)
+                
+        # Return structure of atoms in the universe
+        return Structure(atoms)

@@ -2,7 +2,11 @@
 import argparse
 import time
 import os
-from typing import Literal
+from typing import cast
+
+from surface_explorator.genetic.crossover import PlaneMating
+from surface_explorator.genetic.migration.hedron_universe import HedronMigrator
+from surface_explorator.genetic.mutation import DisplacementMutator, PermuteMutator, TwistMutator
 
 
 
@@ -84,53 +88,80 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
-    "-gcmp",
-    "--generation_children_mutant_proportion",
-    nargs = 3,
+    "--mut_disp_w",
     type = float,
-    default = [1, 1, 1],
-    help = "Proportion between new molecules, children and mutants created every new generation (default = 1 1 1)",
+    default = 1,
+    help = "Mutation displacement weight (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "-mdpp",
-    "--mutation_displacement_permutation_proportion",
-    nargs = 2,
+    "--mut_perm_w",
     type = float,
-    default = [1, 1],
-    help = "Proportion in mutation between atomic displacement and atomic permutation (default = 1 1)",
+    default = 1,
+    help = "Mutation permutation weight (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "-mdm",
-    "--mutation_displacement_maximum",
+    "--mut_twist_w",
+    type = float,
+    default = 1,
+    help = "Mutation twist weight (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "--crov_w",
+    type = float,
+    default = 1,
+    help = "Crossing-over weight (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "--migr_w",
+    type = float,
+    default = 1,
+    help = "Migrator weight (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "--mut_disp_min",
     type = float,
     default = 1.0,
+    help = "Minimum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "--mut_disp_max",
+    type = float,
+    default = 2.0,
     help = "Maximum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "-mds",
-    "--mutation_displacement_steps",
-    type = float,
-    default = 1,
-    help = "Number of steps per displacement in mutations (default = %(default)s)",
-)
-
-arg_parser.add_argument(
-    "-mdn",
-    "--mutation_displacement_number",
+    "--mut_disp_num",
     type = int,
     default = 1,
     help = "Number of atoms to move in mutations of atomic displacement (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "-mpn",
-    "--mutation_permutation_number",
+    "--mut_perm_num",
     type = int,
     default = 0,
-    help = "Number of permutations in mutations of that type (default = half the number of atoms",
+    help = "Number of permutations in mutations of that type (default = Half the number of atoms)",
+)
+
+arg_parser.add_argument(
+    "--mut_twist_min_angle",
+    type = float,
+    default = 90,
+    help = "Minimum angle to be used in twist mutations (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "--mut_twist_max_angle",
+    type = float,
+    default = 270,
+    help = "Maximum angle to be used in twist mutations (default = %(default)s)",
 )
 
 arg_parser.add_argument(
@@ -176,8 +207,7 @@ os.chdir(
 from calculators.xtb import XTB
 from computer import Computer
 from structure import Base, Molecule
-import structure.creator
-from structure.creator.filter_list import FilterList, FilterMode
+from surface_explorator.genetic.migration.filter_list import FilterList, FilterMode
 from surface_explorator.genetic import Genetic
 from structure.geometry import grigoryan_springborn, haas_oliveira
 
@@ -195,13 +225,58 @@ computer = Computer(
 
 computer.add_calculator("xtb", calc)
 
-seed = 2345678
-
 start = time.monotonic_ns()
 
 filter_list = FilterList(FilterMode.EXCLUDE, ((1,1),))
 
-structure_generator = lambda base, n, comp : structure.creator.generate_random_structures_hedron(base, n, comp, 20, filter_list = filter_list)
+migrator = cast(
+    list,
+    [
+        (
+            args.migr_w,
+            HedronMigrator(base, 20, filter_list, None),
+        ),
+    ],
+)
+
+mutators = [
+    (
+        args.mut_dist_w,
+        DisplacementMutator(
+            base,
+            args.mut_disp_num,
+            args.mut_disp_min,
+            args.mut_disp_max,
+            None,
+        ),
+    ),
+    (
+        args.mut_perm_w,
+        PermuteMutator(
+            base,
+            args.mut_perm_num,
+            None,
+        )
+    ),
+    (
+        args.mut_twist_w,
+        TwistMutator(
+            args.mut_twist_min_angle,
+            args.mut_twist_max_angle,
+            None,
+        )
+    ),
+]
+
+crossover = cast(
+    list,
+    [
+        (
+            args.crov_w,
+            PlaneMating(None),
+        ),
+    ],
+)
 
 def haas_oliveira_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
     return haas_oliveira(mol1, mol2, bonding_tolerance = args.comparison_bonding_tolerance)
@@ -229,18 +304,13 @@ genetic = Genetic(
     computer = computer,
     calculator = "xtb",
 
-    energy_threshold = args.energy_threshold,
+    mutations = mutators,
+    crossovers = crossover,
+    migrators = migrator,
 
+    energy_threshold = args.energy_threshold,
     geometry_threshold = args.geometry_threshold,
     comparison_algorithm = comparison_algorithm,
-
-    generation_children_mutant_proportion = tuple(args.generation_children_mutant_proportion),
-    mut_displacement_permutation_proportion = tuple(args.mutation_displacement_permutation_proportion),
-
-    mut_displacement_number = args.mutation_displacement_number,
-    mut_displacement_max = args.mutation_displacement_maximum,
-    mut_displacement_steps = args.mutation_displacement_steps,
-    mut_permutation_num = args.mutation_permutation_number,
 
     end_loop_number = args.end_loop_number,
 )
