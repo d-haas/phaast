@@ -64,6 +64,7 @@ class XTB(Calculator):
             raise ValueError(
                 "Structure is empty, is this some kind of joke?",
             )
+
         with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
                 xtb_path = os.path.abspath(self.xtb_path)
