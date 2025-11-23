@@ -6,11 +6,12 @@ if sys._is_gil_enabled():
 else:
     from multiprocessing.dummy import Pool
 
-#import threading
-from typing import Iterable, overload
+from typing import Any, Callable, Iterable, TypeVar, TypeVarTuple, overload
 from calculators import Calculator
 from structure import Molecule, Structure
-import socket
+
+ParA = TypeVarTuple('ParA')
+ParT = TypeVar('ParT')
 
 class BaseComputer(ABC):
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
@@ -60,52 +61,19 @@ class Computer(BaseComputer):
                 )
             return [mol for mol in molecules if mol]
 
+    #def parallelize(self, args : Iterable[tuple[Unpack[ParA]]] | int, func : Callable[[Unpack[ParA]], ParT]) -> list[ParT]:
+    def parallelize(self, args : Iterable[tuple[Any, ...]] | int, func : Callable[..., ParT]) -> list[ParT]:
+        with Pool(self.cpu_count_limit) as pool:
+            if isinstance(args, int):
+                return pool.starmap(
+                    func,
+                    [() for _ in range(args)],
+                )
+            else:
+                return pool.starmap(
+                    func,
+                    args
+                )
+
     def add_calculator(self, key : str, calculator : Calculator) -> None:
         self.calculators[key] = calculator
-
-
-class RemoteComputerClient(BaseComputer):
-    def __init__(self, ip : str, port : int = 3333):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((ip, port))
-
-        self.cpu_count_limit = self.get_cpu_count_limit()
-
-    @abstractmethod
-    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule]:
-        pass
-
-    def get_cpu_count_limit(self) -> int:
-        self.socket.send(
-            b"\1" + b"\0"*8,
-        )
-        return 0
-
-"""
-class RemoteComputerServer(Computer):
-    def __init__(
-        self,
-        cpu_count_limit : int = 0,
-        port : int = 3333,
-    ):
-        super().__init__(cpu_count_limit)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((socket.gethostname(), port))
-        self.connector()
-
-    def connector(self) -> None:
-        while True:
-            conn, addr = self.socket.accept()
-            data : bytes = conn.recv(9)
-            if not data: break
-            conn.send(data) # Server end of handshake
-            threading.Thread(
-                target = self.optimization_listener,
-                args = (conn,),
-            ).run()
-
-    def optimization_listener(self, connection : socket.socket):
-        while True:
-            data : bytes = connection.recv(9)
-            pass
-"""
