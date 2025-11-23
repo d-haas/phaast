@@ -3,7 +3,7 @@
 cimport cython
 from typing import Any, Iterator, Union, overload
 
-from libc.math cimport sqrt
+from libc.math cimport sqrt, sin, cos
 
 def create_vector(x : float, y : float , z : float) -> "Vector":
     return Vector(x, y, z)
@@ -196,6 +196,57 @@ cdef class Vector:
             self.y*other.z-self.z*other.y,
             self.z*other.x-self.x*other.z,
             self.x*other.y-self.y*other.x,
+        )
+
+    def rotate_x(Vector self, double ang) -> None:
+        ty, tz = self.y, self.z
+        s_ang = sin(ang)
+        c_ang = cos(ang)
+        self.y = ty*c_ang - tz*s_ang
+        self.z = ty*s_ang + tz*c_ang
+
+    def rotated_x(Vector self, double ang) -> Vector:
+        ty, tz = self.y, self.z
+        s_ang = sin(ang)
+        c_ang = cos(ang)
+        return self.__class__(
+            self.x,
+            ty*c_ang - tz*s_ang,
+            ty*s_ang + tz*c_ang,
+        )
+
+    def rotate_y(Vector self, double ang) -> None:
+        tz, tx = self.z, self.x
+        s_ang = sin(ang)
+        c_ang = cos(ang)
+        self.z = tz*c_ang - tx*s_ang
+        self.x = tz*s_ang + tx*c_ang
+
+    def rotated_y(Vector self, double ang) -> Vector:
+        tz, tx = self.z, self.x
+        s_ang = sin(ang)
+        c_ang = cos(ang)
+        return Vector(
+            tz*s_ang + tx*c_ang,
+            self.y,
+            tz*c_ang - tx*s_ang,
+        )
+
+    def rotate_z(Vector self, double ang) -> None:
+        tx, ty = self.x, self.y
+        s_ang = sin(ang)
+        c_ang = cos(ang)
+        self.x = tx*c_ang - ty*s_ang
+        self.y = tx*s_ang + ty*c_ang
+
+    def rotated_z(Vector self, double ang) -> Vector:
+        tx, ty = self.x, self.y
+        s_ang = sin(ang)
+        c_ang = cos(ang)
+        return self.__class__(
+            tx*c_ang - ty*s_ang,
+            tx*s_ang + ty*c_ang,
+            self.z,
         )
 
     @property

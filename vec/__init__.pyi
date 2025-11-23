@@ -114,6 +114,37 @@ class Vector:
         """
         pass
 
+    def rotate_x(self, ang : float) -> None:
+        """
+        Rotate vector over x-axis
+        """
+
+    def rotated_x(self, ang : float) -> Vector:
+        """
+        Return rotated vector over x-axis
+        """
+
+    def rotate_y(self, ang : float) -> None:
+        """
+        Rotate vector over y-axis
+        """
+
+    def rotated_y(self, ang : float) -> Vector:
+        """
+        Return rotated vector over y-axis
+        """
+
+    def rotate_z(self, ang : float) -> None:
+        """
+        Rotate vector over z-axis
+        """
+
+    def rotated_z(self, ang : float) -> Vector:
+        """
+        Return rotated vector over z-axis
+        """
+
+
     @property
     def mod_sqr(self) -> float:
         """
