@@ -42,6 +42,12 @@ class Element:
         """
         return AtomicRadi[self.z]
 
+    def __eq__(self, other : Any | Element) -> bool:
+        if isinstance(other, Element):
+            return self.z == other.z
+        else:
+            return False
+
     def __str__(self) -> str:
         """
         str(Atom) implementation
@@ -63,6 +69,9 @@ class Base:
             self.elements = self.parse_formula(elements)
         else:
             self.elements = tuple(elements)
+
+    def __len__(self) -> int:
+        return len(self.elements)
 
     def __iter__(self) -> Iterator[Element]:
         """
