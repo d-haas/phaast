@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from structure import Molecule, Structure
+from phaast.structure import Molecule, Structure
 
 
 class Calculator(ABC):

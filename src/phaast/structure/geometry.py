@@ -1,13 +1,13 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 if TYPE_CHECKING:
-    from structure import Molecule
+    from phaast.structure import Molecule
 
 import bisect
 import itertools
 from enum import Enum
-from vec import Vector
-from structure.constants import AtomicNumber
+from phaast.vec import Vector
+from phaast.structure.constants import AtomicNumber
 
 class ComparisonAlgorithm(Enum):
     GRIGORYAN_SPRINGBORN = 1

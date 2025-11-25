@@ -1,6 +1,6 @@
 from structure import Structure
 
-Structure.from_xyz_str(
+dication_benzene = Structure.from_xyz_str(
     """12
 
     H 0.57031558944458 -0.71512482887087 -0.61947322560183

@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Any, Callable, Iterable, Iterator, Optional, Self
-from structure.constants import *
-from structure.geometry import ComparisonAlgorithm, comparison_functions_dict
-from vec import Vector
+from phaast.structure.constants import *
+from phaast.structure.geometry import ComparisonAlgorithm, comparison_functions_dict
+from phaast.vec import Vector
 import subprocess, tempfile
 import struct
 
