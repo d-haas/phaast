@@ -1,6 +1,6 @@
 from typing import Any
-from calculators import Calculator
-from structure import Molecule, Structure
+from phaast.calculators import Calculator
+from phaast.structure import Molecule, Structure
 import subprocess, tempfile, os
 
 class CustomCalculator(Calculator):

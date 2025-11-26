@@ -1,5 +1,6 @@
 from typing import Any, Callable, Iterable, overload
-from structure import Atom, Molecule
+
+from phaast.structure import Atom, Molecule
 
 def create_individual(atoms : Iterable[Atom], energy : float, generations_alive : int) -> "Individual":
     ind = Individual(atoms, energy)

@@ -1,17 +1,17 @@
 # cython: freethreading_compatible = True
 
-from surface_explorator.genetic.migration import Migrator
-
+import cython
 import random
 from math import ceil
 from typing import Optional
-from structure import Atom, Base, Structure
-from structure.constants import *
-import cython
-from surface_explorator.genetic.migration.filter_list import *
 
-from utils.typecheck import check_types
-from vec import Vector
+from phaast.structure import Atom, Base, Structure
+from phaast.structure.constants import *
+from phaast.surface_explorator.genetic.migration import Migrator
+from phaast.surface_explorator.genetic.migration.filter_list import *
+
+from phaast.utils.typecheck import check_types
+from phaast.vec import Vector
 
 @cython.cclass
 class Limit:

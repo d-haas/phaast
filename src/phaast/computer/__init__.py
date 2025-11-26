@@ -7,8 +7,10 @@ else:
     from multiprocessing.dummy import Pool
 
 from typing import Any, Callable, Iterable, TypeVar, TypeVarTuple, overload
-from calculators import Calculator
-from structure import Molecule, Structure
+
+from phaast.structure import Molecule, Structure
+
+from phaast.calculators import Calculator
 
 ParA = TypeVarTuple('ParA')
 ParT = TypeVar('ParT')

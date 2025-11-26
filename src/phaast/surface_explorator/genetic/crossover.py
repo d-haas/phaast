@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 import random
 from bisect import insort
 
-from structure import Atom, Structure
-from vec import Vector
+from phaast.structure import Atom, Structure
+from phaast.vec import Vector
 
 class Crossover(ABC):
     @abstractmethod

@@ -1,8 +1,8 @@
 from typing import Callable
 
-from computer import Computer
-from structure import Molecule
-from surface_explorator.genetic.individual import Individual
+from phaast.computer import Computer
+from phaast.structure import Molecule
+from phaast.surface_explorator.genetic.individual import Individual
 
 import sys
 if sys._is_gil_enabled():

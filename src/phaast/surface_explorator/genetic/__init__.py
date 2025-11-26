@@ -2,19 +2,19 @@ import random
 from typing import Callable, Iterable
 from math import floor
 
-from structure.geometry import grigoryan_springborn
+from phaast.structure.geometry import grigoryan_springborn
 
-from surface_explorator.genetic.migration import Migrator
-from surface_explorator.genetic.mutation import Mutator
-from surface_explorator.genetic.crossover import Crossover
-from surface_explorator.genetic.individual import Individual
-from surface_explorator.genetic.duplicate import remove_duplicates
+from phaast.surface_explorator.genetic.migration import Migrator
+from phaast.surface_explorator.genetic.mutation import Mutator
+from phaast.surface_explorator.genetic.crossover import Crossover
+from phaast.surface_explorator.genetic.individual import Individual
+from phaast.surface_explorator.genetic.duplicate import remove_duplicates
 
-from computer import Computer
-from structure import Base, Molecule, Structure
+from phaast.computer import Computer
+from phaast.structure import Base, Molecule, Structure
 
-from surface_explorator import SurfaceExplorator
-from utils.custom_iter import distinct_pairs
+from phaast.surface_explorator import SurfaceExplorator
+from phaast.utils.custom_iter import distinct_pairs
 
 class GeneticComputer(Computer):
     def __init__(self, computer : Computer):

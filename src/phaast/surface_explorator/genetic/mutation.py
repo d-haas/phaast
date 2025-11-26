@@ -3,10 +3,10 @@ from math import tau
 import random
 from typing import cast
 
-from structure import Base, Element, Structure
-from vec import Vector
+from phaast.structure import Base, Element, Structure
+from phaast.vec import Vector
 
-from utils.custom_iter import distinct_pairs
+from phaast.utils.custom_iter import distinct_pairs
 
 class Mutator(ABC):
     @abstractmethod

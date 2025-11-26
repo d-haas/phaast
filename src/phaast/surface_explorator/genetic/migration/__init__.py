@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from structure import Structure
 
-from structure.constants import *
-from surface_explorator.genetic.migration.hedron_universe import HedronMigrator
+from phaast.structure import Structure
+from phaast.structure.constants import *
+from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMigrator
 
 #@check_types
 

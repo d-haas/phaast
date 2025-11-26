@@ -1,4 +1,4 @@
-from structure import Structure
+from phaast.structure import Structure
 
 dication_benzene = Structure.from_xyz_str(
     """12

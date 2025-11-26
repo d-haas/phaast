@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Literal, Iterable
-from structure.constants import AtomicNumber
+
+from phaast.structure.constants import AtomicNumber
 
 class FilterMode(Enum):
     NONE = 0

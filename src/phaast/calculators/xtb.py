@@ -1,9 +1,7 @@
-import subprocess
-import tempfile
+import os, subprocess, tempfile
 from typing import Literal, Optional, TypeAlias
-from calculators import Calculator
-from structure import Molecule, Structure
-import os
+from phaast.calculators import Calculator
+from phaast.structure import Molecule, Structure
 
 OptimizationLevel : TypeAlias = Literal[
     "crude", "sloppy", "loose", "lax",

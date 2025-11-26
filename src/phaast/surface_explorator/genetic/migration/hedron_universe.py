@@ -1,16 +1,17 @@
 # cython: freethreading_compatible = True
 
-from surface_explorator.genetic.migration import Migrator
+import cython
 
 import random
 from typing import Literal, Optional
-from computer import Computer
-from structure import Atom, Base, Structure
-from structure.constants import AtomicNumber, AtomicRadi
-import cython
-from surface_explorator.genetic.migration.filter_list import *
 
-from vec import Vector
+from phaast.structure import Atom, Base, Structure
+from phaast.structure.constants import AtomicNumber, AtomicRadi
+from phaast.surface_explorator.genetic.migration.filter_list import *
+from phaast.surface_explorator.genetic.migration import Migrator
+
+from phaast.vec import Vector
+from phaast.computer import Computer
 
 GOLDEN_RATIO = (1 + 5**.5)/2
 
