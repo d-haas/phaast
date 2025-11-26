@@ -4,11 +4,9 @@ import time
 import os
 from typing import cast
 
-from surface_explorator.genetic.crossover import PlaneMating
-from surface_explorator.genetic.migration.hedron_universe import HedronMigrator
-from surface_explorator.genetic.mutation import DisplacementMutator, PermuteMutator, TwistMutator
-
-
+from phaast.surface_explorator.genetic.crossover import PlaneMating
+from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMigrator
+from phaast.surface_explorator.genetic.mutation import DisplacementMutator, PermuteMutator, TwistMutator
 
 arg_parser = argparse.ArgumentParser(
     prog="P.H.A.A.S.T",
@@ -204,12 +202,12 @@ os.chdir(
     "/".join(__file__.split("/")[:-1])
 )
 
-from calculators.xtb import XTB
-from computer import Computer
-from structure import Base, Molecule
-from surface_explorator.genetic.migration.filter_list import FilterList, FilterMode
-from surface_explorator.genetic import Genetic
-from structure.geometry import grigoryan_springborn, haas_oliveira
+from phaast.calculators.xtb import XTB
+from phaast.computer import Computer
+from phaast.structure import Base, Molecule
+from phaast.surface_explorator.genetic.migration.filter_list import FilterList, FilterMode
+from phaast.surface_explorator.genetic import Genetic
+from phaast.structure.geometry import grigoryan_springborn, haas_oliveira
 
 base = Base(args.stoichiometry)
 
