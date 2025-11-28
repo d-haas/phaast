@@ -5,6 +5,7 @@ import cython
 import random
 from typing import Literal, Optional
 
+
 from phaast.structure import Atom, Base, Structure
 from phaast.structure.constants import AtomicNumber, AtomicRadi
 from phaast.surface_explorator.genetic.migration.filter_list import *
