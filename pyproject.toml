@@ -30,5 +30,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 ext-modules = [
-  {name = "phaast.vec.__init__", sources = ["src/phaast/vec/__init__.pyx"]}
+  { name = "phaast.vec.__init__", sources = ["src/phaast/vec/__init__.pyx"] },
+  { name = "phaast.surface_explorator.genetic.migration.hedron_universe", sources = ["src/phaast/surface_explorator/genetic/migration/hedron_universe.py"] },
 ]
