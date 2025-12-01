@@ -23,7 +23,7 @@ class PlaneMating(ABC):
         else:
             self.rng = random.Random()
 
-    def plane_mating(self, struct1 : Structure, struct2 : Structure) -> Structure:
+    def __call__(self, struct1 : Structure, struct2 : Structure) -> Structure:
         """
         Make a in-between structure from two other structures
 

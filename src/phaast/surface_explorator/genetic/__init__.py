@@ -19,8 +19,9 @@ from phaast.utils.custom_iter import distinct_pairs
 class GeneticComputer(Computer):
     def __init__(self, computer : Computer):
         super().__init__(computer.cpu_count_limit)
+        self.calculators = computer.calculators
 
-    def mutate(self, structs : Structure, mutator : Mutator) -> list[Structure]:
+    def mutate(self, structs : Iterable[Structure], mutator : Mutator) -> list[Structure]:
         return self.parallelize(
             ((struct,) for struct in structs),
             mutator,
@@ -61,10 +62,11 @@ class Genetic(SurfaceExplorator):
     total_optimizations          : int
     total_converged              : int
     total_duplicates_removed     : int
+    total_unfeasible_removed     : int
+    total_not_bonded_removed     : int
     total_mutations              : int
-    total_mutations_displacement : int
-    total_mutations_permutation  : int
     total_mating                 : int
+    total_migrated               : int
 
     def __init__(
         self,
@@ -101,7 +103,7 @@ class Genetic(SurfaceExplorator):
         self.population : list[Individual] = []
 
         migrator_total_weight = sum([weight for weight, _ in migrators])
-        for weight, migrator in self.migrators:
+        for weight, migrator in migrators:
             generated_num = floor(self.population_size*weight/migrator_total_weight)
             self.population+= [
                 Individual(mol) for mol
@@ -113,8 +115,6 @@ class Genetic(SurfaceExplorator):
                     )
                 )
             ]
-
-        self.population_size = len(self.population)
 
         self.mutations = mutations
         self.crossovers = crossovers
@@ -140,12 +140,16 @@ class Genetic(SurfaceExplorator):
         self.total_converged              = len(self.population)
         self.total_unfeasible_removed     = 0
         self.total_duplicates_removed     = 0
+        self.total_not_bonded_removed     = 0
         self.total_mutations              = 0
         self.total_mating                 = 0
+        self.total_migrated               = 0
 
         self.bonding_tolerance            = bonding_tolerance
 
     def remove_duplicates(self) -> None:
+
+        pop_size_before : int = len(self.population)
 
         self.population = remove_duplicates(
             self.computer,
@@ -155,11 +159,16 @@ class Genetic(SurfaceExplorator):
             self.comparison_algorithm,
         )
 
+        pop_size_after : int = len(self.population)
+
+        self.total_duplicates_removed = pop_size_before - pop_size_after
+
     def migrate(self) -> list[Individual]:
         migrated : list[Structure] = []
 
         for weight, migrator in self.migrators:
-            op_num : int = floor(weight/self.operations_weight)
+            op_num : int = floor(self.population_size*weight/self.operations_weight)
+
             migrated+= self.computer.migrate(op_num, migrator)
 
         migrated_individuals = [
@@ -168,6 +177,7 @@ class Genetic(SurfaceExplorator):
             if mol is not None
         ]
 
+        self.total_migrated+= len(migrated)
         self.total_optimizations+= len(migrated)
         self.total_converged+= len(migrated_individuals)
 
@@ -177,15 +187,17 @@ class Genetic(SurfaceExplorator):
         children : list[Structure] = []
 
         for weight, crossover in self.crossovers:
-            op_num : int = floor(weight/self.operations_weight)
+            op_num : int = floor(self.population_size*weight/self.operations_weight)
 
-            for mother, father in random.choices(
+            chosen_parents = random.choices(
                 list(distinct_pairs(self.population)),
                 k = op_num,
-            ):
-                children.append(
-                    crossover(mother, father)
-                )
+            )
+
+            children+= self.computer.crossover(
+                chosen_parents,
+                crossover,
+            )
 
         children_individuals = [
             Individual(mol) for mol
@@ -203,13 +215,16 @@ class Genetic(SurfaceExplorator):
         mutants : list[Structure] = []
 
         for weight, mutation in self.mutations:
-            op_num : int = floor(weight/self.operations_weight)
+            op_num : int = floor(self.population_size*weight/self.operations_weight)
 
-            for mutant in random.choices(
+            chosen_mutants = random.choices(
                 self.population,
                 k = op_num,
-            ):
-                mutants.append(mutation(mutant))
+            )
+            mutants+= self.computer.mutate(
+                chosen_mutants,
+                mutation,
+            )
 
         mutant_molecules : list[Individual] = [
             Individual(mol) for mol
@@ -239,7 +254,7 @@ class Genetic(SurfaceExplorator):
 
         self.population = [
             ind for ind in self.population
-            if ind.energy <=median_energy and ind.generations_alive > self.minimum_lifetime
+            if ind.energy <=median_energy or ind.generations_alive <= self.minimum_lifetime
         ]
 
         pop_size_after = len(self.population)
@@ -247,10 +262,17 @@ class Genetic(SurfaceExplorator):
         self.total_unfeasible_removed+= pop_size_before - pop_size_after
 
     def remove_not_bonded(self) -> None:
+
+        pop_size_before = len(self.population)
+
         self.population = [
             ind for ind in self.population
-            if ind.is_bonded(self.bonding_tolerance)
+            if ind.is_bonded(self.bonding_tolerance) or ind.generations_alive <= self.minimum_lifetime
         ]
+
+        pop_size_after = len(self.population)
+
+        self.total_not_bonded_removed+= pop_size_before - pop_size_after
 
     def get_best_energy(self) -> None:
         new_best_energy : float = min([mol.energy for mol in self.population])
