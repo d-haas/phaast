@@ -2,7 +2,6 @@
 import argparse
 import time
 import os
-from typing import cast
 
 from phaast.surface_explorator.genetic.crossover import PlaneMating
 from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMigrator
@@ -81,21 +80,21 @@ arg_parser.add_argument(
     "-gt",
     "--geometry_threshold",
     type = float,
-    default = 0.9,
+    default = 0.87,
     help = "Maximum geometry difference so molecules are considered the same so one of them is discarded [must be a value between 0 and 1] (default = %(default)s)",
 )
 
 arg_parser.add_argument(
     "--mut_disp_w",
     type = float,
-    default = 1,
+    default = 3,
     help = "Mutation displacement weight (default = %(default)s)",
 )
 
 arg_parser.add_argument(
     "--mut_perm_w",
     type = float,
-    default = 1,
+    default = 2,
     help = "Mutation permutation weight (default = %(default)s)",
 )
 
@@ -123,14 +122,14 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     "--mut_disp_min",
     type = float,
-    default = 1.0,
+    default = 1.3,
     help = "Minimum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
 )
 
 arg_parser.add_argument(
     "--mut_disp_max",
     type = float,
-    default = 2.0,
+    default = 2.3,
     help = "Maximum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
 )
 
@@ -227,19 +226,16 @@ start = time.monotonic_ns()
 
 filter_list = FilterList(FilterMode.EXCLUDE, ((1,1),))
 
-migrator = cast(
-    list,
-    [
-        (
-            args.migr_w,
-            HedronMigrator(base, 20, filter_list, None),
-        ),
-    ],
-)
+migrator = [
+    (
+        args.migr_w,
+        HedronMigrator(base, 20, filter_list, None),
+    ),
+]
 
 mutators = [
     (
-        args.mut_dist_w,
+        args.mut_disp_w,
         DisplacementMutator(
             base,
             args.mut_disp_num,
@@ -266,15 +262,12 @@ mutators = [
     ),
 ]
 
-crossover = cast(
-    list,
-    [
-        (
-            args.crov_w,
-            PlaneMating(None),
-        ),
-    ],
-)
+crossover = [
+    (
+        args.crov_w,
+        PlaneMating(None),
+    ),
+]
 
 def haas_oliveira_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
     return haas_oliveira(mol1, mol2, bonding_tolerance = args.comparison_bonding_tolerance)
@@ -303,8 +296,8 @@ genetic = Genetic(
     calculator = "xtb",
 
     mutations = mutators,
-    crossovers = crossover,
-    migrators = migrator,
+    crossovers = crossover, #type: ignore
+    migrators = migrator, #type: ignore
 
     energy_threshold = args.energy_threshold,
     geometry_threshold = args.geometry_threshold,
@@ -314,10 +307,11 @@ genetic = Genetic(
 )
 
 while genetic.loop():
-    print(f"========================================")
-    print(f"Generation {genetic.cycle_counter} done")
-    print(f"Best energy is {genetic.best_energy}")
-    print(f"========================================")
+    print("╔"+"═"*57+"╗")
+    print("║"+f"Generation {genetic.cycle_counter} done".ljust(57)+"║")
+    print("║"+f"Best energy: {genetic.best_energy}".ljust(57)+"║")
+    print("║"+f"Population size: {len(genetic.population)}".ljust(57)+"║")
+    print("╚"+"═"*57+"╝")
 
 end = time.monotonic_ns()
 delta_time = (end - start)/1e9
@@ -329,9 +323,17 @@ best = sorted(
 
 best_list = best[0 : min(len(best), args.return_number)]
 
-print(f"The process is done. Elapsed time: {round(delta_time)} s")
-print(f"Total optimizations: {genetic.total_optimizations}")
-print(f"Total converged: {genetic.total_converged}")
+print("╔"+"═"*57+"╗")
+print("║"+f"The process is done. Elapsed time: {round(delta_time)} s".ljust(57)+"║")
+print("║"+f"Total optimizations: {genetic.total_optimizations}".ljust(57)+"║")
+print("║"+f"Total converged: {genetic.total_converged}".ljust(57)+"║")
+print("║"+f"Total duplicates removed: {genetic.total_duplicates_removed}".ljust(57)+"║")
+print("║"+f"Total unfeasible removed: {genetic.total_unfeasible_removed}".ljust(57)+"║")
+print("║"+f"Total not-bonded removed: {genetic.total_not_bonded_removed}".ljust(57)+"║")
+print("║"+f"Total migration: {genetic.total_migrated}".ljust(57)+"║")
+print("║"+f"Total mutations: {genetic.total_mutations}".ljust(57)+"║")
+print("║"+f"Total crossovers: {genetic.total_mating}".ljust(57)+"║")
+print("╚"+"═"*57+"╝")
 
 os.chdir(actual_cwd)
 
