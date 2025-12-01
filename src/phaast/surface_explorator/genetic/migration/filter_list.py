@@ -4,9 +4,9 @@ from typing import Literal, Iterable
 from phaast.structure.constants import AtomicNumber
 
 class FilterMode(Enum):
-    NONE = 0
-    INCLUDE = 1
-    EXCLUDE = 2
+    NONE = "NONE"
+    INCLUDE = "INCLUDE"
+    EXCLUDE = "EXCLUDE"
 
 class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
     mode: FilterMode
