@@ -48,6 +48,7 @@ class Genetic(SurfaceExplorator):
     energy_threshold     : float
     geometry_threshold   : float
     comparison_algorithm : Callable[[Molecule, Molecule], float]
+    do_remove_unbonded   : bool
 
     mutations : list[tuple[float, Mutator]]
     crossovers : list[tuple[float, Crossover]]
@@ -77,11 +78,12 @@ class Genetic(SurfaceExplorator):
         geometry_threshold : float,
         calculator : str,
 
-        mutations : list[tuple[float, Mutator]],
+        mutations  : list[tuple[float, Mutator]],
         crossovers : list[tuple[float, Crossover]],
-        migrators : list[tuple[float, Migrator]],
+        migrators  : list[tuple[float, Migrator]],
 
         comparison_algorithm : Callable[[Molecule, Molecule], float] = grigoryan_springborn,
+        do_remove_unbonded    : bool = True,
 
         minimum_lifetime : int = -1,
 
@@ -127,6 +129,7 @@ class Genetic(SurfaceExplorator):
         self.energy_threshold     = energy_threshold
         self.geometry_threshold   = geometry_threshold
         self.comparison_algorithm = comparison_algorithm
+        self.do_remove_unbonded    = do_remove_unbonded
 
         # Generation parameters
         self.end_loop_number   = end_loop_number
@@ -261,7 +264,7 @@ class Genetic(SurfaceExplorator):
 
         self.total_unfeasible_removed+= pop_size_before - pop_size_after
 
-    def remove_not_bonded(self) -> None:
+    def remove_unbonded(self) -> None:
 
         pop_size_before = len(self.population)
 
@@ -294,7 +297,8 @@ class Genetic(SurfaceExplorator):
         self.population+= migrated
 
         self.remove_duplicates()
-        self.remove_not_bonded()
+        if self.do_remove_unbonded:
+            self.remove_unbonded()
 
         self.get_best_energy()
 

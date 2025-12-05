@@ -188,6 +188,14 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    "--do_not_remove_unbonded",
+    default = False,
+    action = "store_true",
+    help = "Choose to not remove unbonded structures from genetic algorithm population",
+)
+
+
+arg_parser.add_argument(
     "-v",
     "--verbose",
     action="store_true",
@@ -302,6 +310,8 @@ genetic = Genetic(
     energy_threshold = args.energy_threshold,
     geometry_threshold = args.geometry_threshold,
     comparison_algorithm = comparison_algorithm,
+
+    do_remove_unbonded = not args.do_not_remove_unbonded,
 
     end_loop_number = args.end_loop_number,
 )
