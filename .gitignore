@@ -7,3 +7,6 @@ xtb-dist/
 orca-dist/
 **/*.so
 **/*.xyz
+install
+.gitignore
+phaast.egg-info/
