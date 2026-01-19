@@ -1,4 +1,4 @@
-import os, subprocess, tempfile
+import os, subprocess, tempfile, shutil
 from typing import Literal, Optional, TypeAlias
 from phaast.calculators import Calculator
 from phaast.structure import Molecule, Structure
@@ -65,7 +65,7 @@ class XTB(Calculator):
 
         with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
-                xtb_path = os.path.abspath(self.xtb_path)
+                xtb_path = shutil.which(self.xtb_path)
 
                 if not xtb_path:
                     raise ValueError(
@@ -95,7 +95,7 @@ class XTB(Calculator):
     def measure_optimization_memory_usage(self, structure : Structure) -> int:
         with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
-                xtb_path = os.path.abspath(self.xtb_path)
+                xtb_path = shutil.which(self.xtb_path)
 
                 if not xtb_path:
                     raise ValueError(
@@ -125,7 +125,7 @@ class XTB(Calculator):
     def measure_optimization_time(self, structure : Structure) -> float:
         with structure.to_temp_xyz() as input_xyz_file:
             with tempfile.TemporaryDirectory(prefix = "phaast_", suffix="_xtb") as dir:
-                xtb_path = os.path.abspath(self.xtb_path)
+                xtb_path = shutil.which(self.xtb_path)
 
                 if not xtb_path:
                     raise ValueError(
