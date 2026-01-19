@@ -520,7 +520,12 @@ class Molecule(Structure):
         Create a Molecule from a xyz formated string
         """
         lines = s.splitlines()
-        energy = float(lines[1].split()[1])
+        if lines[1].startswith("Coordinates from ORCA-job"):
+            energy = float(lines[1].split()[-1])
+        elif lines[1].startswith(" energy:"):
+            energy = float(lines[1].split()[1])
+        else:
+            raise ValueError("xyz file should contain energy in xtb or orca pattern")
         struct = Structure.from_xyz_str(s)
         return Molecule(
             struct,
