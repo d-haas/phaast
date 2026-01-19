@@ -17,6 +17,13 @@ classifiers = [
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE*",]
 
+[project.optional-dependencies]
+gui = [
+  "PyOpenGL",
+  "PyOpenGL-accelerate",
+  "pyopengltk",
+]
+
 [project.urls]
 Homepage = "https://github.com/D-Haas/phaast"
 Issues = "https://github.com/D-Haas/phaast/issues"
