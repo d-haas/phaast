@@ -188,10 +188,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
-    "--do_not_remove_unbonded",
-    default = False,
-    action = "store_true",
-    help = "Choose to not remove unbonded structures from genetic algorithm population",
+    "--remove_unbonded",
+    default = "always",
+    help = """Choose to not remove unbonded structures from genetic algorithm population
+\t- \"always\": Remove unbonded in every loop;
+\t- \"final\": Remove only from final population to not contaminate results;
+\t- \"never\": Do not remove unbonded;
+(default = %(default)s)""",
 )
 
 
@@ -295,7 +298,12 @@ match args.comparison_algorithm:
         raise ValueError(
             f"Incompatible comparison_algorithm: {args.comparison_algorithm}"
         )
-        
+
+assert args.remove_unbonded in ("always", "final", "never"), "Wrong remove_unbonded option"
+if args.remove_unbonded == "always":
+    do_remove_unbonded = True
+else:
+    do_remove_unbonded = False
 
 genetic = Genetic(
     base = base,
@@ -311,20 +319,23 @@ genetic = Genetic(
     geometry_threshold = args.geometry_threshold,
     comparison_algorithm = comparison_algorithm,
 
-    do_remove_unbonded = not args.do_not_remove_unbonded,
+    do_remove_unbonded = do_remove_unbonded,
 
     end_loop_number = args.end_loop_number,
 )
 
 while genetic.loop():
     print("╔"+"═"*57+"╗")
-    print("║"+f"Generation {genetic.cycle_counter} done".ljust(57)+"║")
-    print("║"+f"Best energy: {genetic.best_energy}".ljust(57)+"║")
-    print("║"+f"Population size: {len(genetic.population)}".ljust(57)+"║")
+    print("║"+f" Generation {genetic.cycle_counter} done".ljust(57)+"║")
+    print("║"+f" Best energy: {genetic.best_energy}".ljust(57)+"║")
+    print("║"+f" Population size: {len(genetic.population)}".ljust(57)+"║")
     print("╚"+"═"*57+"╝")
 
 end = time.monotonic_ns()
 delta_time = (end - start)/1e9
+
+if args.remove_unbonded == "final":
+    genetic.remove_unbonded()
 
 best = sorted(
     genetic.population,
