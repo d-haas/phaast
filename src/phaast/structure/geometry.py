@@ -10,13 +10,13 @@ from phaast.vec import Vector
 from phaast.structure.constants import AtomicNumber
 
 class ComparisonAlgorithm(Enum):
-    GRIGORYAN_SPRINGBORN = 1
+    GRIGORYAN_SPRINGBORG = 1
     HAAS_OLIVEIRA = 2
 
-def grigoryan_springborn(struct1 : Molecule, struct2 : Molecule, **_) -> float:
+def grigoryan_springborg(struct1 : Molecule, struct2 : Molecule, **_) -> float:
     """
     Compare different structures using the
-    Grigoryan-Springborn algorithm
+    Grigoryan-Springborg algorithm
     DOI: 10.1140/epjd/e2005-00141-6
     Equation (1)
     """
@@ -62,7 +62,7 @@ def grigoryan_springborn(struct1 : Molecule, struct2 : Molecule, **_) -> float:
             in zip(self_dists[dict_key], other_dists[dict_key])
         ])
 
-    # Calculate final value of Grigoryan-Springborn algorithm
+    # Calculate final value of Grigoryan-Springborg algorithm
     q : float = ( ( 2/(atoms_num*(atoms_num-1)) ) * sum_distances_squared_diff )**.5
     s : float = 1 / ( 1 + q )
 
@@ -100,6 +100,6 @@ def haas_oliveira(mol1 : Molecule, mol2 : Molecule, **kwargs) -> float:
     return 1 / (1 + square_distances_difference_sum)
 
 comparison_functions_dict : dict[ComparisonAlgorithm, Callable[[Molecule, Molecule], float]] = {
-    ComparisonAlgorithm.GRIGORYAN_SPRINGBORN : grigoryan_springborn,
+    ComparisonAlgorithm.GRIGORYAN_SPRINGBORG : grigoryan_springborg,
     ComparisonAlgorithm.HAAS_OLIVEIRA : haas_oliveira,
 }

@@ -488,7 +488,7 @@ class Molecule(Structure):
         else:
             return True
 
-    def compare_geometry(self, other : Self, algorithm : ComparisonAlgorithm = ComparisonAlgorithm.GRIGORYAN_SPRINGBORN, **kwargs) -> float:
+    def compare_geometry(self, other : Self, algorithm : ComparisonAlgorithm = ComparisonAlgorithm.GRIGORYAN_SPRINGBORG, **kwargs) -> float:
         return comparison_functions_dict[algorithm](self, other, **kwargs)
 
     def get_bondings_lenghts(self, bonding_tolerance : float = 0.1) -> dict[tuple[AtomicNumber, AtomicNumber], list[float]]:

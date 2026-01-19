@@ -174,7 +174,7 @@ arg_parser.add_argument(
     default = "mixed",
     type = str,
     help = """Algorithm to be used for structures comparison, the recomendes usage is:
-\t- \"grigoryan_springborn\" for clusters;
+\t- \"grigoryan_springborg\" for clusters;
 \t- \"haas_oliveira\" for organic and general shaped structures (check --comparison_bonding_tolerance too);
 \t- \"mixed\" for both at the same time (sqrt(grigoryan_springborg * haas_oliveira);
 (default = %(default)s)""",
@@ -214,7 +214,7 @@ from phaast.computer import Computer
 from phaast.structure import Base, Molecule
 from phaast.surface_explorator.genetic.migration.filter_list import FilterList, FilterMode
 from phaast.surface_explorator.genetic import Genetic
-from phaast.structure.geometry import grigoryan_springborn, haas_oliveira
+from phaast.structure.geometry import grigoryan_springborg, haas_oliveira
 
 base = Base(args.stoichiometry)
 
@@ -281,14 +281,14 @@ def haas_oliveira_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
     return haas_oliveira(mol1, mol2, bonding_tolerance = args.comparison_bonding_tolerance)
 
 def mixed_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
-    return (haas_oliveira_comparator(mol1, mol2) * grigoryan_springborn(mol1, mol2))**.5
+    return (haas_oliveira_comparator(mol1, mol2) * grigoryan_springborg(mol1, mol2))**.5
 
 
 match args.comparison_algorithm:
     case "haas_oliveira":
         comparison_algorithm = haas_oliveira_comparator
-    case "grigoryan_springborn":
-        comparison_algorithm = grigoryan_springborn
+    case "grigoryan_springborg":
+        comparison_algorithm = grigoryan_springborg
     case "mixed":
         comparison_algorithm = mixed_comparator
     case _:

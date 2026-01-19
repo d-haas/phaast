@@ -2,7 +2,7 @@ import random
 from typing import Callable, Iterable
 from math import floor
 
-from phaast.structure.geometry import grigoryan_springborn
+from phaast.structure.geometry import grigoryan_springborg
 
 from phaast.surface_explorator.genetic.migration import Migrator
 from phaast.surface_explorator.genetic.mutation import Mutator
@@ -82,7 +82,7 @@ class Genetic(SurfaceExplorator):
         crossovers : list[tuple[float, Crossover]],
         migrators  : list[tuple[float, Migrator]],
 
-        comparison_algorithm : Callable[[Molecule, Molecule], float] = grigoryan_springborn,
+        comparison_algorithm : Callable[[Molecule, Molecule], float] = grigoryan_springborg,
         do_remove_unbonded    : bool = True,
 
         minimum_lifetime : int = -1,
