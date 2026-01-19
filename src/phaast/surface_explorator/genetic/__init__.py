@@ -54,6 +54,8 @@ class Genetic(SurfaceExplorator):
     crossovers : list[tuple[float, Crossover]]
     migrators : list[tuple[float, Migrator]]
     operations_weight : float
+    sequential_mutations : int
+    mutation_batches : int
 
     cycle_counter     : int
     minimum_lifetime  : int
@@ -81,6 +83,8 @@ class Genetic(SurfaceExplorator):
         mutations  : list[tuple[float, Mutator]],
         crossovers : list[tuple[float, Crossover]],
         migrators  : list[tuple[float, Migrator]],
+        sequential_mutations : int = 1,
+        mutation_batches : int = 10,
 
         comparison_algorithm : Callable[[Molecule, Molecule], float] = grigoryan_springborg,
         do_remove_unbonded    : bool = True,
@@ -125,6 +129,8 @@ class Genetic(SurfaceExplorator):
             weight for weight, _
             in mutations+crossovers+migrators
         ])
+        self.sequential_mutations = sequential_mutations
+        self.mutation_batches = mutation_batches
 
         self.energy_threshold     = energy_threshold
         self.geometry_threshold   = geometry_threshold
@@ -217,17 +223,46 @@ class Genetic(SurfaceExplorator):
     def mutate(self) -> list[Individual]:
         mutants : list[Structure] = []
 
-        for weight, mutation in self.mutations:
-            op_num : int = floor(self.population_size*weight/self.operations_weight)
+        if self.sequential_mutations > 1:
+            operation_pools = [
+                random.choices(
+                    *list(zip(*self.mutations))[::-1], # This is basically both lists of mutators and weights
+                    k = self.sequential_mutations,
+                )
+                for _ in range(self.mutation_batches)
+            ]
+            mutations_weight = sum([
+                weight for weight, _
+                in self.mutations
+            ])/self.mutation_batches
+            op_num : int = floor(self.population_size*mutations_weight/self.operations_weight)
 
-            chosen_mutants = random.choices(
-                self.population,
-                k = op_num,
-            )
-            mutants+= self.computer.mutate(
-                chosen_mutants,
-                mutation,
-            )
+            for pool in operation_pools:
+                temp_mutants = random.choices(
+                    self.population,
+                    k = op_num,
+                )
+
+                for operation in pool:
+                    temp_mutants = self.computer.mutate(
+                        temp_mutants,
+                        operation,
+                    )
+
+                mutants+= temp_mutants
+
+        else:
+            for weight, mutation in self.mutations:
+                op_num : int = floor(self.population_size*weight/self.operations_weight)
+
+                chosen_mutants = random.choices(
+                    self.population,
+                    k = op_num,
+                )
+                mutants+= self.computer.mutate(
+                    chosen_mutants,
+                    mutation,
+                )
 
         mutant_molecules : list[Individual] = [
             Individual(mol) for mol
@@ -237,7 +272,7 @@ class Genetic(SurfaceExplorator):
 
         self.total_optimizations+= len(mutants)
         self.total_converged+= len(mutant_molecules)
-        self.total_mutations+= len(mutants)
+        self.total_mutations+= len(mutants)*self.sequential_mutations
 
         return mutant_molecules
 
