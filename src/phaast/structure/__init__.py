@@ -329,6 +329,15 @@ class Structure:
         else:
             raise Exception("No atoms in structure")
 
+    def center_mass(self):
+        """
+        Translates the molecule so it's center of mass
+        is centered at (0.0, 0.0, 0.0)
+        """
+        cm = self.cm
+        for atom in self:
+            atom.pos-= cm
+
     
     @staticmethod
     def from_xyz(file_path : str) -> 'Structure':
