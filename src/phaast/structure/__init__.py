@@ -364,12 +364,12 @@ class Structure:
 
         return file
 
-    def to_xyz(self, name : str) -> None:
+    def to_xyz(self, name : str, comment : str = "") -> None:
         """
         Export structure to xyz file
         """
         file = open(name, "w+")
-        file.write(self.to_xyz_str())
+        file.write(self.to_xyz_str(comment))
         file.close()
 
     @staticmethod
@@ -386,13 +386,14 @@ class Structure:
 
         return Structure(atoms)
 
-    def to_xyz_str(self) -> str:
+    def to_xyz_str(self, comment : str = "") -> str:
         """
         Export structure to xyz formated string
         """
+        assert not ("\n" in comment), "There shouldn't be any line breaks in xyz comment"
         lines : list[str] = [
             str(len(self)),
-            "",
+            comment,
         ] + [
             atom.to_xyz_str()
             for atom
