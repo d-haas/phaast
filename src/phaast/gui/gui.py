@@ -5,7 +5,7 @@ from phaast.gui.constants import *
 from phaast.gui.menu import MenuBar
 from phaast.gui.mol_viewer import MolViewer
 
-from phaast.structure.constants import AtomicSymbols, AtomicNumbers, AtomicRadi
+from phaast.structure.constants import AtomicNumbers, AtomicRadi
 
 class GUI(tk.Tk):
     def __init__(self):
@@ -145,22 +145,46 @@ class GUI(tk.Tk):
 
         orca_frame.pack(side = tk.TOP, pady = 10)
 
+        options_frame = ttk.Frame(self)
+
+        self.quality_var = tk.IntVar(value = 1)
+        label = ttk.Label(options_frame, text = "Quality: ")
+        quality_scale = ttk.LabeledScale(
+            options_frame,
+            variable = self.quality_var,
+            from_ = 1, to = 8,
+        )
+        self.quality_var.set(4)
+        self.quality_var.trace(
+            "w",
+            self.on_quality_change,
+        )
+        label.pack(side = tk.LEFT)
+        quality_scale.pack(side = tk.LEFT)
+
+        options_frame.pack(side = tk.TOP)
+
     def on_entry_change(self, *_):
         string_var = self.entry_var.get()
         if string_var.isdigit():
             var_int = int(self.entry_var.get())
-            if var_int in AtomicSymbols:
+            if var_int in AtomicRadi:
                 self.viewer.chosen_z = var_int
 
-            self.label_var.set(" ")
+                self.label_var.set(" ")
+            else:
+                self.label_var.set("*")
 
-        elif string_var and len(string_var) <= 2 and string_var in AtomicNumbers:
+        elif string_var and len(string_var) <= 2 and string_var in AtomicNumbers and AtomicNumbers[string_var] in AtomicRadi:
             self.viewer.chosen_z = AtomicNumbers[string_var]
 
             self.label_var.set(" ")
 
         else:
             self.label_var.set("*")
+
+    def on_quality_change(self, *_):
+        self.viewer.render_quality = self.quality_var.get()
 
     def disable_input(self):
         for widget in self.input_widgets:
