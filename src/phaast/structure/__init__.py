@@ -516,7 +516,7 @@ class Molecule(Structure):
         return result
 
     @staticmethod
-    def from_xyz(file_path: str) -> "Molecule":
+    def from_xyz(file_path: str) -> Molecule:
         """
         Create a Molecule from a xyz file 
         """
@@ -525,12 +525,12 @@ class Molecule(Structure):
             return Molecule.from_xyz_str(s)
 
     @staticmethod
-    def from_xyz_str(s : str) -> "Molecule":
+    def from_xyz_str(s : str) -> Molecule:
         """
         Create a Molecule from a xyz formated string
         """
         lines = s.splitlines()
-        if lines[1].startswith("Coordinates from ORCA-job"):
+        if lines[1].startswith("Coordinates from ORCA-job") or lines[1].startswith("P.H.A.A.S.T job"):
             energy = float(lines[1].split()[-1])
         elif lines[1].startswith(" energy:"):
             energy = float(lines[1].split()[1])
@@ -541,6 +541,35 @@ class Molecule(Structure):
             struct,
             energy,
         )
+
+    def to_xyz_str(self, comment : str = "") -> str:
+        """
+        Export Molecule to xyz formated string
+        """
+        full_comment = "P.H.A.A.S.T job "
+        if comment:
+            assert not ("\n" in comment), "There shouldn't be any line breaks in xyz comment"
+            full_comment+= f"({comment}) "
+        full_comment+= f"Eh: {self.energy}"
+
+        lines : list[str] = [
+            str(len(self)),
+            full_comment,
+        ] + [
+            atom.to_xyz_str()
+            for atom
+            in self
+        ]
+
+        return "\n".join(lines)
+
+    def to_xyz(self, name : str, comment : str = "") -> None:
+        """
+        Export Molecule to xyz file
+        """
+        file = open(name, "w+")
+        file.write(self.to_xyz_str(comment))
+        file.close()
 
     def to_bytes(self) -> bytes:
         """
