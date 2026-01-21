@@ -20,8 +20,8 @@ class GUI(tk.Tk):
 
     def setup_window(self):
         self.title("PHAAST - GUI")
-        self.minsize(900,900)
-        self.resizable(False, False)
+        self.minsize(600,400)
+        #self.resizable(False, False)
         self.configure(
             background="#1e1e2e",
             menu = MenuBar(self)

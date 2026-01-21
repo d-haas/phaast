@@ -57,7 +57,7 @@ class MolViewer(OpenGLFrame):
         self.projection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
         self.viewport = gl.glGetIntegerv(gl.GL_VIEWPORT)
 
-        self.render_quality = 1
+        self.render_quality = 4
 
     def initgl(self):
         pass
