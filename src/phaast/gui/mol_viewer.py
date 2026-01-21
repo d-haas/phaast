@@ -2,11 +2,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, cast
 if TYPE_CHECKING:
     from phaast.gui.gui import GUI
-from math import acos, cos, degrees, sin, sqrt
-from OpenGL.GL import *
-from OpenGL.GLU import *
 
+from math import acos, cos, degrees, sin, sqrt
 import threading
+
+import OpenGL.GL as gl
+import OpenGL.GLU as glu
 
 from pyopengltk.linux import OpenGLFrame
 from phaast.vec import Vector
@@ -52,9 +53,11 @@ class MolViewer(OpenGLFrame):
         self.cam_dir : Vector = Vector()
         self.mouse_dir : Vector = Vector(0.0, 0.0, 1.0)
 
-        self.modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
-        self.projection = glGetDoublev(GL_PROJECTION_MATRIX)
-        self.viewport = glGetIntegerv(GL_VIEWPORT)
+        self.modelview = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+        self.projection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
+        self.viewport = gl.glGetIntegerv(gl.GL_VIEWPORT)
+
+        self.render_quality = 1
 
     def initgl(self):
         pass
@@ -89,8 +92,6 @@ class MolViewer(OpenGLFrame):
 
         thread = threading.Thread(target = temp_optimize_trj)
         thread.start()
-
-
 
     def update_quaternion(self):
         ##############################
@@ -203,7 +204,7 @@ class MolViewer(OpenGLFrame):
         real_y = self.viewport[3] - self.input.mouse_pos[1]
 
         self.cam_pos = Vector(
-            *gluUnProject(
+            *glu.gluUnProject(
                 real_x,
                 real_y,
                 0.0,
@@ -214,7 +215,7 @@ class MolViewer(OpenGLFrame):
         )
 
         far_pos = Vector(
-            *gluUnProject(
+            *glu.gluUnProject(
                 real_x,
                 real_y,
                 1.0,
@@ -226,7 +227,7 @@ class MolViewer(OpenGLFrame):
 
 
         far_center = Vector(
-            *gluUnProject(
+            *glu.gluUnProject(
                 self.width/2,
                 self.height/2,
                 1.0,
@@ -266,23 +267,38 @@ class MolViewer(OpenGLFrame):
         for atom in self.structure:
             for other in self.structure:
                 if atom is not other and atom.is_touching(other, 0.5):
-                    renderer.draw_cylinder_hyperbolic(
-                        #atom.pos + sqrt(3*(atom.radius**2)/16)*(other.pos-atom.pos).normalized(), #For r1 = atom.radius/4
-                        atom.pos + sqrt(15*(atom.radius**2)/64)*(other.pos-atom.pos).normalized(),
-                        atom.pos + (other.pos - atom.pos) * atom.radius/(atom.radius+other.radius),
-                        r1 = atom.radius/8, r2 = (atom.radius+other.radius)/32,
-                        color = ATOM_COLORS_RGB[atom.z],
-                        segments = 16,
-                    )
+                    if self.render_quality <= 4:
+                        renderer.draw_cylinder(
+                            atom.pos + sqrt(15*(atom.radius**2)/64)*(other.pos-atom.pos).normalized(),
+                            atom.pos + (other.pos - atom.pos) * atom.radius/(atom.radius+other.radius),
+                            r1 = (atom.radius+other.radius)/16, r2 = (atom.radius+other.radius)/16,
+                            color = ATOM_COLORS_RGB[atom.z],
+                            quality = self.render_quality*4,
+                        )
+                    else:
+                        renderer.draw_cylinder_hyperbolic(
+                            #atom.pos + sqrt(3*(atom.radius**2)/16)*(other.pos-atom.pos).normalized(), #For r1 = atom.radius/4
+                            atom.pos + sqrt(15*(atom.radius**2)/64)*(other.pos-atom.pos).normalized(),
+                            atom.pos + (other.pos - atom.pos) * atom.radius/(atom.radius+other.radius),
+                            r1 = atom.radius/8, r2 = (atom.radius+other.radius)/32,
+                            color = ATOM_COLORS_RGB[atom.z],
+                            segments = self.render_quality*4,
+                            quality = self.render_quality*4,
+                        )
 
             if self.state == "replace" and atom is self.hovered:
                 post_render = atom
             else:
-                renderer.draw_sphere(atom.pos, atom.radius/2, ATOM_COLORS_RGB[atom.z])
+                renderer.draw_sphere(
+                    atom.pos,
+                    atom.radius/2,
+                    ATOM_COLORS_RGB[atom.z],
+                    quality = self.render_quality*4,
+                )
 
         if post_render:
-            renderer.draw_sphere_alpha(post_render.pos, post_render.radius/2, ATOM_COLORS_RGB[post_render.z], alpha=0.5)
-            renderer.draw_sphere_alpha(post_render.pos, AtomicRadi[self.chosen_z]/2, ATOM_COLORS_RGB[self.chosen_z], alpha=0.5)
+            renderer.draw_sphere_alpha(post_render.pos, post_render.radius/2, ATOM_COLORS_RGB[post_render.z], alpha=0.5, quality = self.render_quality*4)
+            renderer.draw_sphere_alpha(post_render.pos, AtomicRadi[self.chosen_z]/2, ATOM_COLORS_RGB[self.chosen_z], alpha=0.5, quality = self.render_quality*4)
 
 
     def draw_new_ghost(self):
@@ -295,6 +311,7 @@ class MolViewer(OpenGLFrame):
                         r1 = 0.1, r2 = 0.1,
                         color = ATOM_COLORS_RGB[self.ghost.z],
                         alpha = 0.51,
+                        quality = self.render_quality*4,
                     )
                     renderer.draw_cylinder_alpha(
                         other.pos,
@@ -302,9 +319,10 @@ class MolViewer(OpenGLFrame):
                         r1 = 0.1, r2 = 0.1,
                         color = ATOM_COLORS_RGB[other.z],
                         alpha = 0.51,
+                        quality = self.render_quality*4,
                     )
 
-            renderer.draw_sphere_alpha(self.ghost.pos, self.ghost.radius/2, ATOM_COLORS_RGB[self.ghost.z], alpha=0.51)
+            renderer.draw_sphere_alpha(self.ghost.pos, self.ghost.radius/2, ATOM_COLORS_RGB[self.ghost.z], alpha=0.51, quality=self.render_quality*4)
 
     def draw_deletion(self):
         if self.hovered:
@@ -313,49 +331,50 @@ class MolViewer(OpenGLFrame):
                 (self.hovered.radius + 0.1)/2,
                 (1.0, 0.7, 0.7),
                 alpha = 0.1,
+                quality = self.render_quality*4,
             )
 
 
     def redraw(self):
-        glPushMatrix()
+        gl.glPushMatrix()
 
-        glEnable(GL_DEPTH_TEST)
-        glDepthFunc(GL_LESS)  # Default
-        glEnable(GL_LIGHTING)
-        glEnable(GL_LIGHT0)
-        glEnable(GL_COLOR_MATERIAL)
-        glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE)
-        glShadeModel(GL_SMOOTH)
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glDepthFunc(gl.GL_LESS)  # Default
+        gl.glEnable(gl.GL_LIGHTING)
+        gl.glEnable(gl.GL_LIGHT0)
+        gl.glEnable(gl.GL_COLOR_MATERIAL)
+        gl.glColorMaterial(gl.GL_FRONT, gl.GL_AMBIENT_AND_DIFFUSE)
+        gl.glShadeModel(gl.GL_SMOOTH)
 
-        glLightfv(GL_LIGHT0, GL_POSITION, [0.0,300.0,0.0,0.0])
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, [3.0,3.0,3.0,1.0])
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, [0.0,300.0,0.0,0.0])
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, [3.0,3.0,3.0,1.0])
 
-        glViewport(
+        gl.glViewport(
             0,
             0,
             self.width,
             self.height,
         )
 
-        gluPerspective(45, self.width/self.height, 1, 1000.0)
+        glu.gluPerspective(45, self.width/self.height, 1, 1000.0)
 
-        glTranslated(0.0, 0.0, self.distance)
+        gl.glTranslated(0.0, 0.0, self.distance)
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # type: ignore
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT) # type: ignore
 
         w = min(max(self.rotation_quaternion[0], -1), 1)
         rot_angle = 2 * acos(w)
         if rot_angle != 0:
             quat_sin = sin(rot_angle/2)
             axis = (Vector(*self.rotation_quaternion[1:4])/quat_sin).normalized()
-            glRotated(
+            gl.glRotated(
                 degrees(rot_angle),
                 *axis,
             )
 
-        self.modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
-        self.projection = glGetDoublev(GL_PROJECTION_MATRIX)
-        self.viewport = glGetIntegerv(GL_VIEWPORT)
+        self.modelview = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+        self.projection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
+        self.viewport = gl.glGetIntegerv(gl.GL_VIEWPORT)
 
         self.draw_mol()
 
@@ -365,7 +384,7 @@ class MolViewer(OpenGLFrame):
             case "delete":
                 self.draw_deletion()
 
-        glPopMatrix()
+        gl.glPopMatrix()
 
 
     """
