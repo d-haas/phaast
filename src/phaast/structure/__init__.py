@@ -6,7 +6,6 @@ from phaast.vec import Vector
 import subprocess, tempfile
 import struct
 
-
 class Element:
     """
     Class representing an atomic element
@@ -418,11 +417,11 @@ class Structure:
             )
 
 
-    def copy(self) -> "Structure":
+    def copy(self) -> Self:
         """
         Return a deep copy of itself
         """
-        return Structure(
+        return self.__class__(
             [
                 atom.copy()
                 for atom
@@ -447,16 +446,20 @@ class Structure:
 def create_molecule(atoms : Iterable[Atom], energy : float) -> Molecule:
     return Molecule(atoms, energy)
 
+param : TypeAlias = dict[tuple[int, int], float] | dict[int, float]
+
 class Molecule(Structure):
     """
     A class representing a molecule, inheriting from Structure.
     Can be extended with molecule-specific properties and methods.
     """
+
     energy : float
 
-    def __init__(self, atoms: Iterable[Atom], energy : float):
+    def __init__(self, atoms: Iterable[Atom], energy : float, **params : dict[str, param]):
         super().__init__(atoms)
         self.energy = energy
+        self.params = params
 
     def is_bonded(self, bonding_tolerance : float = 0.1) -> bool:
         """
@@ -560,7 +563,6 @@ class Molecule(Structure):
             for atom
             in self
         ]
-
         return "\n".join(lines)
 
     def to_xyz(self, name : str, comment : str = "") -> None:
@@ -570,6 +572,20 @@ class Molecule(Structure):
         file = open(name, "w+")
         file.write(self.to_xyz_str(comment))
         file.close()
+
+    def copy(self) -> Self:
+        """
+        Return a deep copy of itself
+        """
+        return self.__class__(
+            [
+                atom.copy()
+                for atom
+                in self.__atoms
+            ],
+            self.energy,
+            **self.params
+        )
 
     def to_bytes(self) -> bytes:
         """
