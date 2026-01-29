@@ -5,11 +5,9 @@ authors = [
   { name="Daniel Haas", email="danielhaas.ufrj@gmail.com" },
   { name="Ricardo R. Oliveira", email="rrodrigues.iq@gmail.com" },
 ]
-description = """
-A modular framework for global minimum search based on heuristic algorithm optimized for multiple processors
-"""
+description = """A modular framework for global minimum search based on heuristic algorithm optimized for multiple processors"""
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
@@ -35,8 +33,16 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-ext-modules = [
-  { name = "phaast.vec.__init__", sources = ["src/phaast/vec/__init__.pyx"] },
-  { name = "phaast.surface_explorator.genetic.migration.hedron_universe", sources = ["src/phaast/surface_explorator/genetic/migration/hedron_universe.py"] },
+#[tool.setuptools]
+#ext-modules = [
+#  { name = "phaast.vector", sources = ["src/phaast/vector.pyx"] },
+#  { name = "phaast.surface_explorator.genetic.migration.hedron_universe", sources = ["src/phaast/surface_explorator/genetic/migration/hedron_universe.py"] },
+#  { name = "phaast.structure.test_vec", sources = ["src/phaast/structure/test_vec.pyx"] },
+#  { name = "phaast.structure.__init__", sources = ["src/phaast/structure/__init__.pyx"], include-dirs = ["src"] },
+#]
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = [
+  "tests",
 ]

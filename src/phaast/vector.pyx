@@ -1,16 +1,22 @@
 # cython: freethreading_compatible = True
-
-cimport cython
 from typing import Any, Iterator, Union, overload
 
+cimport cython
 from libc.math cimport sqrt, sin, cos
 
-def create_vector(x : float, y : float , z : float) -> "Vector":
+def create_vector(x : float = 0, y : float = 0, z : float = 0) -> Vector:
     return Vector(x, y, z)
 
 @cython.auto_pickle(True)
 cdef class Vector:
-    cdef public double x, y, z
+    x : cython.double
+    y : cython.double
+    z : cython.double
+
+    def __cinit__(self):
+        self.x = 0
+        self.y = 0
+        self.z = 0
 
     def __init__(self, *args : cython.double):
         args_size = len(args)
@@ -288,16 +294,6 @@ cdef class Vector:
             self.y,
             self.z,
         )
-
-    def __getstate__(self) -> tuple[float, float, float]:
-        return (
-            self.x,
-            self.y,
-            self.z,
-        )
-
-    def __setstate__(self, state : tuple[float, float, float]) -> None:
-        self.x, self.y, self.z = state
 
     def __reduce__(self):
         return (create_vector, (self.x, self.y, self.z))
