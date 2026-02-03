@@ -1,5 +1,10 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from phaast.structure import Molecule, Structure
+
 from abc import ABC, abstractmethod
-from phaast.structure import Molecule, Structure
+
 
 
 class Calculator(ABC):

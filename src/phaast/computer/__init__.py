@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 import multiprocessing, sys
 
@@ -9,6 +11,7 @@ else:
 from typing import Any, Callable, Iterable, TypeVar, TypeVarTuple, overload
 
 from phaast.structure import Molecule, Structure
+
 
 from phaast.calculators import Calculator
 
@@ -23,7 +26,7 @@ class BaseComputer(ABC):
     #max_processes : dict[Calculator, int] # Calculators that will be used the for software
 
     @abstractmethod
-    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule]:
+    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule | None]:
         pass
 
 
@@ -43,8 +46,8 @@ class Computer(BaseComputer):
     @overload
     def optimize(self, calculator_key : str, structures : Structure) -> Molecule | None:...
     @overload
-    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule]:...
-    def optimize(self, calculator_key : str, structures : Structure | Iterable[Structure]) -> Molecule | None | list[Molecule]:
+    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule | None]:...
+    def optimize(self, calculator_key : str, structures : Structure | Iterable[Structure]) -> Molecule | None | list[Molecule | None]:
         """
         Execute Structures optimization for a list of Structures
         turning them into a list of Molecules
@@ -61,7 +64,7 @@ class Computer(BaseComputer):
                     self.calculators[calculator_key].optimize,
                     structures,
                 )
-            return [mol for mol in molecules if mol]
+            return [mol for mol in molecules]
 
     #def parallelize(self, args : Iterable[tuple[Unpack[ParA]]] | int, func : Callable[[Unpack[ParA]], ParT]) -> list[ParT]:
     def parallelize(self, args : Iterable[tuple[Any, ...]] | int, func : Callable[..., ParT]) -> list[ParT]:
