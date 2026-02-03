@@ -10,11 +10,11 @@ import OpenGL.GL as gl
 import OpenGL.GLU as glu
 
 from pyopengltk.linux import OpenGLFrame
-from phaast.vec import Vector
-from phaast.structure import Atom, AtomicNumber, Structure
+from phaast.vector import Vector
+from phaast.structure import Atom, Structure
 from phaast.calculators.xtb import XTB
 from phaast.calculators.orca import Orca
-from phaast.structure.constants import AtomicRadi
+from phaast.structure.constants import AtomicRadi, AtomicNumber
 
 from phaast.gui import renderer
 from phaast.gui.constants import *

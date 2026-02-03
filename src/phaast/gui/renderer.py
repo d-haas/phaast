@@ -1,6 +1,6 @@
 from math import acos, pi, sqrt
 
-from phaast.vec import Vector
+from phaast.vector import Vector
 import  OpenGL.GL as gl
 import  OpenGL.GLU as glu
 

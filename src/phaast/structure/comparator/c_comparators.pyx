@@ -1,29 +1,24 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING, Callable
-if TYPE_CHECKING:
-    from phaast.structure import Molecule
+from libc.math cimport fabs
+from phaast.vector cimport Vector
+from phaast.structure.primitives cimport Molecule
+from cython.parallel import prange
 
-import bisect
-import itertools
-from enum import Enum
-from phaast.vec import Vector
-from phaast.structure.constants import AtomicNumber
+import bisect, itertools
 
-class ComparisonAlgorithm(Enum):
-    GRIGORYAN_SPRINGBORG = 1
-    HAAS_OLIVEIRA = 2
+cpdef bool energy_difference(Molecule mol1, Molecule mol2, double tolerance):
+    return fabs(mol1.energy - mol2.energy) > tolerance
 
-def grigoryan_springborg(struct1 : Molecule, struct2 : Molecule, **_) -> float:
+cpdef bool grigoryan_springborg(Molecule mol1, Molecule mol2, double tolerance):
     """
     Compare different structures using the
     Grigoryan-Springborg algorithm
     DOI: 10.1140/epjd/e2005-00141-6
     Equation (1)
     """
-    atoms_num : int = len(struct1) # Number of atoms in structure
+    cdef int atoms_num = len(mol1) # Number of atoms in structure
 
     #Check if number of atoms is the same in both structures
-    assert struct1.is_equal_to(struct2), "Both structure should have the same number of atoms"
+    assert mol1.is_equal_to(mol2), "Both structure should have the same number of atoms"
 
     """
     Sum distances between atoms of each structure and
@@ -32,18 +27,27 @@ def grigoryan_springborg(struct1 : Molecule, struct2 : Molecule, **_) -> float:
 
     Thanks Amanda
     """
-    self_dists : dict[tuple[AtomicNumber, AtomicNumber], list[float]] = {}
-    for atom_i, atom_j in itertools.combinations(struct1, 2):
+
+    # I was gonna try to optimize this with fancy parallel for-loops,
+    # tho it might be wise to keep it this way for now.
+
+    cdef tuple dict_key
+    cdef Vector diff
+
+    cdef dict self_dists = {} # : dict[tuple[AtomicNumber, AtomicNumber], list[float]]
+    for atom_i, atom_j in itertools.combinations(mol1, 2):
         dict_key = (atom_i.z, atom_j.z) if atom_j.z>atom_i.z else (atom_j.z, atom_i.z)
         if not dict_key in self_dists:
             self_dists[dict_key] = []
-        diff : Vector = atom_i.pos - atom_j.pos
+        diff = atom_i.pos - atom_j.pos
         bisect.insort(
             self_dists[dict_key],
-            diff.mod_sqr,
+            diff.cmod_sqr(),
         )
-    other_dists : dict[tuple[AtomicNumber, AtomicNumber], list[float]] = {}
-    for atom_i, atom_j in itertools.combinations(struct2, 2):
+
+
+    cdef dict other_dists = {} # : dict[tuple[AtomicNumber, AtomicNumber], list[float]]
+    for atom_i, atom_j in itertools.combinations(mol2, 2):
         dict_key = (atom_i.z, atom_j.z) if atom_j.z>atom_i.z else (atom_j.z, atom_i.z)
         if not dict_key in other_dists:
             other_dists[dict_key] = []
@@ -54,7 +58,7 @@ def grigoryan_springborg(struct1 : Molecule, struct2 : Molecule, **_) -> float:
         )
 
     # Get difference between each distance in each molecule (squared)
-    sum_distances_squared_diff : float = 0
+    cdef double sum_distances_squared_diff = 0
     for dict_key in self_dists:
         sum_distances_squared_diff+= sum([
             (i - j)**2
@@ -63,28 +67,26 @@ def grigoryan_springborg(struct1 : Molecule, struct2 : Molecule, **_) -> float:
         ])
 
     # Calculate final value of Grigoryan-Springborg algorithm
-    q : float = ( ( 2/(atoms_num*(atoms_num-1)) ) * sum_distances_squared_diff )**.5
-    s : float = 1 / ( 1 + q )
+    cdef double q = ( ( 2/(atoms_num*(atoms_num-1)) ) * sum_distances_squared_diff )**.5
+    cdef double s = 1 / ( 1 + q )
 
-    return s
+    return s > tolerance
 
-def haas_oliveira(mol1 : Molecule, mol2 : Molecule, **kwargs) -> float:
-    bonding_tolarance : float = kwargs["bonding_tolerance"] if "bonding_tolerance" in kwargs else 0.0
-
-    mol1_bondings = mol1.get_bondings_lenghts(bonding_tolarance)
-    mol2_bondings = mol2.get_bondings_lenghts(bonding_tolarance)
+cpdef bool bonding_length(Molecule mol1, Molecule mol2, double tolerance, double bonding_tolerance):
+    cdef dict mol1_bondings = mol1.get_bondings_lenghts(bonding_tolerance)
+    cdef dict mol2_bondings = mol2.get_bondings_lenghts(bonding_tolerance)
 
     # Compare if both molecules have the same types of bondings
-    if mol1_bondings.keys() != mol2_bondings.keys(): return 0
+    if mol1_bondings.keys() != mol2_bondings.keys(): return False
     # At this point both molecules share the same bonding types
 
     for bonding in mol1_bondings:
         if len(mol1_bondings[bonding]) != len(mol2_bondings[bonding]):
-            return 0
+            return False
     # At this point both molecules have the same number of bondings per type
 
     # Compare difference between distances for each bonding type and add to a general variable
-    square_distances_difference_sum : float = 0
+    cdef double square_distances_difference_sum = 0
     for bonding in mol1_bondings:
         square_distances_difference_sum+= sum(
             [
@@ -97,9 +99,4 @@ def haas_oliveira(mol1 : Molecule, mol2 : Molecule, **kwargs) -> float:
         )
 
     # Use said variable (with positive value) to obtain a number between 1 and 0
-    return 1 / (1 + square_distances_difference_sum)
-
-comparison_functions_dict : dict[ComparisonAlgorithm, Callable[[Molecule, Molecule], float]] = {
-    ComparisonAlgorithm.GRIGORYAN_SPRINGBORG : grigoryan_springborg,
-    ComparisonAlgorithm.HAAS_OLIVEIRA : haas_oliveira,
-}
+    return 1 / (1 + square_distances_difference_sum) > tolerance

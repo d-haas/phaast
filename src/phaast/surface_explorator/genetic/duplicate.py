@@ -2,7 +2,7 @@ from typing import Callable
 
 from phaast.computer import Computer
 from phaast.structure import Molecule
-from phaast.surface_explorator.genetic.individual import Individual
+from phaast.surface_explorator.genetic.individual import OptimizedIndividual
 
 import sys
 if sys._is_gil_enabled():
@@ -11,7 +11,7 @@ else:
     from multiprocessing.dummy import Pool
 
 def is_pop_index_duplicate(
-    population : list[Individual],
+    population : list[OptimizedIndividual],
     i : int,
     energy_threshold : float,
     geometry_threshold : float,
@@ -29,11 +29,11 @@ def is_pop_index_duplicate(
 
 def remove_duplicates(
     computer : Computer,
-    population : list[Individual],
+    population : list[OptimizedIndividual],
     energy_threshold : float,
     geometry_threshold : float,
     comparison_algorithm : Callable[[Molecule, Molecule], float],
-) -> list[Individual]:
+) -> list[OptimizedIndividual]:
     with Pool(computer.cpu_count_limit) as pool:
         remove_mask : list[bool]  = pool.starmap(
             is_pop_index_duplicate,

@@ -4,19 +4,19 @@ from typing import Any, Iterator, Union, overload
 cimport cython
 from libc.math cimport sqrt, sin, cos
 
-def create_vector(x : float = 0, y : float = 0, z : float = 0) -> Vector:
+cpdef Vector create_vector(double x = 0, double y = 0, double z = 0):
     return Vector(x, y, z)
+
+cdef struct BaseVector:
+    double x
+    double y
+    double z
 
 @cython.auto_pickle(True)
 cdef class Vector:
     x : cython.double
     y : cython.double
     z : cython.double
-
-    def __cinit__(self):
-        self.x = 0
-        self.y = 0
-        self.z = 0
 
     def __init__(self, *args : cython.double):
         args_size = len(args)
@@ -63,23 +63,22 @@ cdef class Vector:
         """
         Iter over vector
         """
-        return iter(
-            (
-                self.x,
-                self.y,
-                self.z,
-            ),
-        )
+        yield self.x
+        yield self.y
+        yield self.z
 
+    cdef Vector add(self, Vector other):
+        cdef Vector result = Vector(
+            self.x + other.x,
+            self.y + other.y,
+            self.z + other.z,
+        )
+        return result
     def __add__(self, other : Vector) -> Vector:
         """
         Vector addition
         """
-        return self.__class__(
-            self.x+other.x,
-            self.y+other.y,
-            self.z+other.z,
-        )
+        return self.add(other)
     def __iadd__(self, other : Vector) -> Vector:
         """
         In-place vector addition
@@ -89,15 +88,18 @@ cdef class Vector:
         self.z+= other.z
         return self
 
+    cdef Vector sub(self, Vector other):
+        cdef Vector result = Vector(
+            self.x - other.x,
+            self.y - other.y,
+            self.z - other.z,
+        )
+        return result
     def __sub__(self, other : Vector) -> Vector:
         """
         Vector subtraction
         """
-        return self.__class__(
-            self.x-other.x,
-            self.y-other.y,
-            self.z-other.z,
-        )
+        return self.sub(other)
     def __isub__(self, other : Vector) -> Vector:
         """
         In-place vector subtraction
@@ -107,19 +109,21 @@ cdef class Vector:
         self.z-= other.z
         return self
 
+    cdef double dot(self, Vector other):
+        return self.x*other.x + self.y*other.y + self.z*other.z
+    cdef Vector mul(self, double other):
+        cdef Vector result = Vector(other * self.x, other * self.y, other * self.z)
+        return result
+
     def __mul__(self, other : Union[Vector,cython.double]) -> Union[cython.double, Vector]:
         """
         This function contains both vector multiplication by scalar
         and scalar product, depending on the other variable
         """
         if isinstance(other, Vector):
-            return self.x*other.x + self.y*other.y + self.z*other.z
+            return self.dot(other)
         elif isinstance(other, float):
-            return self.__class__(
-                other*self.x,
-                other*self.y,
-                other*self.z,
-            )
+            return self.mul(other)
         else:
             raise TypeError(
                 f"Multiplication only accepts a Vector or cython.double, not {type(other)}."
@@ -131,13 +135,9 @@ cdef class Vector:
         and scalar product, depending on the other variable
         """
         if isinstance(other, Vector):
-            return self.x*other.x + self.y*other.y + self.z*other.z
+            return self.dot(other)
         elif isinstance(other, float):
-            return self.__class__(
-                other*self.x,
-                other*self.y,
-                other*self.z,
-            )
+            return self.mul(other)
         else:
             raise TypeError(
                 f"Multiplication only accepts a Vector or cython.double, not {type(other)}."
@@ -157,15 +157,13 @@ cdef class Vector:
                 f"In-place multiplication only accepts cython.double, not {type(other)}."
             )
 
+    cdef Vector div(self, double other):
+        cdef Vector result = Vector(self.x/other, self.y/other, self.z/other)
     def __truediv__(self, other : cython.double) -> Vector:
         """
         Division by scalar
         """
-        return self.__class__(
-            self.x/other,
-            self.y/other,
-            self.z/other,
-        )
+        return self.div(other)
     def __itruediv__(self, other : cython.double) -> Vector:
         """
         In-place division by scalar
@@ -175,12 +173,11 @@ cdef class Vector:
         self.z/= other
         return self
 
+    cdef Vector neg(self):
+        cdef Vector result = self.mul(-1)
+        return result
     def __neg__(self) -> Vector:
-        return self.__class__(
-            -self.x,
-            -self.y,
-            -self.z,
-        )
+        return self.neg()
 
     def __eq__(self, other : Any) -> bool:
         if isinstance(other, Vector):
@@ -194,102 +191,111 @@ cdef class Vector:
     def __str__(self) -> str:
         return f"({self.x}, {self.y}, {self.z})"
 
-    def cross(Vector self, Vector other) -> Vector:
+    cpdef Vector cross(Vector self, Vector other):
         """
         Vectorial product
         """
-        return self.__class__(
+        return Vector(
             self.y*other.z-self.z*other.y,
             self.z*other.x-self.x*other.z,
             self.x*other.y-self.y*other.x,
         )
 
-    def rotate_x(Vector self, double ang) -> None:
-        ty, tz = self.y, self.z
-        s_ang = sin(ang)
-        c_ang = cos(ang)
+    cpdef void rotate_x(Vector self, double ang):
+        cdef double ty = self.y
+        cdef double tz = self.z
+        cdef double s_ang = sin(ang)
+        cdef double c_ang = cos(ang)
         self.y = ty*c_ang - tz*s_ang
         self.z = ty*s_ang + tz*c_ang
 
-    def rotated_x(Vector self, double ang) -> Vector:
-        ty, tz = self.y, self.z
-        s_ang = sin(ang)
-        c_ang = cos(ang)
-        return self.__class__(
+    cpdef Vector rotated_x(Vector self, double ang):
+        cdef double ty = self.y
+        cdef double tz = self.z
+        cdef double s_ang = sin(ang)
+        cdef double c_ang = cos(ang)
+        return Vector(
             self.x,
             ty*c_ang - tz*s_ang,
             ty*s_ang + tz*c_ang,
         )
 
-    def rotate_y(Vector self, double ang) -> None:
-        tz, tx = self.z, self.x
-        s_ang = sin(ang)
-        c_ang = cos(ang)
+    cpdef void rotate_y(Vector self, double ang):
+        cdef double tz = self.z
+        cdef double tx = self.x
+        cdef double s_ang = sin(ang)
+        cdef double c_ang = cos(ang)
         self.z = tz*c_ang - tx*s_ang
         self.x = tz*s_ang + tx*c_ang
 
-    def rotated_y(Vector self, double ang) -> Vector:
-        tz, tx = self.z, self.x
-        s_ang = sin(ang)
-        c_ang = cos(ang)
+    cpdef Vector rotated_y(Vector self, double ang):
+        cdef double tz = self.z
+        cdef double tx = self.x
+        cdef double s_ang = sin(ang)
+        cdef double c_ang = cos(ang)
         return Vector(
             tz*s_ang + tx*c_ang,
             self.y,
             tz*c_ang - tx*s_ang,
         )
 
-    def rotate_z(Vector self, double ang) -> None:
-        tx, ty = self.x, self.y
-        s_ang = sin(ang)
-        c_ang = cos(ang)
+    cpdef void rotate_z(Vector self, double ang):
+        cdef double tx = self.x
+        cdef double ty = self.y
+        cdef double s_ang = sin(ang)
+        cdef double c_ang = cos(ang)
         self.x = tx*c_ang - ty*s_ang
         self.y = tx*s_ang + ty*c_ang
 
-    def rotated_z(Vector self, double ang) -> Vector:
-        tx, ty = self.x, self.y
-        s_ang = sin(ang)
-        c_ang = cos(ang)
-        return self.__class__(
+    cpdef Vector rotated_z(Vector self, double ang):
+        cdef double tx = self.x
+        cdef double ty = self.y
+        cdef double s_ang = sin(ang)
+        cdef double c_ang = cos(ang)
+        return Vector(
             tx*c_ang - ty*s_ang,
             tx*s_ang + ty*c_ang,
             self.z,
         )
 
+    cdef double cmod_sqr(self):
+        return self.dot(self)
     @property
     def mod_sqr(self) -> cython.double:
         """
         Get square or vector module
         """
-        return self.x*self.x + self.y*self.y + self.z*self.z
+        return self.cmod_sqr()
 
+    cdef double cmod(self):
+        return sqrt(self.cmod_sqr())
     @property
     def mod(self) -> cython.double:
         """
         Get vector module
         """
-        return sqrt(self.mod_sqr)
+        return self.cmod()
 
-
-    def normalize(self) -> None:
+    cpdef void normalize(self):
         """
         Normalize vector in-place
         """
-        mod = self.mod
+        mod = self.cmod()
         self.x/= mod
         self.y/= mod
         self.z/= mod
 
-    def normalized(self) -> Vector:
+    cpdef Vector normalized(self):
         """
         Return normalized vector
         """
-        return self.copy()/self.mod
+        return self.copy()/self.cmod()
 
     def __abs__(self) -> cython.double:
-        return self.mod
+        return self.cmod()
 
-    def copy(self) -> Vector:
-        return self.__class__(
+    cpdef Vector copy(self):
+        return Vector(
             self.x,
             self.y,
             self.z,

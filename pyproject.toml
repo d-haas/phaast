@@ -1,3 +1,4 @@
+
 [project]
 name = "phaast"
 version = "0.0.1"
@@ -7,13 +8,17 @@ authors = [
 ]
 description = """A modular framework for global minimum search based on heuristic algorithm optimized for multiple processors"""
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">= 3.13"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
+  "Development Status :: 2 - Pre-Alpha",
+  "Programming Language :: Python :: 3.13",
+  "Environment :: Console",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Cython",
 ]
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE*",]
+keywords = ["chemistry", "physics", "genetic algorithm"]
 
 [project.optional-dependencies]
 gui = [
@@ -24,22 +29,32 @@ gui = [
 
 [project.urls]
 Homepage = "https://github.com/D-Haas/phaast"
+Documentation = "https://d-haas.github.io/phaast/main.html"
 Issues = "https://github.com/D-Haas/phaast/issues"
 
 [build-system]
 requires = [
-  "setuptools>=74.1.0",
-  "cython"
+  "setuptools >= 80.0.0",
+  "wheel >= 0.46",
+  "cython >= 3.2.2",
 ]
 build-backend = "setuptools.build_meta"
 
-#[tool.setuptools]
-#ext-modules = [
-#  { name = "phaast.vector", sources = ["src/phaast/vector.pyx"] },
-#  { name = "phaast.surface_explorator.genetic.migration.hedron_universe", sources = ["src/phaast/surface_explorator/genetic/migration/hedron_universe.py"] },
-#  { name = "phaast.structure.test_vec", sources = ["src/phaast/structure/test_vec.pyx"] },
-#  { name = "phaast.structure.__init__", sources = ["src/phaast/structure/__init__.pyx"], include-dirs = ["src"] },
-#]
+[tool.setuptools]
+ext-modules = [
+  { name = "phaast.vector", sources = ["src/phaast/vector.pyx"] },
+  { name = "phaast.structure.primitives", sources = ["src/phaast/structure/primitives.pyx"] },
+  { name = "phaast.structure.comparator.c_comparators", sources = ["src/phaast/structure/comparator/c_comparators.pyx"] },
+  { name = "phaast.surface_explorator.genetic.migration.hedron_universe", sources = ["src/phaast/surface_explorator/genetic/migration/hedron_universe.py"] },
+  { name = "phaast.surface_explorator.genetic.individual", sources = ["src/phaast/surface_explorator/genetic/individual.pyx"] },
+  { name = "phaast.surface_explorator.genetic.mutation", sources = ["src/phaast/surface_explorator/genetic/mutation.pyx"] },
+  { name = "phaast.structure.test_vec", sources = ["src/phaast/structure/test_vec.pyx"] },
+]
+package-dir = {"" = "src"}
+package-data = { "phaast" = ["*.pxd", "**/*.pxd"] }
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest]
 minversion = "9.0"

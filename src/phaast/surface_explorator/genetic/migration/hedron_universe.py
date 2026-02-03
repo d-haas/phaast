@@ -11,20 +11,21 @@ from phaast.structure.constants import AtomicNumber, AtomicRadi
 from phaast.surface_explorator.genetic.migration.filter_list import *
 from phaast.surface_explorator.genetic.migration import Migrator
 
-from phaast.vec import Vector
+from phaast.vector import Vector
 from phaast.computer import Computer
 
 GOLDEN_RATIO = (1 + 5**.5)/2
 
-HedronNumber = Literal[4,6,8,12,20]
+HedronNumber = Literal[6,8,12,20]
 
 HedronPositions : dict[HedronNumber, list[Vector]] = {}
-HedronPositions[4] = [
-    Vector( 1, 1, 1).normalized(),
-    Vector(-1,-1, 1).normalized(),
-    Vector(-1, 1,-1).normalized(),
-    Vector( 1,-1,-1).normalized(),
-]
+#HedronPositions[4] = [
+#    Vector( 1, 1, 1).normalized(),
+#    Vector(-1,-1, 1).normalized(),
+#    Vector(-1, 1,-1).normalized(),
+#    Vector( 1,-1,-1).normalized(),
+#]
+
 HedronPositions[6] = [
     Vector(-1, 0, 0),
     Vector( 1, 0, 0),
@@ -33,6 +34,7 @@ HedronPositions[6] = [
     Vector( 0, 0,-1),
     Vector( 0, 0, 1),
 ]
+
 HedronPositions[8] = [
     Vector(-1,-1,-1).normalized(),
     Vector( 1,-1,-1).normalized(),

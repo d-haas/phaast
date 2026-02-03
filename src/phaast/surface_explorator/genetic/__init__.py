@@ -1,53 +1,79 @@
 import random
-from typing import Callable, Iterable
+from typing import Iterable, cast
 from math import floor
 
-from phaast.structure.geometry import grigoryan_springborg
-
+from phaast.structure.comparator import ComparisonAlgorithm, GrigoryanSpringborg
 from phaast.surface_explorator.genetic.migration import Migrator
 from phaast.surface_explorator.genetic.mutation import Mutator
 from phaast.surface_explorator.genetic.crossover import Crossover
-from phaast.surface_explorator.genetic.individual import Individual
+from phaast.surface_explorator.genetic.individual import ChildIndividual, Individual, MutantIndividual, OptimizedIndividual
 from phaast.surface_explorator.genetic.duplicate import remove_duplicates
 
 from phaast.computer import Computer
-from phaast.structure import Base, Molecule, Structure
+from phaast.structure import Base
 
 from phaast.surface_explorator import SurfaceExplorator
 from phaast.utils.custom_iter import distinct_pairs
 
 class GeneticComputer(Computer):
-    def __init__(self, computer : Computer):
+    def __init__(self, computer : Computer, calculator : str):
         super().__init__(computer.cpu_count_limit)
         self.calculators = computer.calculators
+        self.chosen_calculator : str = calculator
 
-    def mutate(self, structs : Iterable[Structure], mutator : Mutator) -> list[Structure]:
-        return self.parallelize(
+    def mutate(self, structs : Iterable[Individual], mutator : Mutator) -> list[MutantIndividual]:
+        mutants = self.parallelize(
             ((struct,) for struct in structs),
             mutator,
         )
 
-    def crossover(self, struct_pairs : Iterable[tuple[Structure, Structure]], crossover : Crossover) -> list[Structure]:
-        return self.parallelize(
+        return [
+            MutantIndividual(mutant, ancestor)
+            for mutant, ancestor
+            in zip(mutants, structs)
+        ]
+
+    def crossover(self, struct_pairs : Iterable[tuple[Individual, Individual]], crossover : Crossover) -> list[ChildIndividual]:
+        children = self.parallelize(
             struct_pairs,
             crossover,
         )
 
-    def migrate(self, num : int, migrator : Migrator) -> list[Structure]:
-        return self.parallelize(num, migrator)
+        return [
+            ChildIndividual(child, parents)
+            for child, parents
+            in zip(children, struct_pairs)
+        ]
+
+    def migrate(self, num : int, migrator : Migrator) -> list[Individual]:
+        new_born = self.parallelize(num, migrator)
+        return [
+            Individual(struct)
+            for struct in new_born
+        ]
+
+    def genetic_optimize(self, structs : Iterable[Individual]) -> list[OptimizedIndividual]:
+        mols = self.optimize(self.chosen_calculator, structs)
+
+        return [
+            OptimizedIndividual(mol, struct, mol.energy)
+            for mol, struct
+            in zip(mols, structs)
+            if mol
+        ]
+
+
 
 class Genetic(SurfaceExplorator):
     population_size : int
-    population      : list[Individual]
+    population      : list[OptimizedIndividual]
     end_loop_number : int
 
     calculator          : str
     computer            : GeneticComputer
     base                : Base
 
-    energy_threshold     : float
-    geometry_threshold   : float
-    comparison_algorithm : Callable[[Molecule, Molecule], float]
+    comparison_algorithm : ComparisonAlgorithm
     do_remove_unbonded   : bool
 
     mutations : list[tuple[float, Mutator]]
@@ -86,7 +112,7 @@ class Genetic(SurfaceExplorator):
         sequential_mutations : int = 1,
         mutation_batches : int = 10,
 
-        comparison_algorithm : Callable[[Molecule, Molecule], float] = grigoryan_springborg,
+        comparison_algorithm : ComparisonAlgorithm = GrigoryanSpringborg(0.85),
         do_remove_unbonded    : bool = True,
 
         minimum_lifetime : int = -1,
@@ -98,29 +124,24 @@ class Genetic(SurfaceExplorator):
         """
         Define initial variables for genetic algorithm
         """
-        self.computer = GeneticComputer(computer)
-        self.calculator = calculator
+        self.computer = GeneticComputer(computer, calculator)
         if population_size < 100:
             raise ValueError(
                 "Population size is too small",
             )
         self.base = base
         self.population_size = population_size
-        self.population : list[Individual] = []
+        self.population : list[OptimizedIndividual] = []
 
         migrator_total_weight = sum([weight for weight, _ in migrators])
         for weight, migrator in migrators:
             generated_num = floor(self.population_size*weight/migrator_total_weight)
-            self.population+= [
-                Individual(mol) for mol
-                in computer.optimize(
-                    self.calculator,
+            self.population+= self.computer.genetic_optimize(
                     self.computer.migrate(
                         generated_num,
                         migrator,
                     )
                 )
-            ]
 
         self.mutations = mutations
         self.crossovers = crossovers
@@ -172,19 +193,15 @@ class Genetic(SurfaceExplorator):
 
         self.total_duplicates_removed = pop_size_before - pop_size_after
 
-    def migrate(self) -> list[Individual]:
-        migrated : list[Structure] = []
+    def migrate(self) -> list[OptimizedIndividual]:
+        migrated : list[Individual] = []
 
         for weight, migrator in self.migrators:
             op_num : int = floor(self.population_size*weight/self.operations_weight)
 
             migrated+= self.computer.migrate(op_num, migrator)
 
-        migrated_individuals = [
-            Individual(mol) for mol
-            in self.computer.optimize(self.calculator, migrated)
-            if mol is not None
-        ]
+        migrated_individuals = self.computer.genetic_optimize(migrated)
 
         self.total_migrated+= len(migrated)
         self.total_optimizations+= len(migrated)
@@ -192,12 +209,14 @@ class Genetic(SurfaceExplorator):
 
         return migrated_individuals
 
-    def reproduce(self) -> list[Individual]:
-        children : list[Structure] = []
+    def reproduce(self) -> list[OptimizedIndividual]:
+        children : list[ChildIndividual] = []
 
         for weight, crossover in self.crossovers:
             op_num : int = floor(self.population_size*weight/self.operations_weight)
 
+            # It is safe to assume that, for every child (children[i]) in children,
+            # children[i] came from chosen_parents[i]
             chosen_parents = random.choices(
                 list(distinct_pairs(self.population)),
                 k = op_num,
@@ -208,11 +227,7 @@ class Genetic(SurfaceExplorator):
                 crossover,
             )
 
-        children_individuals = [
-            Individual(mol) for mol
-            in self.computer.optimize(self.calculator, children)
-            if mol is not None
-        ]
+        children_individuals = self.computer.genetic_optimize(children)
 
         self.total_optimizations+= len(children)
         self.total_converged+= len(children_individuals)
@@ -220,8 +235,8 @@ class Genetic(SurfaceExplorator):
 
         return children_individuals
 
-    def mutate(self) -> list[Individual]:
-        mutants : list[Structure] = []
+    def mutate(self) -> list[OptimizedIndividual]:
+        mutants : list[MutantIndividual] = []
 
         if self.sequential_mutations > 1:
             operation_pools = [
@@ -249,7 +264,7 @@ class Genetic(SurfaceExplorator):
                         operation,
                     )
 
-                mutants+= temp_mutants
+                mutants+= cast(list[MutantIndividual], temp_mutants)
 
         else:
             for weight, mutation in self.mutations:
@@ -264,11 +279,7 @@ class Genetic(SurfaceExplorator):
                     mutation,
                 )
 
-        mutant_molecules : list[Individual] = [
-            Individual(mol) for mol
-            in self.computer.optimize(self.calculator, mutants)
-            if mol is not None
-        ]
+        mutant_molecules : list[OptimizedIndividual] = self.computer.genetic_optimize(mutants)
 
         self.total_optimizations+= len(mutants)
         self.total_converged+= len(mutant_molecules)
@@ -323,9 +334,9 @@ class Genetic(SurfaceExplorator):
     def loop(self) -> bool:
         self.cycle_counter+= 1
 
-        children : list[Individual] = self.reproduce()
-        mutants : list[Individual] = self.mutate()
-        migrated : list[Individual] = self.migrate()
+        children : list[OptimizedIndividual] = self.reproduce()
+        mutants : list[OptimizedIndividual] = self.mutate()
+        migrated : list[OptimizedIndividual] = self.migrate()
 
         self.population+= children
         self.population+= mutants

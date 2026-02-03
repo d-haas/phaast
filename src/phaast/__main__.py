@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
 import argparse
 import time
 import os
 
+from phaast.structure.comparator import BondingLength, ComparisonSequence, EnergyDifference, GrigoryanSpringborg
 from phaast.surface_explorator.genetic.crossover import PlaneMating
 from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMigrator
 from phaast.surface_explorator.genetic.mutation import DisplacementMutator, PermuteMutator, TwistMutator
@@ -175,8 +175,7 @@ arg_parser.add_argument(
     type = str,
     help = """Algorithm to be used for structures comparison, the recomendes usage is:
 \t- \"grigoryan_springborg\" for clusters;
-\t- \"haas_oliveira\" for organic and general shaped structures (check --comparison_bonding_tolerance too);
-\t- \"mixed\" for both at the same time (sqrt(grigoryan_springborg * haas_oliveira);
+\t- \"bonding_length\" for organic and general shaped structures (check --comparison_bonding_tolerance too);
 (default = %(default)s)""",
 )
 
@@ -214,10 +213,9 @@ os.chdir(
 
 from phaast.calculators.xtb import XTB
 from phaast.computer import Computer
-from phaast.structure import Base, Molecule
+from phaast.structure import Base
 from phaast.surface_explorator.genetic.migration.filter_list import FilterList, FilterMode
 from phaast.surface_explorator.genetic import Genetic
-from phaast.structure.geometry import grigoryan_springborg, haas_oliveira
 
 base = Base(args.stoichiometry)
 
@@ -280,20 +278,21 @@ crossover = [
     ),
 ]
 
-def haas_oliveira_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
-    return haas_oliveira(mol1, mol2, bonding_tolerance = args.comparison_bonding_tolerance)
-
-def mixed_comparator(mol1 : Molecule, mol2 : Molecule) -> float:
-    return (haas_oliveira_comparator(mol1, mol2) * grigoryan_springborg(mol1, mol2))**.5
+grigoryan_springborg = GrigoryanSpringborg(args.geometry_threshold)
+bonding_length_comparator = BondingLength(args.geometry_threshold, bonding_tolerance = args.comparison_bonding_tolerance)
 
 
 match args.comparison_algorithm:
-    case "haas_oliveira":
-        comparison_algorithm = haas_oliveira_comparator
+    case "bonding_length":
+        comparison_algorithm = ComparisonSequence(
+            EnergyDifference(args.energy_threshold),
+            bonding_length_comparator,
+        )
     case "grigoryan_springborg":
-        comparison_algorithm = grigoryan_springborg
-    case "mixed":
-        comparison_algorithm = mixed_comparator
+        comparison_algorithm = ComparisonSequence(
+            EnergyDifference(args.energy_threshold),
+            grigoryan_springborg,
+        )
     case _:
         raise ValueError(
             f"Incompatible comparison_algorithm: {args.comparison_algorithm}"

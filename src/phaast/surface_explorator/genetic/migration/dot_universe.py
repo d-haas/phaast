@@ -11,7 +11,7 @@ from phaast.surface_explorator.genetic.migration import Migrator
 from phaast.surface_explorator.genetic.migration.filter_list import *
 
 from phaast.utils.typecheck import check_types
-from phaast.vec import Vector
+from phaast.vector import Vector
 
 @cython.cclass
 class Limit:

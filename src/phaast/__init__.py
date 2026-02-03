@@ -6,15 +6,15 @@
     for global minima structures search
 """
 
-from . import calculators, computer, structure, surface_explorator, vector
+from . import vector, structure, calculators, computer, surface_explorator
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "vector",
+    "structure",
     "calculators",
     "computer",
-    "structure",
     "surface_explorator",
-    "vector",
-    "__version__"
+    "__version__",
 ]

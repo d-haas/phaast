@@ -1,14 +1,35 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from math import tau
 import random
 from typing import cast
 
-from phaast.structure import Base, Element, Structure
-from phaast.vec import Vector
+from libc.stdlib cimport rand, srand, RAND_MAX
+from libc.time cimport time
+from libc.math cimport sqrt
+cimport cython
+from cython.view cimport array as cvarray
+from phaast.vector cimport Vec, Vector
+from phaast.structure.primitives cimport Element, Structure
 
+from cython.parallel import prange
+
+from phaast.structure import Base
+from phaast.vector import Vector
 from phaast.utils.custom_iter import distinct_pairs
 
-class Mutator(ABC):
+srand(time(NULL))
+
+cdef double get_rand() nogil:
+    cdef unsigned long num = rand()
+
+    cdef double result = (num * 1.0) / RAND_MAX
+
+    return result
+
+cdef double get_rand_uniform(double a, double b) nogil:
+    return get_rand()*(b - a) + a 
+
+cdef class Mutator:
     @abstractmethod
     def __init__(self, *args, **kwargs) -> None:
         pass
@@ -17,19 +38,17 @@ class Mutator(ABC):
     def __call__(self, struct : Structure) -> Structure:
         pass
 
-class DisplacementMutator(Mutator):
-    num : int
-    min_displacement : float
-    max_displacement : float
-    rng : random.Random
+cdef class DisplacementMutator(Mutator):
+    num : cython.uint
+    min_displacement : cython.double
+    max_displacement : cython.double
 
     def __init__(
         self,
         base : Base,
-        num : int = 1,
-        min_displacement : float = 0.7,
-        max_displacement : float = 2.3,
-        rng : None | random.Random = None,
+        num : cython.uint = 1,
+        min_displacement : cython.double = 0.7,
+        max_displacement : cython.double = 2.3,
     ):
         if len(base) < num:
             raise ValueError(
@@ -41,30 +60,44 @@ class DisplacementMutator(Mutator):
         self.min_displacement = min_displacement
         self.max_displacement = max_displacement
 
-        if isinstance(rng, random.Random):
-            self.rng = rng
-        else:
-            self.rng = random.Random()
-
 
     def __call__(self, structure : Structure) -> Structure:
-        new_structure : Structure = structure.copy()
+        return self.ccall(structure)
 
-        # Divide them by the sum so they sum 1 now
+    @cython.boundscheck(False)
+    cdef Structure ccall(self, Structure structure):
+        cdef Structure new_structure = structure.copy()
 
-        for atom_index in self.rng.sample(range(len(new_structure)), self.num):
-            displacement = Vector(
-                *[
-                    (self.rng.uniform(-1, 1))
-                    for _ in range(3)
-                ]
-            ).normalized() 
+        cdef unsigned int i
+        cdef double min_displacement = self.min_displacement
+        cdef double max_displacement = self.max_displacement
+        cdef unsigned int length = len(new_structure)
+        cdef Vec[:] rand_vecs = cvarray(shape=(length,), itemsize=sizeof(Vec), format="ddd")
+        cdef Vec[:] rand_displacements = cvarray(shape=(length,), itemsize=sizeof(Vec), format="ddd")
+        cdef double[:] rand_vec_mods = cvarray(shape=(length,), itemsize=sizeof(double), format="d")
+        cdef double[:] rand_distances = cvarray(shape=(length,), itemsize=sizeof(double), format="d")
 
-            new_structure[atom_index].pos+= displacement * self.rng.uniform(self.min_displacement, self.max_displacement)
+        # Add random position to it
+        for i in prange(length, nogil=True):
+            rand_vecs[i].x = get_rand()
+            rand_vecs[i].y = get_rand()
+            rand_vecs[i].z = get_rand()
+            rand_vec_mods[i] = sqrt(rand_vecs[i].x*rand_vecs[i].x + rand_vecs[i].y*rand_vecs[i].y + rand_vecs[i].z*rand_vecs[i].z)
+            rand_distances[i] = get_rand_uniform(min_displacement, max_displacement)
+
+            rand_displacements[i].x = rand_distances[i]*rand_vecs[i].x/rand_vec_mods[i]
+            rand_displacements[i].y = rand_distances[i]*rand_vecs[i].y/rand_vec_mods[i]
+            rand_displacements[i].z = rand_distances[i]*rand_vecs[i].z/rand_vec_mods[i]
+
+        for i in range(length):
+            new_structure.atoms[i].pos.x+= rand_displacements[i].x
+            new_structure.atoms[i].pos.y+= rand_displacements[i].y
+            new_structure.atoms[i].pos.z+= rand_displacements[i].z
 
         return new_structure
 
-class PermuteMutator(Mutator):
+
+cdef class PermuteMutator(Mutator):
     num : int
     rng : random.Random
 
@@ -115,7 +148,7 @@ class PermuteMutator(Mutator):
 
         return new_structure
 
-class TwistMutator(Mutator):
+cdef class TwistMutator(Mutator):
     min_angle : float
     max_angle : float
     rng : random.Random

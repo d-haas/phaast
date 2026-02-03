@@ -3,7 +3,7 @@ import random
 from bisect import insort
 
 from phaast.structure import Atom, Structure
-from phaast.vec import Vector
+from phaast.vector import Vector
 
 class Crossover(ABC):
     @abstractmethod
