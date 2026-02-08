@@ -57,7 +57,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     "-xtbt", "--xtb-threads",
     type = int,
-    default = 1,
+    default = 4,
     help = "Number of threads to be used by each -t xtb instance (default = %(default)s)",
 )
 
@@ -171,7 +171,7 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     "--comparison_algorithm",
-    default = "mixed",
+    default = "grigoryan_springborg",
     type = str,
     help = """Algorithm to be used for structures comparison, the recomendes usage is:
 \t- \"grigoryan_springborg\" for clusters;
