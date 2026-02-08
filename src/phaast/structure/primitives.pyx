@@ -342,15 +342,16 @@ cdef class Structure:
 
         cdef double mass_counter = 0
 
-        cdef unsigned int length = self.length
-
+        cdef double mass
 
         for atom in self.atoms:
-            total.x+= atom.pos.x
-            total.y+= atom.pos.y
-            total.z+= atom.pos.z
+            mass = atom.mass
+            total.x+= atom.pos.x * mass
+            total.y+= atom.pos.y * mass
+            total.z+= atom.pos.z * mass
+            mass_counter+= mass
 
-        return total
+        return total.div(mass_counter)
 
     @property
     def cm(self) -> Vector:
