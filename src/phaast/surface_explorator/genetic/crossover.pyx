@@ -5,7 +5,7 @@ from bisect import insort
 from phaast.structure import Atom, Structure
 from phaast.vector import Vector
 
-class Crossover(ABC):
+cdef class Crossover:
     @abstractmethod
     def __init__(self, *args, **kwargs) -> None:
         pass
@@ -14,7 +14,7 @@ class Crossover(ABC):
     def __call__(self, struct_a : Structure, struct_b : Structure) -> Structure:
         pass
 
-class PlaneMating(ABC):
+cdef class PlaneMating(ABC):
     rng : random.Random
 
     def __init__(self, rng : None | random.Random = None):
@@ -24,6 +24,9 @@ class PlaneMating(ABC):
             self.rng = random.Random()
 
     def __call__(self, struct1 : Structure, struct2 : Structure) -> Structure:
+        return self.ccall(struct1, struct2)
+
+    cdef Structure ccall(self, Structure struct1, Structure struct2):
         """
         Make a in-between structure from two other structures
 
