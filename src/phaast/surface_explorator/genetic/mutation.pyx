@@ -45,16 +45,10 @@ cdef class DisplacementMutator(Mutator):
 
     def __init__(
         self,
-        base : Base,
         num : cython.uint = 1,
         min_displacement : cython.double = 0.7,
         max_displacement : cython.double = 2.3,
     ):
-        if len(base) < num:
-            raise ValueError(
-                "Number of displacements is higher than number of atoms in structure"
-            )
-
         self.num = num
 
         self.min_displacement = min_displacement
@@ -99,7 +93,6 @@ cdef class DisplacementMutator(Mutator):
 
 cdef class PermuteMutator(Mutator):
     num : int
-    rng : random.Random
 
     def __init__(self, base : Base, num : int, rng : None | random.Random):
         all_permutations = cast(
@@ -118,11 +111,6 @@ cdef class PermuteMutator(Mutator):
             )
 
         self.num = num
-
-        if isinstance(rng, random.Random):
-            self.rng = rng
-        else:
-            self.rng = random.Random()
 
 
     def __call__(self, structure : Structure) -> Structure:
