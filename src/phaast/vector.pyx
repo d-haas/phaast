@@ -155,6 +155,7 @@ cdef class Vector:
 
     cdef Vector div(self, double other):
         cdef Vector result = Vector(self.x/other, self.y/other, self.z/other)
+        return result
     def __truediv__(self, other : cython.double) -> Vector:
         """
         Division by scalar
