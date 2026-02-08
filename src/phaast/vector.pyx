@@ -7,10 +7,6 @@ from libc.math cimport sqrt, sin, cos
 cpdef Vector create_vector(double x = 0, double y = 0, double z = 0):
     return Vector(x, y, z)
 
-cdef struct BaseVector:
-    double x
-    double y
-    double z
 
 @cython.auto_pickle(True)
 cdef class Vector:
