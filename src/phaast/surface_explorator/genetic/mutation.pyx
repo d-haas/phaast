@@ -26,6 +26,10 @@ cdef double get_rand() nogil:
 
     return result
 
+cdef unsigned long get_randint(int a, int b) nogil:
+    cdef unsigned long num = rand()
+    return (num % (b - a)) + a
+
 cdef double get_rand_uniform(double a, double b) nogil:
     return get_rand()*(b - a) + a 
 
@@ -114,38 +118,47 @@ cdef class PermuteMutator(Mutator):
 
 
     def __call__(self, structure : Structure) -> Structure:
+        return self.ccall(structure)
+
+    @cython.boundscheck(False)
+    cdef Structure ccall(self, Structure structure):
         """
         Permute atoms in a structure at random
         supposedly generating a new structure
         """
 
-        new_structure = structure.copy()
+        cdef Structure new_structure = structure.copy()
+        cdef int length = len(structure)
+        cdef int num = self.num
 
-        valid_permutations = [
-            atoms for atoms
-            in distinct_pairs(tuple(new_structure))
-            if atoms[0].z != atoms[1].z
-        ]
+        cdef int valid_permutations
+        cdef int i
+        cdef int j
+        cdef int _
 
-        # Choosing N permutations at "random"
-        chosen_permutations = self.rng.sample(valid_permutations, k=self.num)
+        for _ in range(num):
+            valid_permutations = 0
+            i = get_randint(0, length-1)
+            for j in range(length):
+                if new_structure[i] != new_structure[j]:
+                    valid_permutations+= 1
 
-        # Swapping atom positions
-        for atom_i, atom_j in chosen_permutations:
-            atom_i.pos, atom_j.pos = atom_j.pos, atom_i.pos
+            for j in range(length):
+                if new_structure[i] != new_structure[j]:
+                    valid_permutations-= 1
+                    if valid_permutations == 0:
+                        new_structure[i].pos, new_structure[j].pos = new_structure[j].pos, new_structure[i].pos
 
         return new_structure
 
 cdef class TwistMutator(Mutator):
     min_angle : float
     max_angle : float
-    rng : random.Random
 
     def __init__(
         self,
         min_angle : float,
         max_angle : float,
-        rng : None | random.Random,
     ):
         if min_angle > tau:
             min_angle%= tau
@@ -155,33 +168,32 @@ cdef class TwistMutator(Mutator):
         self.min_angle = min_angle
         self.max_angle = max_angle
 
-        if isinstance(rng, random.Random):
-            self.rng = rng
-        else:
-            self.rng = random.Random()
 
     def __call__(self, structure : Structure) -> Structure:
+        return self.ccall(structure)
 
-        new_structure : Structure = structure.copy()
+    @cython.boundscheck(False)
+    cdef Structure ccall(self, Structure structure):
 
-        cm : Vector = new_structure.cm
+        cdef Structure new_structure : Structure = structure.copy()
+        cdef double min_angle = self.min_angle
+        cdef double max_angle = self.max_angle
 
-        for atom in new_structure:
-            atom.pos-= cm
+        new_structure.center_mass()
 
         rotations : tuple[float, float] = (
             self.rng.uniform(0, tau),
             self.rng.uniform(0, tau),
         )
 
+        cdef double rotation_angle = get_rand_uniform(min_angle, max_angle)
+
         for atom in new_structure:
             atom.pos.rotate_x(rotations[0])
             atom.pos.rotate_y(rotations[1])
 
             if atom.pos.z > 0:
-                atom.pos.rotate_z(
-                    self.rng.choice((-1,1),)*self.rng.uniform(self.min_angle, self.max_angle)
-                )
+                atom.pos.rotate_z(rotation_angle)
 
             atom.pos.rotate_y(-rotations[1])
             atom.pos.rotate_x(-rotations[0])
