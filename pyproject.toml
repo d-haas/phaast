@@ -42,6 +42,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 ext-modules = [
+  { name = "phaast.utils.c_random", sources = ["src/phaast/utils/c_random.pyx"] },
   { name = "phaast.vector", sources = ["src/phaast/vector.pyx"] },
   { name = "phaast.structure.primitives", sources = ["src/phaast/structure/primitives.pyx"] },
   { name = "phaast.structure.comparator.c_comparators", sources = ["src/phaast/structure/comparator/c_comparators.pyx"] },

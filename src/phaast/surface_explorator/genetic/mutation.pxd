@@ -1,11 +1,5 @@
 from phaast.structure.primitives cimport Structure
 
-cdef double get_rand() nogil
-
-cdef unsigned long get_randint(int a, int b) nogil
-
-cdef double get_rand_uniform(double a, double b) nogil
-
 cdef class Mutator:
     pass
 
@@ -17,7 +11,7 @@ cdef class DisplacementMutator(Mutator):
     cdef Structure ccall(self, Structure structure)
 
 cdef class PermuteMutator(Mutator):
-    cdef int num : int
+    cdef int num
 
     cdef Structure ccall(self, Structure structure)
 

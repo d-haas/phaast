@@ -3,13 +3,12 @@ from math import tau
 import random
 from typing import cast
 
-from libc.stdlib cimport rand, srand, RAND_MAX
-from libc.time cimport time
 from libc.math cimport sqrt
 cimport cython
 from cython.view cimport array as cvarray
 from phaast.vector cimport Vec, Vector
 from phaast.structure.primitives cimport Element, Structure
+from phaast.utils.c_random cimport get_rand, get_randint, get_rand_uniform
 
 from cython.parallel import prange
 
@@ -17,21 +16,6 @@ from phaast.structure import Base
 from phaast.vector import Vector
 from phaast.utils.custom_iter import distinct_pairs
 
-srand(time(NULL))
-
-cdef double get_rand() nogil:
-    cdef unsigned long num = rand()
-
-    cdef double result = (num * 1.0) / RAND_MAX
-
-    return result
-
-cdef unsigned long get_randint(int a, int b) nogil:
-    cdef unsigned long num = rand()
-    return (num % (b - a)) + a
-
-cdef double get_rand_uniform(double a, double b) nogil:
-    return get_rand()*(b - a) + a 
 
 cdef class Mutator:
     @abstractmethod
@@ -175,7 +159,7 @@ cdef class TwistMutator(Mutator):
     @cython.boundscheck(False)
     cdef Structure ccall(self, Structure structure):
 
-        cdef Structure new_structure : Structure = structure.copy()
+        cdef Structure new_structure = structure.copy()
         cdef double min_angle = self.min_angle
         cdef double max_angle = self.max_angle
 
