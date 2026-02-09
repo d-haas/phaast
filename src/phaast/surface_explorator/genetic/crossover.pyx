@@ -5,6 +5,9 @@ from bisect import insort
 from phaast.structure import Atom, Structure
 from phaast.vector import Vector
 
+from phaast.utils.c_random cimport get_rand, get_randint, get_rand_uniform
+from phaast.structure.primitives cimport Atom, Structure
+
 cdef class Crossover:
     @abstractmethod
     def __init__(self, *args, **kwargs) -> None:
@@ -15,17 +18,13 @@ cdef class Crossover:
         pass
 
 cdef class PlaneMating(ABC):
-    rng : random.Random
 
-    def __init__(self, rng : None | random.Random = None):
-        if isinstance(rng, random.Random):
-            self.rng = rng
-        else:
-            self.rng = random.Random()
+    def __init__(self):
 
     def __call__(self, struct1 : Structure, struct2 : Structure) -> Structure:
         return self.ccall(struct1, struct2)
 
+    # I chose not to optimize this function further
     cdef Structure ccall(self, Structure struct1, Structure struct2):
         """
         Make a in-between structure from two other structures
@@ -41,12 +40,14 @@ cdef class PlaneMating(ABC):
 
         # Create a normalized vector in a random direction to represent
         # the normal vector to the plane
-        plane_ortho_vec : Vector = Vector(
-            *[self.rng.uniform(-1, 1) for _ in range(3)],
+        cdef Vector plane_ortho_vec = Vector(
+            get_rand_uniform(-1, 1),
+            get_rand_uniform(-1, 1),
+            get_rand_uniform(-1, 1),
         ).normalized()
         # Invert the vector to create the same plane with opposite
         # normal for the other structure
-        inv_plane_ortho_vec : Vector = -plane_ortho_vec
+        cdef Vector inv_plane_ortho_vec = -1 * plane_ortho_vec
 
         ##########################################################
         ### Get distances of atoms from the plane and order it ###
@@ -56,9 +57,9 @@ cdef class PlaneMating(ABC):
         # Order atoms by distance to the plane, giving positive
         # values if they are above the plane and negative otherwise
         struct1_atom_dist_pairs : list[tuple[Atom, float]] = []
-        cm1 = struct1.cm # Structure 1 center of mass
+        struct1.center_mass()
         for atom in struct1:
-            dist = (atom.pos-cm1)*plane_ortho_vec
+            dist = atom.pos*plane_ortho_vec
             insort(
                 struct1_atom_dist_pairs,
                 (atom, dist),
@@ -68,9 +69,9 @@ cdef class PlaneMating(ABC):
         # And structure 2
         # Same for structure 1 but with above and below inverted
         struct2_atom_dist_pairs : list[tuple[Atom, float]] = []
-        cm2 = struct2.cm # Structure 2 center of mass
+        struct2.center_mass()
         for atom in struct2:
-            dist = (atom.pos-cm2)*inv_plane_ortho_vec
+            dist = atom.pos*inv_plane_ortho_vec
             insort(
                 struct2_atom_dist_pairs,
                 (atom, dist),
