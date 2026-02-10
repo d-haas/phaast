@@ -67,17 +67,19 @@ class Computer(BaseComputer):
             return [mol for mol in molecules]
 
     #def parallelize(self, args : Iterable[tuple[Unpack[ParA]]] | int, func : Callable[[Unpack[ParA]], ParT]) -> list[ParT]:
-    def parallelize(self, args : Iterable[tuple[Any, ...]] | int, func : Callable[..., ParT]) -> list[ParT]:
+    def parallelize(self, args : Iterable[tuple[Any, ...]] | int, func : Callable[..., ParT], chunksize : int | None = None) -> list[ParT]:
         with Pool(self.cpu_count_limit) as pool:
             if isinstance(args, int):
                 return pool.starmap(
                     func,
                     [() for _ in range(args)],
+                    chunksize=chunksize,
                 )
             else:
                 return pool.starmap(
                     func,
-                    args
+                    args,
+                    chunksize=chunksize,
                 )
 
     def add_calculator(self, key : str, calculator : Calculator) -> None:

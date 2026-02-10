@@ -1,5 +1,5 @@
 import random
-from typing import Iterable, cast
+from typing import Iterable, Sequence, cast
 from math import floor
 
 from phaast.structure.comparator import ComparisonAlgorithm, GrigoryanSpringborg
@@ -7,7 +7,6 @@ from phaast.surface_explorator.genetic.migration import Migrator
 from phaast.surface_explorator.genetic.mutation import Mutator
 from phaast.surface_explorator.genetic.crossover import Crossover
 from phaast.surface_explorator.genetic.individual import ChildIndividual, Individual, MutantIndividual, OptimizedIndividual
-from phaast.surface_explorator.genetic.duplicate import remove_duplicates
 
 from phaast.computer import Computer
 from phaast.structure import Base
@@ -62,6 +61,18 @@ class GeneticComputer(Computer):
             if mol
         ]
 
+    def get_duplicate(self, i : int, inds : Sequence[OptimizedIndividual], comparison_algorithm : ComparisonAlgorithm) -> bool:
+        for j in range(i+1, len(inds)):
+            if comparison_algorithm(inds[i], inds[j]):
+                return True
+        return False
+
+    def get_duplicate_mask(self, inds : Sequence[OptimizedIndividual], comparison_algorithm : ComparisonAlgorithm) -> list[bool]:
+        mask = self.parallelize(
+            [(i, inds, comparison_algorithm) for i in range(len(inds))],
+            self.get_duplicate,
+        )
+        return mask
 
 
 class Genetic(SurfaceExplorator):
@@ -102,8 +113,6 @@ class Genetic(SurfaceExplorator):
         base : Base,
         population_size : int,
         computer : Computer,
-        energy_threshold : float,
-        geometry_threshold : float,
         calculator : str,
 
         mutations  : list[tuple[float, Mutator]],
@@ -153,8 +162,6 @@ class Genetic(SurfaceExplorator):
         self.sequential_mutations = sequential_mutations
         self.mutation_batches = mutation_batches
 
-        self.energy_threshold     = energy_threshold
-        self.geometry_threshold   = geometry_threshold
         self.comparison_algorithm = comparison_algorithm
         self.do_remove_unbonded    = do_remove_unbonded
 
@@ -181,13 +188,15 @@ class Genetic(SurfaceExplorator):
 
         pop_size_before : int = len(self.population)
 
-        self.population = remove_duplicates(
-            self.computer,
-            self.population,
-            self.energy_threshold,
-            self.geometry_threshold,
-            self.comparison_algorithm,
-        )
+        self.population = [
+            ind
+            for ind, is_duplicate
+            in zip(
+                self.population,
+                self.computer.get_duplicate_mask(self.population, self.comparison_algorithm),
+            )
+            if not is_duplicate
+        ]
 
         pop_size_after : int = len(self.population)
 
