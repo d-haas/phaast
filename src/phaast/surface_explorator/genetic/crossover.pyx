@@ -1,25 +1,22 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import random
 from bisect import insort
 
-from phaast.structure import Atom, Structure
-from phaast.vector import Vector
-
+from phaast.vector cimport Vector
 from phaast.utils.c_random cimport get_rand, get_randint, get_rand_uniform
 from phaast.structure.primitives cimport Atom, Structure
 
 cdef class Crossover:
-    @abstractmethod
     def __init__(self, *args, **kwargs) -> None:
         pass
 
-    @abstractmethod
     def __call__(self, struct_a : Structure, struct_b : Structure) -> Structure:
         pass
 
-cdef class PlaneMating(ABC):
+cdef class PlaneMating:
 
     def __init__(self):
+        pass
 
     def __call__(self, struct1 : Structure, struct2 : Structure) -> Structure:
         return self.ccall(struct1, struct2)

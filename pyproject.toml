@@ -49,6 +49,7 @@ ext-modules = [
   { name = "phaast.surface_explorator.genetic.migration.hedron_universe", sources = ["src/phaast/surface_explorator/genetic/migration/hedron_universe.py"] },
   { name = "phaast.surface_explorator.genetic.individual", sources = ["src/phaast/surface_explorator/genetic/individual.pyx"] },
   { name = "phaast.surface_explorator.genetic.mutation", sources = ["src/phaast/surface_explorator/genetic/mutation.pyx"] },
+  { name = "phaast.surface_explorator.genetic.crossover", sources = ["src/phaast/surface_explorator/genetic/crossover.pyx"] },
   { name = "phaast.structure.test_vec", sources = ["src/phaast/structure/test_vec.pyx"] },
 ]
 package-dir = {"" = "src"}

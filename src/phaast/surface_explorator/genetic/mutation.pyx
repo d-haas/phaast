@@ -18,11 +18,11 @@ from phaast.utils.custom_iter import distinct_pairs
 
 
 cdef class Mutator:
-    @abstractmethod
+    #@abstractmethod
     def __init__(self, *args, **kwargs) -> None:
         pass
 
-    @abstractmethod
+    #@abstractmethod
     def __call__(self, struct : Structure) -> Structure:
         pass
 
@@ -166,8 +166,8 @@ cdef class TwistMutator(Mutator):
         new_structure.center_mass()
 
         rotations : tuple[float, float] = (
-            self.rng.uniform(0, tau),
-            self.rng.uniform(0, tau),
+            get_rand_uniform(0, tau),
+            get_rand_uniform(0, tau),
         )
 
         cdef double rotation_angle = get_rand_uniform(min_angle, max_angle)
