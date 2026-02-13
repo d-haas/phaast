@@ -5,18 +5,20 @@ import cython
 import random
 from typing import Literal, Optional
 
+from phaast.utils.c_random cimport get_rand, get_randint, get_rand_uniform
+from phaast.vector cimport Vector
+from phaast.structure.primitives cimport Atom, Structure
 
-from phaast.structure import Atom, Base, Structure
+from phaast.structure import Base
 from phaast.structure.constants import AtomicNumber, AtomicRadi
 from phaast.surface_explorator.genetic.migration.filter_list import *
 from phaast.surface_explorator.genetic.migration import Migrator
 
-from phaast.vector import Vector
 from phaast.computer import Computer
 
 GOLDEN_RATIO = (1 + 5**.5)/2
 
-HedronNumber = Literal[6,8,12,20]
+HedronNumber = Literal[6,8,12,20] #4 was removed
 
 HedronPositions : dict[HedronNumber, list[Vector]] = {}
 #HedronPositions[4] = [
@@ -80,14 +82,14 @@ HedronPositions[20] = HedronPositions[8] + [
     Vector(-1/GOLDEN_RATIO, 0,-GOLDEN_RATIO).normalized(),
 ]
 
-class HedronUniverse:
+cdef class HedronUniverse:
     """
     A base class to define the cell-separated universe
     used to place and model each element of the population
     """
-    atom_population : list[tuple[Atom, float]]
+    atom_population : list[Atom]
     bond_filter : FilterList
-    n_vertices : HedronNumber
+    n_vertices : cython.int # HedronNumber
 
     def __init__(
         self,
@@ -98,10 +100,10 @@ class HedronUniverse:
         self.atom_population = []
         self.bond_filter = filter_list if filter_list else FilterList(FilterMode.NONE, ())
 
-    def check_available_position(self, new_atom : Atom) -> cython.int:
+    cdef bool check_available_position(self, Atom new_atom):
 
         if self.atom_population:
-            for atom, _ in self.atom_population:
+            for atom in self.atom_population:
                 if new_atom.is_touching(atom, bonding_tolerance=-0.005): #dist_squared < radius_sum_squared:
                     # Atom would be "inside the delimited field of bonding"
                     return False
@@ -112,44 +114,41 @@ class HedronUniverse:
             return True
 
 
-    def get_available_positions(self, atomic_number : AtomicNumber) -> list[tuple[Vector, float]]:
-        positions : list[tuple[Vector, float]] = []
+    cdef list get_available_positions(self, unsigned int atomic_number): # -> list[tuple[Vector, float]]:
+        cdef list positions = [] # : list[Vector]
 
-        for atom, hedron_scale in self.atom_population:
+        cdef double radius
+        cdef Vector new_position
+        cdef Atom new_atom
+
+        for atom in self.atom_population:
             if self.bond_filter.is_permited(atomic_number, atom.z):
                 radius : cython.double = AtomicRadi[atomic_number] + atom.radius
                 for point in HedronPositions[self.n_vertices]:
-                    new_position = atom.pos + point*radius*hedron_scale
+                    new_position = atom.pos + point*radius
                     new_atom = Atom(atomic_number, new_position)
                     if self.check_available_position(new_atom):
                         positions.append(
-                            (
-                                new_position,
-                                -hedron_scale,
-                            ),
+                            new_position,
                         )
 
         return positions
 
-    def get_random_available_position(self, atomic_number : AtomicNumber, rand_gen : None | random.Random = None) -> tuple[Vector, float] | None:
-        rng = rand_gen if rand_gen else random.Random()
+    def get_random_available_position(self, atomic_number : AtomicNumber) -> Vector | None:
         if self.atom_population:
             positions = self.get_available_positions(atomic_number)
             if positions:
-                return rng.choice(positions)
+                return positions[get_randint(0, len(positions-1))]
             else:
                 return None
         else:
-            return Vector(), 1.0
+            return Vector(0, 0, 0)
 
-    def include_atom(self, pos : Vector, atom : Atom, hedron_scale : float):
+    def include_atom(self, Vector pos, Atom atom):
         # Caching radius for faster access
         atom.pos = pos
         self.atom_population.append(
-            (
-                atom,
-                hedron_scale,
-            )
+            atom,
         )
 
 class HedronMigrator(Migrator):
@@ -157,9 +156,8 @@ class HedronMigrator(Migrator):
     n_vertices : HedronNumber
     filter_list : FilterList
     computer : Computer
-    rng : random.Random
 
-    def __init__(self, base : Base, n_vertices : HedronNumber, filter_list : FilterList, rng : None | random.Random):
+    def __init__(self, base : Base, n_vertices : HedronNumber, filter_list : FilterList):
         self.base = base
 
         assert n_vertices in (4,6,8,12,20), "Number of vertices is not valid, must be in (4,6,8,12,20)"
@@ -168,18 +166,13 @@ class HedronMigrator(Migrator):
 
         self.filter_list = filter_list
 
-        if isinstance(rng, random.Random):
-            self.rng = rng
-        else:
-            self.rng = random.Random()
-
     def __call__(
         self,
     ) -> Structure:
 
 
         atoms = [Atom(element.z) for element in self.base.elements]
-        self.rng.shuffle(atoms)
+        random.shuffle(atoms)
 
         universe = HedronUniverse(
             n_vertices = self.n_vertices,
@@ -188,10 +181,9 @@ class HedronMigrator(Migrator):
 
         while atoms:
             atom = atoms.pop(0)
-            random_available_position = universe.get_random_available_position(atom.z, self.rng)
+            random_available_position = universe.get_random_available_position(atom.z)
             if random_available_position is not None:
-                random_available_position, hedron_scale = random_available_position
-                universe.include_atom(random_available_position, atom, hedron_scale)
+                universe.include_atom(random_available_position, atom)
             else:
                 atoms.append(atom)
                 
