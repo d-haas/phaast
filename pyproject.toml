@@ -42,16 +42,21 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 ext-modules = [
+# Independent (cimported) modules 
   { name = "phaast.utils.c_random", sources = ["src/phaast/utils/c_random.pyx"] },
   { name = "phaast.vector", sources = ["src/phaast/vector.pyx"] },
+
+# Structure
   { name = "phaast.structure.primitives", sources = ["src/phaast/structure/primitives.pyx"] },
   { name = "phaast.structure.comparator.c_comparators", sources = ["src/phaast/structure/comparator/c_comparators.pyx"] },
+  { name = "phaast.structure.test_vec", sources = ["src/phaast/structure/test_vec.pyx"] },
+
+# Genetic algorithm utils
   { name = "phaast.surface_explorator.genetic.migration.dot_universe", sources = ["src/phaast/surface_explorator/genetic/migration/dot_universe.pyx"] },
   { name = "phaast.surface_explorator.genetic.migration.hedron_universe", sources = ["src/phaast/surface_explorator/genetic/migration/hedron_universe.pyx"] },
   { name = "phaast.surface_explorator.genetic.individual", sources = ["src/phaast/surface_explorator/genetic/individual.pyx"] },
   { name = "phaast.surface_explorator.genetic.mutation", sources = ["src/phaast/surface_explorator/genetic/mutation.pyx"] },
   { name = "phaast.surface_explorator.genetic.crossover", sources = ["src/phaast/surface_explorator/genetic/crossover.pyx"] },
-  { name = "phaast.structure.test_vec", sources = ["src/phaast/structure/test_vec.pyx"] },
 ]
 package-dir = {"" = "src"}
 package-data = { "phaast" = ["*.pxd", "**/*.pxd"] }
