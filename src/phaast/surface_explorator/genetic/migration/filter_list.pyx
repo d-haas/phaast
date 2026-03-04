@@ -1,12 +1,11 @@
-from enum import Enum
 from typing import Literal, Iterable
 
 from phaast.structure.constants import AtomicNumber
 
-class FilterMode(Enum):
-    NONE = "NONE"
-    INCLUDE = "INCLUDE"
-    EXCLUDE = "EXCLUDE"
+cpdef enum FilterMode:
+    NONE = 0
+    INCLUDE = 1
+    EXCLUDE = 2
 
 class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
     mode: FilterMode
@@ -24,11 +23,10 @@ class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
             self[(i, j)] = True
             self[(j, i)] = True
 
-    def is_permited(self, zi: AtomicNumber, zj: AtomicNumber):
-        match self.mode:
-            case FilterMode.INCLUDE:
-                return (zi, zj) in self
-            case FilterMode.EXCLUDE:
-                return (zi, zj) not in self
-            case FilterMode.NONE:
-                return True
+    def is_permited(self, zi: AtomicNumber, zj: AtomicNumber) -> bool:
+        if self.mode == FilterMode.INCLUDE:
+            return (zi, zj) in self
+        elif self.mode == FilterMode.EXCLUDE:
+            return (zi, zj) not in self
+        elif self.mode == FilterMode.NONE:
+            return True

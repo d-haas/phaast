@@ -6,7 +6,7 @@ from cython.parallel import prange
 import bisect, itertools
 
 cpdef bool energy_difference(Molecule mol1, Molecule mol2, double tolerance):
-    return fabs(mol1.energy - mol2.energy) > tolerance
+    return fabs(mol1.energy - mol2.energy) < tolerance
 
 cpdef bool grigoryan_springborg(Molecule mol1, Molecule mol2, double tolerance):
     """

@@ -238,7 +238,7 @@ filter_list = FilterList(FilterMode.EXCLUDE, ((1,1),))
 migrator = [
     (
         args.migr_w,
-        HedronMigrator(base, 20, filter_list, None),
+        HedronMigrator(base, 20, filter_list),
     ),
 ]
 
@@ -246,11 +246,9 @@ mutators = [
     (
         args.mut_disp_w,
         DisplacementMutator(
-            base,
             args.mut_disp_num,
             args.mut_disp_min,
             args.mut_disp_max,
-            None,
         ),
     ),
     (
@@ -258,7 +256,6 @@ mutators = [
         PermuteMutator(
             base,
             args.mut_perm_num,
-            None,
         )
     ),
     (
@@ -266,7 +263,6 @@ mutators = [
         TwistMutator(
             args.mut_twist_min_angle,
             args.mut_twist_max_angle,
-            None,
         )
     ),
 ]
@@ -274,7 +270,7 @@ mutators = [
 crossover = [
     (
         args.crov_w,
-        PlaneMating(None),
+        PlaneMating(),
     ),
 ]
 
@@ -314,8 +310,6 @@ genetic = Genetic(
     crossovers = crossover, #type: ignore
     migrators = migrator, #type: ignore
 
-    energy_threshold = args.energy_threshold,
-    geometry_threshold = args.geometry_threshold,
     comparison_algorithm = comparison_algorithm,
 
     do_remove_unbonded = do_remove_unbonded,

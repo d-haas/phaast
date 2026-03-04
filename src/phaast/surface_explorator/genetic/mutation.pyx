@@ -82,7 +82,7 @@ cdef class DisplacementMutator(Mutator):
 cdef class PermuteMutator(Mutator):
     num : int
 
-    def __init__(self, base : Base, num : int, rng : None | random.Random):
+    def __init__(self, base : Base, num : int):
         all_permutations = cast(
             list[tuple[Element,Element]],
             list(distinct_pairs(tuple(base))),

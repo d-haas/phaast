@@ -52,6 +52,7 @@ ext-modules = [
   { name = "phaast.structure.test_vec", sources = ["src/phaast/structure/test_vec.pyx"] },
 
 # Genetic algorithm utils
+  { name = "phaast.surface_explorator.genetic.migration.filter_list", sources = ["src/phaast/surface_explorator/genetic/migration/filter_list.pyx"] },
   { name = "phaast.surface_explorator.genetic.migration.dot_universe", sources = ["src/phaast/surface_explorator/genetic/migration/dot_universe.pyx"] },
   { name = "phaast.surface_explorator.genetic.migration.hedron_universe", sources = ["src/phaast/surface_explorator/genetic/migration/hedron_universe.pyx"] },
   { name = "phaast.surface_explorator.genetic.individual", sources = ["src/phaast/surface_explorator/genetic/individual.pyx"] },

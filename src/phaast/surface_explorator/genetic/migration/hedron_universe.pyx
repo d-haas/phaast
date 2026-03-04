@@ -11,7 +11,8 @@ from phaast.structure.primitives cimport Atom, Structure
 
 from phaast.structure import Base
 from phaast.structure.constants import AtomicNumber, AtomicRadi
-from phaast.surface_explorator.genetic.migration.filter_list import *
+#from phaast.surface_explorator.genetic.migration.filter_list cimport FilterMode
+from phaast.surface_explorator.genetic.migration.filter_list import FilterMode, FilterList
 from phaast.surface_explorator.genetic.migration import Migrator
 
 from phaast.computer import Computer
@@ -114,7 +115,7 @@ cdef class HedronUniverse:
             return True
 
 
-    cdef list get_available_positions(self, unsigned int atomic_number): # -> list[tuple[Vector, float]]:
+    cpdef list get_available_positions(self, unsigned int atomic_number): # -> list[tuple[Vector, float]]:
         cdef list positions = [] # : list[Vector]
 
         cdef double radius
@@ -138,7 +139,7 @@ cdef class HedronUniverse:
         if self.atom_population:
             positions = self.get_available_positions(atomic_number)
             if positions:
-                return positions[get_randint(0, len(positions-1))]
+                return positions[get_randint(0, len(positions)-1)]
             else:
                 return None
         else:
@@ -151,11 +152,13 @@ cdef class HedronUniverse:
             atom,
         )
 
+    cpdef Structure get_structure(self):
+        return Structure([atom for atom in self.atom_population])
+
 class HedronMigrator(Migrator):
     base : Base
     n_vertices : HedronNumber
     filter_list : FilterList
-    computer : Computer
 
     def __init__(self, base : Base, n_vertices : HedronNumber, filter_list : FilterList):
         self.base = base
@@ -187,4 +190,4 @@ class HedronMigrator(Migrator):
             else:
                 atoms.append(atom)
                 
-        return Structure([element[0] for element in universe.atom_population])
+        return Structure([atom for atom in universe.atom_population])

@@ -37,7 +37,6 @@ class GeneticComputer(Computer):
             struct_pairs,
             crossover,
         )
-
         return [
             ChildIndividual(child, parents)
             for child, parents
@@ -78,6 +77,7 @@ class GeneticComputer(Computer):
 class Genetic(SurfaceExplorator):
     population_size : int
     population      : list[OptimizedIndividual]
+    generations     : list[list[OptimizedIndividual]]
     end_loop_number : int
 
     calculator          : str
@@ -134,7 +134,7 @@ class Genetic(SurfaceExplorator):
         Define initial variables for genetic algorithm
         """
         self.computer = GeneticComputer(computer, calculator)
-        if population_size < 100:
+        if population_size < 10:
             raise ValueError(
                 "Population size is too small",
             )
@@ -151,6 +151,11 @@ class Genetic(SurfaceExplorator):
                         migrator,
                     )
                 )
+        print(f"Population size is {len(self.population)}")
+
+        if None in self.population: raise ValueError("There is a None in the population")
+        self.generations = []
+        self.generations.append(self.population.copy())
 
         self.mutations = mutations
         self.crossovers = crossovers
@@ -223,11 +228,14 @@ class Genetic(SurfaceExplorator):
 
         for weight, crossover in self.crossovers:
             op_num : int = floor(self.population_size*weight/self.operations_weight)
+            print(f"op_num is {op_num}")
 
             # It is safe to assume that, for every child (children[i]) in children,
             # children[i] came from chosen_parents[i]
+            pairs : list[tuple[Individual, Individual]] = list(distinct_pairs(self.population))
+            print(f"Pairs size is {len(pairs)}")
             chosen_parents = random.choices(
-                list(distinct_pairs(self.population)),
+                pairs,
                 k = op_num,
             )
 
@@ -312,7 +320,7 @@ class Genetic(SurfaceExplorator):
 
         self.population = [
             ind for ind in self.population
-            if ind.energy <=median_energy or ind.generations_alive <= self.minimum_lifetime
+            if ind.energy <= median_energy or ind.generations_alive <= self.minimum_lifetime
         ]
 
         pop_size_after = len(self.population)
@@ -341,6 +349,7 @@ class Genetic(SurfaceExplorator):
             self.best_energy_loops+= 1
 
     def loop(self) -> bool:
+
         self.cycle_counter+= 1
 
         children : list[OptimizedIndividual] = self.reproduce()
@@ -351,16 +360,19 @@ class Genetic(SurfaceExplorator):
         self.population+= mutants
         self.population+= migrated
 
+        self.remove_unfeasible()
         self.remove_duplicates()
         if self.do_remove_unbonded:
             self.remove_unbonded()
 
         self.get_best_energy()
 
+        self.generations.append(self.population.copy())
+
         return self.best_energy_loops < self.end_loop_number
 
 
     def save(self, file : str) -> None:
-        print(file)
         # Do later
+        print(file)
         pass

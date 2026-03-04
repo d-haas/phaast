@@ -44,7 +44,7 @@ cdef class PlaneMating:
         ).normalized()
         # Invert the vector to create the same plane with opposite
         # normal for the other structure
-        cdef Vector inv_plane_ortho_vec = -1 * plane_ortho_vec
+        cdef Vector inv_plane_ortho_vec = -1.0 * plane_ortho_vec
 
         ##########################################################
         ### Get distances of atoms from the plane and order it ###
