@@ -3,6 +3,10 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 if TYPE_CHECKING:
     from phaast.gui.gui import GUI
 
+import os
+os.environ["PYOPENGL_PLATFORM"] = "glx"
+
+import tkinter as tk
 from math import acos, cos, degrees, sin, sqrt
 import threading
 
@@ -21,7 +25,7 @@ from phaast.gui.constants import *
 from phaast.gui.input import InputHandler
 
 class MolViewer(OpenGLFrame):
-    def __init__(self, parent : GUI, *args, **kwargs):
+    def __init__(self, parent : GUI | tk.Misc, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
 
         self.parent = parent
@@ -65,7 +69,8 @@ class MolViewer(OpenGLFrame):
     def optimize_xtb(self, options : dict[str, Any]) -> None:
         previous_state = self.state
         self.state = "view"
-        self.parent.disable_input()
+        if isinstance(self.parent, GUI):
+            self.parent.disable_input()
 
         calc = XTB(**options)
 
@@ -75,12 +80,14 @@ class MolViewer(OpenGLFrame):
             self.structure = mol
 
         self.state = previous_state
-        self.parent.enable_input()
+        if isinstance(self.parent, GUI):
+            self.parent.enable_input()
 
     def optimize_orca(self, options : dict[str, Any]) -> None:
         previous_state = self.state
         self.state = "view"
-        self.parent.disable_input()
+        if isinstance(self.parent, GUI):
+            self.parent.disable_input()
 
         calc = Orca(**options)
 
@@ -88,7 +95,8 @@ class MolViewer(OpenGLFrame):
             for mol in calc.optimize_trj(self.structure):
                 self.structure = mol
             self.state = previous_state
-            self.parent.enable_input()
+            if isinstance(self.parent, GUI):
+                self.parent.enable_input()
 
         thread = threading.Thread(target = temp_optimize_trj)
         thread.start()
