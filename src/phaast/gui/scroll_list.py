@@ -162,3 +162,32 @@ class ScrollList(ttk.Frame):
 
         elif all_items:
             self.set_selection((all_items[0],),)
+
+class ScrollNumberList(ScrollList):
+    def __init__(
+        self,
+        master : tk.Misc | None = None,
+        title : str = "",
+        width : tuple[int, ...] | int | None = None,
+        selectmode : Literal["extended", "browse", "none"] = "extended",
+        select_func : Callable[[tk.Event], None] | None = None,
+        check_function : Optional[Callable[[tuple[Any, ...]|Literal[""], CheckArg], bool]] = None,
+        *args,
+        **kwargs
+    ):
+        super().__init__(master, title, width, selectmode, select_func, check_function, *args, **kwargs)
+
+    def heading(self, column, *args, **kwargs):
+        self.tree.heading(column, *args, **kwargs, command = lambda : self.sort_by_column(column))
+
+    def sort_by_column(self, column):
+        items = self.tree.get_children()
+        rows = [self.get_item_values(item) for item in items]
+        self.delete_items(*items)
+        column_id : int = self.tree["columns"].index(column)
+
+
+        rows.sort(key = lambda row : float(row[column_id]))
+
+        for row in rows:
+            self.insert_item(row)

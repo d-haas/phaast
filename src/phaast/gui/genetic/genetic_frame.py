@@ -1,59 +1,100 @@
 from __future__ import annotations
+import enum
+from math import nan
 import threading
+from multiprocessing import dummy as multiprocessing
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
-from phaast.surface_explorator.genetic.individual import ChildIndividual, Individual, MutantIndividual, OptimizedIndividual
 if TYPE_CHECKING:
     from phaast.gui.genetic.__main__ import MainFrame
 
 import tkinter as tk
 from tkinter import ttk
 
+from phaast.structure import Structure
+from phaast.surface_explorator.genetic.individual import ChildIndividual, Individual, MutantIndividual, OptimizedIndividual
 from phaast.surface_explorator.genetic import Genetic
-from phaast.gui.scroll_list import ScrollList
+from phaast.gui.scroll_list import ScrollNumberList
 from phaast.gui.mol_viewer import MolViewer
 from phaast.gui.utils import TkDict
 
+class SortingType(enum.Enum):
+    ID = 0
+    ENERGY = 1
+
+class SortingOrder(enum.Enum):
+    NORMAL = 0
+    REVERSE = 1
+
+class Sorting(NamedTuple):
+    type  : SortingType
+    order : SortingOrder
+
 class CommandList(ttk.Frame):
 
-    def __init__(self, master : tk.Misc, struct : None = None, *args, **kwargs):
+    def __init__(self, master : GeneticFrame, struct : None | Individual = None, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
+        self.parent = master
+
         self.struct = struct
 
         self.title    = ttk.Label(self, text = "")
-        self.ancestor = ttk.Button(self, text = "Ancestor")
-        self.parent_a = ttk.Button(self, text = "Parent (Mother)")
-        self.parent_b = ttk.Button(self, text = "Parent (Father)")
-        self.title.pack(side = tk.TOP, fill = tk.X)
+        self.ancestor = ttk.Button(
+            self,
+            text = "Ancestor",
+            command = self.change_to_ancestor,
+        )
+        self.parent_a = ttk.Button(
+            self,
+            text = "Parent (Mother)",
+            command = self.change_to_parent_a,
+        )
+        self.parent_b = ttk.Button(
+            self,
+            text = "Parent (Father)",
+            command = self.change_to_parent_b,
+        )
+        self.title.pack(side = tk.LEFT, fill = tk.X)
 
-    def update(self):
-        if isinstance(self.struct, MutantIndividual):
-            self.parent_b.pack_forget()
+    def refresh(self):
+        if isinstance(self.parent.viewer.structure, MutantIndividual):
             self.parent_a.pack_forget()
-            self.ancestor.pack(side = tk.BOTTOM, fill = tk.X)
+            self.parent_b.pack_forget()
+            self.ancestor.pack(side = tk.LEFT, fill = tk.X)
             self.title.config(text = "Mutated from:")
-        elif isinstance(self.struct, ChildIndividual):
-            self.parent_b.pack(side = tk.BOTTOM, fill = tk.X)
-            self.parent_a.pack(side = tk.BOTTOM, fill = tk.X)
+        elif isinstance(self.parent.viewer.structure, ChildIndividual):
+            self.parent_a.pack(side = tk.LEFT, fill = tk.X)
+            self.parent_b.pack(side = tk.LEFT, fill = tk.X)
             self.ancestor.pack_forget()
             self.title.config(text = "Born from:")
-        elif isinstance(self.struct, OptimizedIndividual):
-            self.parent_b.pack_forget()
+        elif isinstance(self.parent.viewer.structure, OptimizedIndividual):
             self.parent_a.pack_forget()
-            self.ancestor.pack(side = tk.BOTTOM, fill = tk.X)
+            self.parent_b.pack_forget()
+            self.ancestor.pack(side = tk.LEFT, fill = tk.X)
             self.title.config(text = "Optimized from:")
-        elif isinstance(self.struct, Individual):
-            self.parent_b.pack_forget()
+        elif isinstance(self.parent.viewer.structure, Individual):
             self.parent_a.pack_forget()
+            self.parent_b.pack_forget()
             self.ancestor.pack_forget()
             self.title.config(text = "Migrated")
         else:
-            self.parent_b.pack_forget()
             self.parent_a.pack_forget()
+            self.parent_b.pack_forget()
             self.ancestor.pack_forget()
             self.title.config(text = "")
 
+    def change_to_ancestor(self):
+        if isinstance(self.parent.viewer.structure, (MutantIndividual, OptimizedIndividual)):
+            self.parent.change_individual(self.parent.viewer.structure.ancestor)
+
+    def change_to_parent_a(self):
+        if isinstance(self.parent.viewer.structure, ChildIndividual):
+            self.parent.change_individual(self.parent.viewer.structure.parents[0])
+
+    def change_to_parent_b(self):
+        if isinstance(self.parent.viewer.structure, ChildIndividual):
+            self.parent.change_individual(self.parent.viewer.structure.parents[1])
 
 
 class InfoList(ttk.Frame):
@@ -107,51 +148,57 @@ class GeneticFrame(ttk.Frame):
 
         self.viewer = MolViewer(self)
         self.viewer.animate = 1
-        self.generation_list = ScrollList(
+        self.generation_list = ScrollNumberList(
             self,
-            width = 80,
+            width = (83,),
             selectmode = tk.BROWSE,
             columns = ("generations",),
             display_columns = ("generations",),
             select_func = self.on_select_generation,
         )
-        self.generation_list.tree.heading("generations", text = "Generations")
-        self.population_list = ScrollList(
+        self.generation_list.heading("generations", text = "Generations")
+        self.population_list = ScrollNumberList(
             self,
-            width = (80, 110),
+            width = (83, 137),
             selectmode = tk.BROWSE,
             columns = ("population", "energy"),
             display_columns = ("population", "energy"),
             select_func = self.on_select_individual,
         )
-        self.population_list.tree.heading("population", text = "Population")
-        self.population_list.tree.heading("energy", text = "Energy")
-        self.descendant_list = ScrollList(
+        self.population_list.heading("population", text = "Population")
+        self.population_list.heading("energy", text = "Energy")
+        self.descendant_list = ScrollNumberList(
             self,
-            width = (80, 110),
+            width = (83, 137),
             selectmode = tk.BROWSE,
             columns = ("descendants", "energy"),
             display_columns = ("descendants", "energy"),
+            select_func = self.on_select_descendant,
         )
-        self.descendant_list.tree.heading("descendants", text = "Descendants")
-        self.descendant_list.tree.heading("energy", text = "energy")
+        self.descendant_list.heading("descendants", text = "Descendants")
+        self.descendant_list.heading("energy", text = "Energy")
         self.command_list = CommandList(self)
         self.info_list = InfoList(self)
 
-        self.generation_list.grid(column = 0, row = 0, sticky = tk.NSEW)
-        self.population_list.grid(column = 1, row = 0, sticky = tk.NSEW)
+        self.generation_list.grid(column = 0, row = 0, sticky = tk.NSEW, rowspan = 2)
+        self.population_list.grid(column = 1, row = 0, sticky = tk.NSEW, rowspan = 2)
         self.command_list.grid(column = 2, row = 0, sticky = tk.NSEW)
-        self.viewer.grid(column = 3, row = 0, sticky = tk.NSEW)
-        self.descendant_list.grid(column = 4, row = 0, sticky = tk.NSEW)
-        self.info_list.grid(column = 0, row = 1, columnspan = 5, sticky = tk.NSEW)
+        self.viewer.grid(column = 2, row = 1, sticky = tk.NSEW)
+        self.descendant_list.grid(column = 3, row = 0, sticky = tk.NSEW, rowspan = 2)
+        self.info_list.grid(column = 0, row = 2, columnspan = 4, sticky = tk.NSEW)
 
-        self.rowconfigure(0, weight = 1)
-        self.columnconfigure(3, weight = 1)
+        self.rowconfigure(1, weight = 1)
+        self.columnconfigure(2, weight = 1)
 
         self.genetic_loop_thread = threading.Thread(target = self.genetic_loop)
         self.genetic_loop_thread.start()
         self.loop_thread = threading.Thread(target = self.loop)
         self.loop_thread.start()
+
+        self.history : list[Structure] = []
+        self.future : list[Structure] = []
+        self.root.bind("<Control-z>", self.reverse_history)
+        self.root.bind("<Control-y>", self.forward_history)
 
         self.refresh()
 
@@ -167,12 +214,40 @@ class GeneticFrame(ttk.Frame):
         selected_item = self.population_list.get_selected_item()
         if selected_item:
             selected_individual_index = int(self.population_list.get_item_values(selected_item)[0])
-            self.viewer.structure = self.algorithm.generations[self.selected_generation][selected_individual_index]
+            self.change_individual(self.algorithm.generations[self.selected_generation][selected_individual_index])
 
+    def on_select_descendant(self, _ : tk.Event):
+        selected_item = self.descendant_list.get_selected_item()
+        if selected_item and isinstance(self.viewer.structure, Individual):
+            selected_descendant_index = int(self.descendant_list.get_item_values(selected_item)[0])
+            self.change_individual(self.viewer.structure.get_descendants()[selected_descendant_index])
+
+    def change_individual(self, individual : Individual):
+        self.add_to_history(self.viewer.structure)
+        self.viewer.structure = individual
         self.refresh_descentants()
+        self.command_list.refresh()
+
+    def add_to_history(self, struct : Structure):
+        self.history.append(struct)
+        self.future.clear()
+
+    def reverse_history(self, _ : tk.Event):
+        if self.history:
+            self.future.append(self.viewer.structure)
+            self.viewer.structure = self.history.pop(-1)
+            self.refresh_descentants()
+            self.command_list.refresh()
+
+    def forward_history(self, _ : tk.Event):
+        if self.future:
+            self.history.append(self.viewer.structure)
+            self.viewer.structure = self.future.pop(-1)
+            self.refresh_descentants()
+            self.command_list.refresh()
 
     def loop(self):
-        self.soft_refresh()
+        self.refresh_statistics()
         time.sleep(0.997)
 
     def genetic_loop(self):
@@ -198,7 +273,7 @@ class GeneticFrame(ttk.Frame):
         self.population_list.tree.delete(*self.population_list.tree.get_children())
 
         for i, individual in enumerate(self.algorithm.generations[self.selected_generation]):
-            self.population_list.insert_item((i,individual.energy),)
+            self.population_list.insert_item((i, individual.energy),)
 
     def refresh_statistics(self):
         for field in self.info_list.fields:
@@ -208,6 +283,7 @@ class GeneticFrame(ttk.Frame):
         if isinstance(self.viewer.structure, Individual):
             self.descendant_list.tree.delete(*self.descendant_list.tree.get_children())
 
-            for i in range(len(self.viewer.structure.get_descendants())):
-                self.descendant_list.insert_item(str(i))
+            for i, individual in enumerate(self.viewer.structure.get_descendants()):
+                energy = individual.energy if isinstance(individual, OptimizedIndividual) else nan
+                self.descendant_list.insert_item((i, energy),)
 
