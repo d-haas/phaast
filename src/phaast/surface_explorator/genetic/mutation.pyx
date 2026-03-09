@@ -76,6 +76,8 @@ cdef class DisplacementMutator(Mutator):
             new_structure.atoms[i].pos.y+= rand_displacements[i].y
             new_structure.atoms[i].pos.z+= rand_displacements[i].z
 
+        new_structure.center_mass()
+
         return new_structure
 
 
@@ -133,6 +135,8 @@ cdef class PermuteMutator(Mutator):
                     if valid_permutations == 0:
                         new_structure[i].pos, new_structure[j].pos = new_structure[j].pos, new_structure[i].pos
 
+        new_structure.center_mass()
+
         return new_structure
 
 cdef class TwistMutator(Mutator):
@@ -181,5 +185,7 @@ cdef class TwistMutator(Mutator):
 
             atom.pos.rotate_y(-rotations[1])
             atom.pos.rotate_x(-rotations[0])
+
+        new_structure.center_mass()
 
         return new_structure

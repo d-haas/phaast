@@ -94,6 +94,10 @@ cdef class PlaneMating:
                     )
                     atom_count[atom.z]-= 1
 
-        return Structure(inherited_atoms)
+        new_structure = Structure(inherited_atoms)
+
+        new_structure.center_mass()
+
+        return new_structure
 
 
