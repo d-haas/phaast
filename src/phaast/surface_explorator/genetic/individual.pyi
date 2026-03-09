@@ -11,6 +11,8 @@ class Individual(Structure):
 
     def __init__(self, atoms_or_mol : Iterable[Atom], energy : float = nan): ...
 
+    def get_descendants(self) -> list[Individual]: ...
+
 
 class ChildIndividual(Individual):
     parents : tuple[Individual, Individual]
