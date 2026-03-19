@@ -69,7 +69,7 @@ class MolViewer(OpenGLFrame):
     def optimize_xtb(self, options : dict[str, Any]) -> None:
         previous_state = self.state
         self.state = "view"
-        if isinstance(self.parent, GUI):
+        if not isinstance(self.parent, tk.Misc):
             self.parent.disable_input()
 
         calc = XTB(**options)
@@ -80,13 +80,13 @@ class MolViewer(OpenGLFrame):
             self.structure = mol
 
         self.state = previous_state
-        if isinstance(self.parent, GUI):
+        if not isinstance(self.parent, tk.Misc):
             self.parent.enable_input()
 
     def optimize_orca(self, options : dict[str, Any]) -> None:
         previous_state = self.state
         self.state = "view"
-        if isinstance(self.parent, GUI):
+        if not isinstance(self.parent, tk.Misc):
             self.parent.disable_input()
 
         calc = Orca(**options)
@@ -95,7 +95,7 @@ class MolViewer(OpenGLFrame):
             for mol in calc.optimize_trj(self.structure):
                 self.structure = mol
             self.state = previous_state
-            if isinstance(self.parent, GUI):
+            if not isinstance(self.parent, tk.Misc):
                 self.parent.enable_input()
 
         thread = threading.Thread(target = temp_optimize_trj)

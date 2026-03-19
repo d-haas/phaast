@@ -13,7 +13,7 @@ def test_operations():
     vb = Vector(*tb)
 
     ### MOD ###
-    mod = va.mod + vb.mod
+    _ = va.mod + vb.mod
 
     ###########
     ### SUM ###

@@ -1,17 +1,17 @@
 import os, subprocess, tempfile, shutil
 import threading
 import time
-from typing import Generator, Literal, TypeAlias
+from typing import Generator, Literal
 from phaast.calculators import Calculator
 from phaast.structure import Molecule, Structure
 
-OptimizationLevel : TypeAlias = Literal[
+type OptimizationLevel = Literal[
     "crude", "sloppy", "loose", "lax",
     "normal",
     "tight", "vtight", "extreme",
 ]
 
-Functional : TypeAlias = Literal[
+type Functional = Literal[
 # Gradient corrected
 "HFS", "LDA", "LSD", "VWN", "VWN5", "VWN3", "PWLDA", "BP86", "BP", "BLYP", "OLYP", "GLYP", "XLYP", "PW91", "mPWPW", "mPWLYP", "PBE", "RPBE", "REVPBE", "RPW86PBE", "PWP",
 
@@ -22,7 +22,7 @@ Functional : TypeAlias = Literal[
 "TPSS", "TPSSh", "TPSS0", "M06L", "M06", "M062X", "PW6B95", "B97M-V", "B97M-D3BJ", "B97M-D4", "SCANfunc", "r2SCAN", "r2SCANh", "r2SCAN0", "r2SCAN50",
 ]
 
-BasisSet : TypeAlias = Literal[
+type BasisSet = Literal[
 # Pople-style
 "STO-3G", "3-21G", "3-21GSP", "4-22GSP", "6-31G", "m6-31G", "6-311G",
 

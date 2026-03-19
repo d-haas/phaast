@@ -13,6 +13,9 @@ cdef class Crossover:
     def __call__(self, struct_a : Structure, struct_b : Structure) -> Structure:
         pass
 
+    def as_data(self) -> dict:
+        pass
+
 cdef class PlaneMating:
 
     def __init__(self):
@@ -101,3 +104,10 @@ cdef class PlaneMating:
         return new_structure
 
 
+    def as_data(self) -> dict:
+        return {
+            "name" : "Plane Cross-over",
+            "import" : "phaast.surface_explorator.genetic.crossover.PlaneMating",
+            "args" : (),
+            "kwargs" : {},
+        }

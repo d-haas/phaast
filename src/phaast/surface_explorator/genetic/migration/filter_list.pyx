@@ -7,6 +7,12 @@ cpdef enum FilterMode:
     INCLUDE = 1
     EXCLUDE = 2
 
+filter_mode_to_str = {
+    FilterMode.NONE : "None",
+    FilterMode.INCLUDE : "Include",
+    FilterMode.EXCLUDE : "Exclude",
+}
+
 class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
     mode: FilterMode
 
@@ -19,9 +25,9 @@ class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
         self.mode = mode
 
         super().__init__()
-        for i, j in bondings:
-            self[(i, j)] = True
-            self[(j, i)] = True
+        for pair in bondings:
+            self[(pair[0], pair[1])] = True
+            self[(pair[1], pair[0])] = True
 
     def is_permited(self, zi: AtomicNumber, zj: AtomicNumber) -> bool:
         if self.mode == FilterMode.INCLUDE:
@@ -30,3 +36,12 @@ class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
             return (zi, zj) not in self
         elif self.mode == FilterMode.NONE:
             return True
+
+    def as_data(self) -> dict:
+        return {
+            "mode"     : filter_mode_to_str[self.mode],
+            "bondings" : list(self.keys()),
+            "import"   : "phaast.surface_explorator.genetic.migration.filter_list.FilterList",
+            "args"     : (int(self.mode), list(self.keys())),
+            "kwargs"   : {},
+        }

@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Any, Callable, Iterable, Iterator, Optional, Self
+from typing import Any, Callable, Iterable, Iterator, Optional, Self, TypedDict
 from phaast.structure.constants import *
-from phaast.vector import Vector
+from phaast.utils import EmptyDict, JsonType
+from phaast.vector import Vector, VectorData
 import tempfile
 
 class Element:
@@ -51,6 +52,12 @@ class Element:
     def __repr__(self) -> str:
         pass
 
+class BaseData(TypedDict):
+    import_path : Literal["phaast.structure.primitives.Base"]
+    args        : tuple[str]
+    kwargs      : EmptyDict
+
+
 class Base:
     elements : tuple[Element, ...]
 
@@ -70,6 +77,12 @@ class Base:
         """
         pass
 
+    def as_data(self) -> BaseData:
+        """
+        Return Base as a JSON-parseable object
+        """
+        pass
+
     def parse_formula(self, formula : str) -> tuple[Element, ...]:
         """
         Parse composition string formula
@@ -78,6 +91,10 @@ class Base:
 
 def create_atom(atomic_number : AtomicNumber, pos : Vector) -> Atom:
     pass
+
+class AtomData(TypedDict):
+    z   : int
+    pos : VectorData
 
 class Atom(Element):
     """
@@ -127,12 +144,22 @@ class Atom(Element):
         Convert atom data to bytes
         """
         pass
+
+    def as_data(self) -> AtomData:
+        """
+        Export to JSON importable dict
+        """
+        pass
     
     def __reduce__(self):
         pass
 
 def create_structure(atoms : Iterable[Atom]) -> Structure:
     pass
+
+class StructureData(TypedDict):
+    length : int
+    atoms  : list[AtomData]
 
 class Structure:
     """
@@ -254,11 +281,20 @@ class Structure:
         """
         pass
 
+    def as_data(self) -> StructureData:
+        """
+        Export to JSON importable dict
+        """
+        pass
+
     def __reduce__(self) -> tuple[ Callable[..., Structure], tuple[Any, ...] ]:
         pass
 
 def create_molecule(atoms : Iterable[Atom], energy : float) -> Molecule:
     pass
+
+class MoleculeData(StructureData):
+    energy : float
 
 class Molecule(Structure):
     """
@@ -318,6 +354,12 @@ class Molecule(Structure):
     def to_bytes(self) -> bytes:
         """
         Convert molecule data to bytes
+        """
+        pass
+
+    def as_data(self) -> MoleculeData:
+        """
+        Export to JSON importable dict
         """
         pass
 

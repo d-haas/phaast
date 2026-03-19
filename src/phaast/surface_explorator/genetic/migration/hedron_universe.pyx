@@ -163,7 +163,7 @@ class HedronMigrator(Migrator):
     def __init__(self, base : Base, n_vertices : HedronNumber, filter_list : FilterList):
         self.base = base
 
-        assert n_vertices in (4,6,8,12,20), "Number of vertices is not valid, must be in (4,6,8,12,20)"
+        assert n_vertices in (6,8,12,20), "Number of vertices is not valid, must be in (6,8,12,20)"
 
         self.n_vertices = n_vertices
 
@@ -191,3 +191,10 @@ class HedronMigrator(Migrator):
                 atoms.append(atom)
                 
         return Structure([atom for atom in universe.atom_population])
+
+    def as_data(self) -> dict[str, JsonType]:
+        return {
+            "base" : self.base.as_data(),
+            "vertices_number" : self.n_vertices,
+            "filter_list"     : self.filter_list.as_data(),
+        }

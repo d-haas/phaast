@@ -1,7 +1,7 @@
 from phaast.vector cimport Vector
 
 cdef class Element:
-    cdef readonly unsigned int z
+    cdef public unsigned int z
 
 cpdef Atom create_atom(unsigned int atomic_number, Vector pos)
 cdef class Atom(Element):
@@ -9,7 +9,7 @@ cdef class Atom(Element):
 
 cpdef Structure create_structure(object atoms)
 cdef class Structure:
-    cdef readonly Atom[:] atoms
+    cdef public Atom[:] atoms
     cdef public Py_ssize_t length
 
     cdef Vector get_cm(self)

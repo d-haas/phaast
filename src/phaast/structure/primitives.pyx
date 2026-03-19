@@ -90,6 +90,30 @@ class Base:
         """
         return iter(self.elements)
 
+    def to_formula(self) -> dict[str, int]:
+        element_counter = {}
+        for element in self.elements:
+            if element.symbol in element_counter:
+                element_counter[element.symbol]+= 1
+            else:
+                element_counter[element.symbol] = 1
+
+        return sum(
+            [
+                symbol+str(num)
+                for symbol, num
+                in element_counter.items()
+            ],
+            start = "",
+        )
+
+    def as_data(self) -> dict[str, int]:
+        return {
+            "import" : "phaast.structure.primitives.Base",
+            "args"   : (self.to_formula(),),
+            "kwargs" : {},
+        }
+
     def parse_formula(self, formula : str) -> tuple[Element, ...]:
         """
         Parse composition string formula
@@ -240,6 +264,12 @@ cdef class Atom(Element):
             self.pos.y,
             self.pos.z,
         )
+
+    def as_data(self) -> dict:
+        return {
+            "z" : self.z,
+            "pos" : self.pos.as_data(),
+        }
     
     def __reduce__(self):
         return (create_atom, (self.z, self.pos))
@@ -489,6 +519,12 @@ cdef class Structure:
 
         return r
 
+    def as_data(self) -> dict:
+        return {
+            "length" : self.length,
+            "atoms"  : [atom.as_data() for atom in self.atoms],
+        }
+
     def __reduce__(self):
         return (create_structure, (tuple(self),))
 
@@ -640,6 +676,11 @@ cdef class Molecule(Structure):
             r+= atom.to_bytes()
 
         return r
+
+    def as_data(self) -> dict:
+        return super().as_data() | {
+            "energy" : self.energy,
+        }
 
     def __reduce__(self):
         return (create_molecule, (tuple(self), self.energy))

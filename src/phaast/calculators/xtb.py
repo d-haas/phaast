@@ -1,9 +1,9 @@
 import os, subprocess, tempfile, shutil
-from typing import Literal, Optional, TypeAlias
+from typing import Literal, Optional
 from phaast.calculators import Calculator
 from phaast.structure import Molecule, Structure
 
-OptimizationLevel : TypeAlias = Literal[
+type OptimizationLevel = Literal[
     "crude", "sloppy", "loose", "lax",
     "normal",
     "tight", "vtight", "extreme",

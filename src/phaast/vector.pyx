@@ -298,5 +298,8 @@ cdef class Vector:
             self.z,
         )
 
+    def as_data(self) -> tuple:
+        return (self.x, self.y, self.z)
+
     def __reduce__(self):
         return (create_vector, (self.x, self.y, self.z))

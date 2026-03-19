@@ -26,6 +26,9 @@ cdef class Mutator:
     def __call__(self, struct : Structure) -> Structure:
         pass
 
+    def as_date(self) -> dict:
+        pass
+
 cdef class DisplacementMutator(Mutator):
     num : cython.uint
     min_displacement : cython.double
@@ -80,28 +83,23 @@ cdef class DisplacementMutator(Mutator):
 
         return new_structure
 
+    def as_data(self) -> dict:
+        return {
+            "name"             : "Displacement Mutation",
+            "num_displacement" : self.num,
+            "min_displacement" : self.min_displacement,
+            "max_displacement" : self.max_displacement,
+            "import"           : "phaast.surface_explorator.genetic.mutation.DisplacementMutator",
+            "args"             : (self.num, self.min_displacement, self.max_displacement),
+            "kwargs"           : {},
+        }
+
 
 cdef class PermuteMutator(Mutator):
     num : int
 
-    def __init__(self, base : Base, num : int):
-        all_permutations = cast(
-            list[tuple[Element,Element]],
-            list(distinct_pairs(tuple(base))),
-        )
-
-        valid_permutations = sum([
-            1 for perm in all_permutations
-            if perm[0] != perm[1]
-        ])
-
-        if valid_permutations < num:
-            raise ValueError(
-                "Number of needed permutations is higher than available"
-            )
-
+    def __init__(self, num : int):
         self.num = num
-
 
     def __call__(self, structure : Structure) -> Structure:
         return self.ccall(structure)
@@ -118,9 +116,7 @@ cdef class PermuteMutator(Mutator):
         cdef int num = self.num
 
         cdef int valid_permutations
-        cdef int i
-        cdef int j
-        cdef int _
+        cdef int i, j, _
 
         for _ in range(num):
             valid_permutations = 0
@@ -138,6 +134,15 @@ cdef class PermuteMutator(Mutator):
         new_structure.center_mass()
 
         return new_structure
+
+    def as_data(self) -> dict:
+        return {
+            "name"             : "Permutation Mutation",
+            "num_permutations" : self.num,
+            "import"           : "phaast.surface_explorator.genetic.mutation.PermuteMutator",
+            "args"             : (self.num,),
+            "kwargs"           : {},
+        }
 
 cdef class TwistMutator(Mutator):
     min_angle : float
@@ -189,3 +194,13 @@ cdef class TwistMutator(Mutator):
         new_structure.center_mass()
 
         return new_structure
+
+    def as_data(self) -> dict:
+        return {
+            "name"      : "Twist Mutation",
+            "min_angle" : self.min_angle,
+            "max_angle" : self.max_angle,
+            "import"           : "phaast.surface_explorator.genetic.mutation.TwistMutator",
+            "args"             : (self.min_angle, self.max_angle,),
+            "kwargs"           : {},
+        }

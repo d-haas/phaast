@@ -254,7 +254,6 @@ mutators = [
     (
         args.mut_perm_w,
         PermuteMutator(
-            base,
             args.mut_perm_num,
         )
     ),
@@ -301,7 +300,6 @@ else:
     do_remove_unbonded = False
 
 genetic = Genetic(
-    base = base,
     population_size = args.population_size,
     computer = computer,
     calculator = "xtb",

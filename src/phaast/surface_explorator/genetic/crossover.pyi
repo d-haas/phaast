@@ -1,0 +1,19 @@
+from abc import abstractmethod
+from phaast.structure import Structure
+from phaast.utils import JsonType
+
+class Crossover:
+    @abstractmethod
+    def __init__(self, *args, **kwargs) -> None: ...
+
+    @abstractmethod
+    def __call__(self, struct_a : Structure, struct_b : Structure) -> Structure: ...
+
+    def as_data(self) -> dict[str, JsonType]: ...
+
+class PlaneMating:
+    def __init__(self): ...
+
+    def __call__(self, struct1 : Structure, struct2 : Structure) -> Structure: ...
+
+    def as_data(self) -> dict[str, JsonType]: ...

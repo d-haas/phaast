@@ -1,22 +1,59 @@
+from __future__ import annotations
 import random
-from typing import Iterable, Sequence, cast
+import re
+from typing import Any, Iterable, Self, Sequence, TypedDict, cast
 from math import floor
+import json
 
+from phaast.computer import Computer
+from phaast.structure import Molecule, Structure
 from phaast.structure.comparator import ComparisonAlgorithm, GrigoryanSpringborg
+from phaast.surface_explorator import SurfaceExplorator
 from phaast.surface_explorator.genetic.migration import Migrator
 from phaast.surface_explorator.genetic.mutation import Mutator
 from phaast.surface_explorator.genetic.crossover import Crossover
 from phaast.surface_explorator.genetic.individual import ChildIndividual, Individual, MutantIndividual, OptimizedIndividual
 
-from phaast.computer import Computer
-from phaast.structure import Base
-
-from phaast.surface_explorator import SurfaceExplorator
+from phaast.utils import JsonType
 from phaast.utils.custom_iter import distinct_pairs
 
+class GeneticData(TypedDict):
+
+    population_size          : int
+    end_loop_number          : int
+
+    cycle_counter            : int
+    minimum_lifetime         : int
+    best_energy              : float
+    best_energy_loops        : int
+
+    total_optimizations      : int
+    total_converged          : int
+    total_duplicates_removed : int
+    total_unfeasible_removed : int
+    total_not_bonded_removed : int
+    total_mutations          : int
+    total_mating             : int
+    total_migrated           : int
+
+    generations              : list[list[int]]
+    population               : list[int]
+    population_ids           : dict[int, JsonType]
+
+class PopulationRegister(dict[int, Individual]):
+    def __init__(self):
+        super().__init__()
+
+    def __setitem__(self, key : int, value : Individual):
+        if key in self:
+            raise KeyError(f"Id [\"{key}\"] was already set in this population:\n{self}")
+        else:
+            super().__setitem__(key, value)
+
 class GeneticComputer(Computer):
-    def __init__(self, computer : Computer, calculator : str):
+    def __init__(self, parent : Genetic, computer : Computer, calculator : str):
         super().__init__(computer.cpu_count_limit)
+        self.parent = parent
         self.calculators = computer.calculators
         self.chosen_calculator : str = calculator
 
@@ -26,39 +63,75 @@ class GeneticComputer(Computer):
             mutator,
         )
 
-        return [
-            MutantIndividual(mutant, ancestor)
-            for mutant, ancestor
-            in zip(mutants, structs)
+        inds = [
+            MutantIndividual(mutant, ancestor, self.parent.max_id + i)
+            for i, (mutant, ancestor)
+            in enumerate(zip(mutants, structs))
         ]
+        self.parent.max_id+= len(inds)
+        for ind in inds: self.parent.population_ids[ind.id] = ind
+
+        self.parent.total_mutations+= len(mutants)
+
+        return inds
 
     def crossover(self, struct_pairs : Iterable[tuple[Individual, Individual]], crossover : Crossover) -> list[ChildIndividual]:
         children = self.parallelize(
             struct_pairs,
             crossover,
         )
-        return [
-            ChildIndividual(child, parents)
-            for child, parents
-            in zip(children, struct_pairs)
+
+        inds = [
+            ChildIndividual(child, parents, self.parent.max_id + i)
+            for i, (child, parents)
+            in enumerate(zip(children, struct_pairs))
         ]
+        self.parent.max_id+= len(inds)
+        for ind in inds: self.parent.population_ids[ind.id] = ind
+
+        self.parent.total_mating+= len(children)
+
+        return inds
 
     def migrate(self, num : int, migrator : Migrator) -> list[Individual]:
         new_born = self.parallelize(num, migrator)
-        return [
-            Individual(struct)
-            for struct in new_born
+
+        inds = [
+            Individual(struct, self.parent.max_id + i)
+            for i, struct in enumerate(new_born)
         ]
+        self.parent.max_id+= len(inds)
+        for ind in inds: self.parent.population_ids[ind.id] = ind
+
+        self.parent.total_migrated+= num
+
+        return inds
 
     def genetic_optimize(self, structs : Iterable[Individual]) -> list[OptimizedIndividual]:
-        mols = self.optimize(self.chosen_calculator, structs)
+        mols = [mol for mol in self.optimize(self.chosen_calculator, structs) if mol]
 
-        return [
-            OptimizedIndividual(mol, struct, mol.energy)
-            for mol, struct
-            in zip(mols, structs)
-            if mol
+        inds = [
+            OptimizedIndividual(mol, struct, self.parent.max_id + i, mol.energy)
+            for i, (mol, struct)
+            in enumerate(zip(mols, structs))
         ]
+        self.parent.max_id+= len(inds)
+        for ind in inds: self.parent.population_ids[ind.id] = ind
+
+        self.parent.total_optimizations+= len(list(structs)) # This list(...) is dumb and shouldn't be used... Anyway..
+        self.parent.total_converged+= len(mols)
+
+        return inds
+
+    def incorporate(self, structs : list[Structure]) -> list[OptimizedIndividual]:
+        inds = [
+            Individual(struct, self.parent.max_id + i)
+            for i, struct in enumerate(structs)
+        ]
+        self.parent.max_id+= len(inds)
+        for ind in inds: self.parent.population_ids[ind.id] = ind
+
+        return self.genetic_optimize(inds)
 
     def get_duplicate(self, i : int, inds : Sequence[OptimizedIndividual], comparison_algorithm : ComparisonAlgorithm) -> bool:
         for j in range(i+1, len(inds)):
@@ -78,18 +151,18 @@ class Genetic(SurfaceExplorator):
     population_size : int
     population      : list[OptimizedIndividual]
     generations     : list[list[OptimizedIndividual]]
+    population_ids  : PopulationRegister
     end_loop_number : int
 
     calculator          : str
     computer            : GeneticComputer
-    base                : Base
 
     comparison_algorithm : ComparisonAlgorithm
     do_remove_unbonded   : bool
 
-    mutations : list[tuple[float, Mutator]]
+    mutations  : list[tuple[float, Mutator]]
     crossovers : list[tuple[float, Crossover]]
-    migrators : list[tuple[float, Migrator]]
+    migrators  : list[tuple[float, Migrator]]
     operations_weight : float
     sequential_mutations : int
     mutation_batches : int
@@ -98,6 +171,7 @@ class Genetic(SurfaceExplorator):
     minimum_lifetime  : int
     best_energy       : float
     best_energy_loops : int
+    max_id            : int
 
     total_optimizations          : int
     total_converged              : int
@@ -110,7 +184,6 @@ class Genetic(SurfaceExplorator):
 
     def __init__(
         self,
-        base : Base,
         population_size : int,
         computer : Computer,
         calculator : str,
@@ -129,57 +202,38 @@ class Genetic(SurfaceExplorator):
         end_loop_number : int = 9,
 
         bonding_tolerance : float = 0.25,
+
+        custom_population : list[Structure] | None = None,
+
+        generate_population : bool = True,
     ):
         """
         Define initial variables for genetic algorithm
         """
-        self.computer = GeneticComputer(computer, calculator)
-        if population_size < 10:
-            raise ValueError(
-                "Population size is too small",
-            )
-        self.base = base
-        self.population_size = population_size
+        self.computer = GeneticComputer(self, computer, calculator)
+        self.population_ids = PopulationRegister()
+        self.max_id   = 0
         self.population : list[OptimizedIndividual] = []
-
-        migrator_total_weight = sum([weight for weight, _ in migrators])
-        for weight, migrator in migrators:
-            generated_num = floor(self.population_size*weight/migrator_total_weight)
-            self.population+= self.computer.genetic_optimize(
-                    self.computer.migrate(
-                        generated_num,
-                        migrator,
-                    )
-                )
-        print(f"Population size is {len(self.population)}")
-
-        if None in self.population: raise ValueError("There is a None in the population")
+        self.population_size = population_size
         self.generations = []
-        self.generations.append(self.population.copy())
-
         self.mutations = mutations
         self.crossovers = crossovers
         self.migrators = migrators
-        self.operations_weight = sum([
-            weight for weight, _
-            in mutations+crossovers+migrators
-        ])
+
         self.sequential_mutations = sequential_mutations
         self.mutation_batches = mutation_batches
 
         self.comparison_algorithm = comparison_algorithm
         self.do_remove_unbonded    = do_remove_unbonded
 
-        # Generation parameters
         self.end_loop_number   = end_loop_number
         self.cycle_counter     = 0
         self.minimum_lifetime  = minimum_lifetime
-        self.best_energy       = min([mol.energy for mol in self.population])
         self.best_energy_loops = 0
 
-        #Statistics variables (start with prefix "total")
-        self.total_optimizations          = self.population_size
-        self.total_converged              = len(self.population)
+        # Statistic counters
+        self.total_optimizations          = 0
+        self.total_converged              = 0
         self.total_unfeasible_removed     = 0
         self.total_duplicates_removed     = 0
         self.total_not_bonded_removed     = 0
@@ -188,6 +242,36 @@ class Genetic(SurfaceExplorator):
         self.total_migrated               = 0
 
         self.bonding_tolerance            = bonding_tolerance
+
+        if population_size < 10:
+            raise ValueError(
+                "Population size is too small",
+            )
+
+        migrator_total_weight = sum([weight for weight, _ in migrators])
+        for weight, migrator in migrators:
+            generated_num = floor(self.population_size*weight/migrator_total_weight)
+            self.population+= self.computer.genetic_optimize(
+                self.computer.migrate(
+                    generated_num,
+                    migrator,
+                )
+            )
+        print(f"Population size is {len(self.population)}")
+
+        if None in self.population: raise ValueError("There is a None in the population")
+        self.generations.append(self.population.copy())
+
+
+        self.operations_weight = sum([
+            weight for weight, _
+            in mutations+crossovers+migrators
+        ])
+
+        # Generation parameters
+        self.best_energy       = min([mol.energy for mol in self.population])
+
+        #Statistics variables (start with prefix "total")
 
     def remove_duplicates(self) -> None:
 
@@ -217,10 +301,6 @@ class Genetic(SurfaceExplorator):
 
         migrated_individuals = self.computer.genetic_optimize(migrated)
 
-        self.total_migrated+= len(migrated)
-        self.total_optimizations+= len(migrated)
-        self.total_converged+= len(migrated_individuals)
-
         return migrated_individuals
 
     def reproduce(self) -> list[OptimizedIndividual]:
@@ -228,12 +308,8 @@ class Genetic(SurfaceExplorator):
 
         for weight, crossover in self.crossovers:
             op_num : int = floor(self.population_size*weight/self.operations_weight)
-            print(f"op_num is {op_num}")
 
-            # It is safe to assume that, for every child (children[i]) in children,
-            # children[i] came from chosen_parents[i]
             pairs : list[tuple[Individual, Individual]] = list(distinct_pairs(self.population))
-            print(f"Pairs size is {len(pairs)}")
             chosen_parents = random.choices(
                 pairs,
                 k = op_num,
@@ -245,10 +321,6 @@ class Genetic(SurfaceExplorator):
             )
 
         children_individuals = self.computer.genetic_optimize(children)
-
-        self.total_optimizations+= len(children)
-        self.total_converged+= len(children_individuals)
-        self.total_mating+= len(children)
 
         return children_individuals
 
@@ -297,10 +369,6 @@ class Genetic(SurfaceExplorator):
                 )
 
         mutant_molecules : list[OptimizedIndividual] = self.computer.genetic_optimize(mutants)
-
-        self.total_optimizations+= len(mutants)
-        self.total_converged+= len(mutant_molecules)
-        self.total_mutations+= len(mutants)*self.sequential_mutations
 
         return mutant_molecules
 
@@ -353,7 +421,7 @@ class Genetic(SurfaceExplorator):
         self.cycle_counter+= 1
 
         children : list[OptimizedIndividual] = self.reproduce()
-        mutants : list[OptimizedIndividual] = self.mutate()
+        mutants  : list[OptimizedIndividual] = self.mutate()
         migrated : list[OptimizedIndividual] = self.migrate()
 
         self.population+= children
@@ -371,8 +439,113 @@ class Genetic(SurfaceExplorator):
 
         return self.best_energy_loops < self.end_loop_number
 
+    def as_data(self) -> GeneticData:
+        results = {
+            "population_size"          : self.population_size,
+            "end_loop_number"          : self.end_loop_number,
 
-    def save(self, file : str) -> None:
-        # Do later
-        print(file)
+            "cycle_counter"            : self.cycle_counter,
+            "minimum_lifetime"         : self.minimum_lifetime,
+            "best_energy"              : self.best_energy,
+            "best_energy_loops"        : self.best_energy_loops,
+
+            "total_optimizations"      : self.total_optimizations,
+            "total_converged"          : self.total_converged,
+            "total_duplicates_removed" : self.total_duplicates_removed,
+            "total_unfeasible_removed" : self.total_unfeasible_removed,
+            "total_not_bonded_removed" : self.total_not_bonded_removed,
+            "total_mutations"          : self.total_mutations,
+            "total_mating"             : self.total_mating,
+            "total_migrated"           : self.total_migrated,
+
+            "generations"              : [],
+        }
+
+        results["generations"] = [
+            [ind.id for ind in gen]
+            for gen in self.generations
+        ]
+
+        results["population"] = [ind.id for ind in self.population]
+
+        results["population_ids"] = {
+            k : v.as_data()
+            for k, v in self.population_ids.items()
+        }
+        return results
+
+    def save(self, file_path : str) -> None:
+        if not file_path.endswith(".json"): file_path+= ".json"
+
+        with open(file_path, "w") as file:
+            json_string = json.dumps(
+                self.as_data(),
+                sort_keys = True,
+                indent = "  ",
+            )
+
+            # Removal of indentation in numeric lists was done with AI (improve that shit later)
+            json_string_f = re.sub(
+                r'\[[\s\d,\.\-]+\]',
+                lambda match: re.sub(r'\s+', ' ', match.group(0)).replace('[ ', '[').replace(' ]', ']'),
+                json_string
+            )
+
+            file.write(json_string_f)
+
+    @classmethod
+    def from_data(cls, data : dict[str, Any]) -> Self:
+        #return Genetic()
         pass
+
+    @classmethod
+    def load(cls, file_path : str) -> Self:
+        with open(file_path, "r") as file:
+            data = json.load(file)
+            return Genetic.from_data(data)
+
+    def get_report(self) -> dict[str, Any]:
+        report = {
+            "Population Size"          : self.population_size,
+            "End Loop Number"          : self.end_loop_number,
+
+            "Cycle Counter"            : self.cycle_counter,
+            "Minimum Lifetime"         : self.minimum_lifetime,
+            "Best Energy"              : self.best_energy,
+            "Best Energy Loops"        : self.best_energy_loops,
+
+            "Total Optimizations"      : self.total_optimizations,
+            "Total Converged"          : self.total_converged,
+            "Total Duplicates Removed" : self.total_duplicates_removed,
+            "Total Unfeasible Removed" : self.total_unfeasible_removed,
+            "Total Not Bonded Removed" : self.total_not_bonded_removed,
+            "Total Mutations"          : self.total_mutations,
+            "Total Mating"             : self.total_mating,
+            "Total Migrated"           : self.total_migrated,
+        }
+        optimizeds = [ind for ind in self.population_ids.values() if isinstance(ind, OptimizedIndividual)]
+        report["Minima"] = sorted(
+            optimizeds,
+            key = lambda ind : ind.energy,
+        )[0:min(len(optimizeds), 50)]
+
+        return report
+
+    def save_report(self, file_path : str = "phaast_report.json"):
+        if not file_path.endswith(".json"): file_path+= ".json"
+
+        with open(file_path, "w") as file:
+            json_string = json.dumps(
+                self.as_data(),
+                sort_keys = True,
+                indent = "  ",
+            )
+
+            # Removal of indentation in numeric lists was done with AI (improve that shit later)
+            json_string_f = re.sub(
+                r'\[[\s\d,\.\-]+\]',
+                lambda match: re.sub(r'\s+', ' ', match.group(0)).replace('[ ', '[').replace(' ]', ']'),
+                json_string
+            )
+
+            file.write(json_string_f)

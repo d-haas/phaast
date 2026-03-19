@@ -26,6 +26,14 @@ class MainFrame(tk.Tk):
             ) == "yes" else None,
         )
 
+    def kill(self):
+        if askquestion(
+            "Confirmação",
+            "Tem certeza que deseja fechar o programa?",
+        ) == "yes":
+            #self.genetic_frame.kill()
+            sys.exit()
+
     def main_setup(self):
         self.setup_frame = SetupFrame(self)
         self.setup_frame.pack(fill = tk.BOTH, expand = True)

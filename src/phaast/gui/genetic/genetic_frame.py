@@ -2,12 +2,8 @@ from __future__ import annotations
 import enum
 from math import nan
 import threading
-from multiprocessing import dummy as multiprocessing
 import time
-from typing import TYPE_CHECKING, NamedTuple
-
-if TYPE_CHECKING:
-    from phaast.gui.genetic.__main__ import MainFrame
+from typing import NamedTuple
 
 import tkinter as tk
 from tkinter import ttk
@@ -86,15 +82,21 @@ class CommandList(ttk.Frame):
 
     def change_to_ancestor(self):
         if isinstance(self.parent.viewer.structure, (MutantIndividual, OptimizedIndividual)):
-            self.parent.change_individual(self.parent.viewer.structure.ancestor)
+            self.parent.change_individual(
+                self.parent.algorithm.population_ids[self.parent.viewer.structure.ancestor]
+            )
 
     def change_to_parent_a(self):
         if isinstance(self.parent.viewer.structure, ChildIndividual):
-            self.parent.change_individual(self.parent.viewer.structure.parents[0])
+            self.parent.change_individual(
+                self.parent.algorithm.population_ids[self.parent.viewer.structure.parents[0]]
+            )
 
     def change_to_parent_b(self):
         if isinstance(self.parent.viewer.structure, ChildIndividual):
-            self.parent.change_individual(self.parent.viewer.structure.parents[1])
+            self.parent.change_individual(
+                self.parent.algorithm.population_ids[self.parent.viewer.structure.parents[1]]
+            )
 
 
 class InfoList(ttk.Frame):
@@ -135,10 +137,10 @@ class InfoList(ttk.Frame):
 
 class GeneticFrame(ttk.Frame):
 
-    root : MainFrame
+    root : tk.Misc
     algorithm : Genetic
 
-    def __init__(self, master : MainFrame, algorithm : Genetic, *args, **kwargs):
+    def __init__(self, master : tk.Misc, algorithm : Genetic, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.root = master
         self.algorithm = algorithm

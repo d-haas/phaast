@@ -1,5 +1,7 @@
 from typing import Any, Iterator, Union, overload
 
+type VectorData = tuple[float, float, float]
+
 class Vector:
     x : float
     y : float
@@ -171,7 +173,9 @@ class Vector:
         """
         pass
 
-    def __abs__(self) -> float:...
+    def __abs__(self) -> float: ...
+
+    def as_data(self) -> VectorData: ...
 
     def copy(self) -> 'Vector':
         """
@@ -180,6 +184,6 @@ class Vector:
         """
         pass
 
-    def __getstate__(self) -> tuple[float, float, float]:...
+    def __getstate__(self) -> tuple[float, float, float]: ...
 
     def __setstate__(self, state : tuple[float, float, float]) -> None:...

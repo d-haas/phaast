@@ -8,15 +8,12 @@ if sys._is_gil_enabled():
 else:
     from multiprocessing.dummy import Pool
 
-from typing import Any, Callable, Iterable, TypeVar, TypeVarTuple, overload
+from typing import Any, Callable, Iterable, overload
 
 from phaast.structure import Molecule, Structure
 
 
 from phaast.calculators import Calculator
-
-ParA = TypeVarTuple('ParA')
-ParT = TypeVar('ParT')
 
 class BaseComputer(ABC):
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
@@ -66,8 +63,7 @@ class Computer(BaseComputer):
                 )
             return [mol for mol in molecules]
 
-    #def parallelize(self, args : Iterable[tuple[Unpack[ParA]]] | int, func : Callable[[Unpack[ParA]], ParT]) -> list[ParT]:
-    def parallelize(self, args : Iterable[tuple[Any, ...]] | int, func : Callable[..., ParT], chunksize : int | None = None) -> list[ParT]:
+    def parallelize[T](self, args : Iterable[tuple[Any, ...]] | int, func : Callable[..., T], chunksize : int | None = None) -> list[T]:
         with Pool(self.cpu_count_limit) as pool:
             if isinstance(args, int):
                 return pool.starmap(

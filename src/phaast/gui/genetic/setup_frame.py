@@ -142,7 +142,6 @@ class SetupFrame(ttk.Frame):
             (
                 self.fields.mut_perm_w,
                 PermuteMutator(
-                    base,
                     self.fields.mut_perm_num,
                 )
             ),
@@ -190,7 +189,6 @@ class SetupFrame(ttk.Frame):
         )
 
         genetic = Genetic(
-            base = base,
             population_size = self.fields.population_size,
             computer = computer,
             calculator = "xtb",
