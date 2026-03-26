@@ -1,12 +1,16 @@
 from __future__ import annotations
+import time
+from typing import Any, Iterable, Optional, Sequence, TypedDict, cast, TYPE_CHECKING
+if TYPE_CHECKING:
+    from phaast.surface_explorator.genetic.individual import IndividualData
 import random
 import re
-from typing import Any, Iterable, Self, Sequence, TypedDict, cast
 from math import floor
 import json
 
+from phaast.calculators.xtb import XTB
 from phaast.computer import Computer
-from phaast.structure import Molecule, Structure
+from phaast.structure import Structure
 from phaast.structure.comparator import ComparisonAlgorithm, GrigoryanSpringborg
 from phaast.surface_explorator import SurfaceExplorator
 from phaast.surface_explorator.genetic.migration import Migrator
@@ -14,7 +18,7 @@ from phaast.surface_explorator.genetic.mutation import Mutator
 from phaast.surface_explorator.genetic.crossover import Crossover
 from phaast.surface_explorator.genetic.individual import ChildIndividual, Individual, MutantIndividual, OptimizedIndividual
 
-from phaast.utils import JsonType
+from phaast.utils import ObjectData, import_object
 from phaast.utils.custom_iter import distinct_pairs
 
 class GeneticData(TypedDict):
@@ -22,10 +26,18 @@ class GeneticData(TypedDict):
     population_size          : int
     end_loop_number          : int
 
+    do_remove_unbonded       : bool
+    bonding_tolerance        : float
+
+    sequential_mutations     : int
+    mutation_batches         : int
+
     cycle_counter            : int
     minimum_lifetime         : int
     best_energy              : float
+    best_energies            : list[int]
     best_energy_loops        : int
+    best_energy_num          : int
 
     total_optimizations      : int
     total_converged          : int
@@ -38,7 +50,13 @@ class GeneticData(TypedDict):
 
     generations              : list[list[int]]
     population               : list[int]
-    population_ids           : dict[int, JsonType]
+    population_ids           : dict[int, IndividualData]
+
+    mutations                : list[tuple[float, ObjectData]]
+    crossovers               : list[tuple[float, ObjectData]]
+    migrators                : list[tuple[float, ObjectData]]
+
+    comparison_algorithm     : ObjectData
 
 class PopulationRegister(dict[int, Individual]):
     def __init__(self):
@@ -46,18 +64,43 @@ class PopulationRegister(dict[int, Individual]):
 
     def __setitem__(self, key : int, value : Individual):
         if key in self:
-            raise KeyError(f"Id [\"{key}\"] was already set in this population:\n{self}")
+            raise KeyError(f"Id [{repr(key)}] was already set in this population:\n{self}")
         else:
             super().__setitem__(key, value)
 
 class GeneticComputer(Computer):
+    parent : Genetic
+    chosen_calculator : str
+    mutation_time_ns     : int
+    crossover_time_ns    : int
+    migration_time_ns    : int
+    optimization_time_ns : int
     def __init__(self, parent : Genetic, computer : Computer, calculator : str):
         super().__init__(computer.cpu_count_limit)
         self.parent = parent
         self.calculators = computer.calculators
         self.chosen_calculator : str = calculator
+        self.mutation_time_ns     = 0
+        self.crossover_time_ns    = 0
+        self.migration_time_ns    = 0
+        self.optimization_time_ns = 0
+
+    @property
+    def mutation_time(self) -> float:
+        return self.mutation_time_ns/1e9
+    @property
+    def crossover_time(self):
+        return self.crossover_time_ns/1e9
+    @property
+    def migration_time(self):
+        return self.migration_time_ns/1e9
+    @property
+    def optimization_time(self):
+        return self.optimization_time_ns/1e9
 
     def mutate(self, structs : Iterable[Individual], mutator : Mutator) -> list[MutantIndividual]:
+        start = time.monotonic_ns()
+
         mutants = self.parallelize(
             ((struct,) for struct in structs),
             mutator,
@@ -73,9 +116,13 @@ class GeneticComputer(Computer):
 
         self.parent.total_mutations+= len(mutants)
 
+        self.mutation_time_ns+= time.monotonic_ns()-start
+
         return inds
 
     def crossover(self, struct_pairs : Iterable[tuple[Individual, Individual]], crossover : Crossover) -> list[ChildIndividual]:
+        start = time.monotonic_ns()
+
         children = self.parallelize(
             struct_pairs,
             crossover,
@@ -91,9 +138,13 @@ class GeneticComputer(Computer):
 
         self.parent.total_mating+= len(children)
 
+        self.crossover_time_ns+= time.monotonic_ns()-start
+
         return inds
 
     def migrate(self, num : int, migrator : Migrator) -> list[Individual]:
+        start = time.monotonic_ns()
+
         new_born = self.parallelize(num, migrator)
 
         inds = [
@@ -105,9 +156,13 @@ class GeneticComputer(Computer):
 
         self.parent.total_migrated+= num
 
+        self.migration_time_ns+= time.monotonic_ns()-start
+
         return inds
 
     def genetic_optimize(self, structs : Iterable[Individual]) -> list[OptimizedIndividual]:
+        start = time.monotonic_ns()
+
         mols = [mol for mol in self.optimize(self.chosen_calculator, structs) if mol]
 
         inds = [
@@ -120,6 +175,8 @@ class GeneticComputer(Computer):
 
         self.parent.total_optimizations+= len(list(structs)) # This list(...) is dumb and shouldn't be used... Anyway..
         self.parent.total_converged+= len(mols)
+
+        self.optimization_time_ns+= time.monotonic_ns()-start
 
         return inds
 
@@ -170,6 +227,8 @@ class Genetic(SurfaceExplorator):
     cycle_counter     : int
     minimum_lifetime  : int
     best_energy       : float
+    best_energies     : list[OptimizedIndividual]
+    best_energy_num   : int
     best_energy_loops : int
     max_id            : int
 
@@ -201,6 +260,8 @@ class Genetic(SurfaceExplorator):
 
         end_loop_number : int = 9,
 
+        best_energy_num : int = 10,
+
         bonding_tolerance : float = 0.25,
 
         custom_population : list[Structure] | None = None,
@@ -224,12 +285,13 @@ class Genetic(SurfaceExplorator):
         self.mutation_batches = mutation_batches
 
         self.comparison_algorithm = comparison_algorithm
-        self.do_remove_unbonded    = do_remove_unbonded
+        self.do_remove_unbonded   = do_remove_unbonded
 
-        self.end_loop_number   = end_loop_number
-        self.cycle_counter     = 0
-        self.minimum_lifetime  = minimum_lifetime
-        self.best_energy_loops = 0
+        self.end_loop_number      = end_loop_number
+        self.cycle_counter        = 0
+        self.minimum_lifetime     = minimum_lifetime
+        self.best_energy_num      = best_energy_num
+        self.best_energy_loops    = 0
 
         # Statistic counters
         self.total_optimizations          = 0
@@ -248,20 +310,22 @@ class Genetic(SurfaceExplorator):
                 "Population size is too small",
             )
 
-        migrator_total_weight = sum([weight for weight, _ in migrators])
-        for weight, migrator in migrators:
-            generated_num = floor(self.population_size*weight/migrator_total_weight)
-            self.population+= self.computer.genetic_optimize(
-                self.computer.migrate(
-                    generated_num,
-                    migrator,
+        if custom_population:
+            self.population+= self.computer.incorporate(custom_population)
+
+        if generate_population:
+            migrator_total_weight = sum([weight for weight, _ in migrators])
+            for weight, migrator in migrators:
+                generated_num = floor(self.population_size*weight/migrator_total_weight)
+                self.population+= self.computer.genetic_optimize(
+                    self.computer.migrate(
+                        generated_num,
+                        migrator,
+                    )
                 )
-            )
-        print(f"Population size is {len(self.population)}")
 
-        if None in self.population: raise ValueError("There is a None in the population")
+
         self.generations.append(self.population.copy())
-
 
         self.operations_weight = sum([
             weight for weight, _
@@ -269,7 +333,8 @@ class Genetic(SurfaceExplorator):
         ])
 
         # Generation parameters
-        self.best_energy       = min([mol.energy for mol in self.population])
+        self.best_energies = sorted(self.population, key = lambda mol : mol.energy)[:min(self.best_energy_num, len(self.population))]
+        self.best_energy = self.best_energies[0].energy
 
         #Statistics variables (start with prefix "total")
 
@@ -388,7 +453,11 @@ class Genetic(SurfaceExplorator):
 
         self.population = [
             ind for ind in self.population
-            if ind.energy <= median_energy or ind.generations_alive <= self.minimum_lifetime
+            if (
+                ind.energy <= median_energy or
+                ind.generations_alive <= self.minimum_lifetime or
+                ind in self.best_energies
+            )
         ]
 
         pop_size_after = len(self.population)
@@ -409,29 +478,40 @@ class Genetic(SurfaceExplorator):
         self.total_not_bonded_removed+= pop_size_before - pop_size_after
 
     def get_best_energy(self) -> None:
-        new_best_energy : float = min([mol.energy for mol in self.population])
-        if new_best_energy < self.best_energy:
-            self.best_energy = new_best_energy
+        new_best_energies : list[OptimizedIndividual] = sorted(self.population, key = lambda mol : mol.energy)[:min(self.best_energy_num, len(self.population))]
+
+        ind_diffs = [ind_a is not ind_b for ind_a, ind_b in zip(self.best_energies, new_best_energies)]
+
+        if any(ind_diffs):
+            self.best_energies = new_best_energies
+            self.best_energy = new_best_energies[0].energy
             self.best_energy_loops = 0
         else:
             self.best_energy_loops+= 1
 
     def loop(self) -> bool:
 
+        if len(self.population) == 0:
+            print("Population was erradicated, can't proceed correctly with algorithm")
+        if len(self.population) < 10:
+            print("Population length is not enough to proceed with genetic algorithm properly")
+
         self.cycle_counter+= 1
 
-        children : list[OptimizedIndividual] = self.reproduce()
-        mutants  : list[OptimizedIndividual] = self.mutate()
+        if len(self.population) > 0:
+            children : list[OptimizedIndividual] = self.reproduce()
+            mutants  : list[OptimizedIndividual] = self.mutate()
+        else:
+            children, mutants = [], []
         migrated : list[OptimizedIndividual] = self.migrate()
 
-        self.population+= children
-        self.population+= mutants
-        self.population+= migrated
+        self.population+= children + mutants + migrated
 
         self.remove_unfeasible()
-        self.remove_duplicates()
         if self.do_remove_unbonded:
             self.remove_unbonded()
+
+        self.remove_duplicates()
 
         self.get_best_energy()
 
@@ -440,14 +520,16 @@ class Genetic(SurfaceExplorator):
         return self.best_energy_loops < self.end_loop_number
 
     def as_data(self) -> GeneticData:
-        results = {
+        results : GeneticData = {
             "population_size"          : self.population_size,
             "end_loop_number"          : self.end_loop_number,
 
             "cycle_counter"            : self.cycle_counter,
             "minimum_lifetime"         : self.minimum_lifetime,
             "best_energy"              : self.best_energy,
+            "best_energies"            : [ind.id for ind in self.best_energies],
             "best_energy_loops"        : self.best_energy_loops,
+            "best_energy_num"          : self.best_energy_num,
 
             "total_optimizations"      : self.total_optimizations,
             "total_converged"          : self.total_converged,
@@ -458,23 +540,26 @@ class Genetic(SurfaceExplorator):
             "total_mating"             : self.total_mating,
             "total_migrated"           : self.total_migrated,
 
-            "generations"              : [],
+            "generations"              : [ [ind.id for ind in gen] for gen in self.generations ],
+            "population"               : [ind.id for ind in self.population],
+            "population_ids"           : { k : v.as_data() for k, v in self.population_ids.items() },
+
+            "mutations"                : [(weight, mutation.as_data()) for weight, mutation in self.mutations],
+            "crossovers"               : [(weight, crossover.as_data()) for weight, crossover in self.crossovers],
+            "migrators"                : [(weight, migrator.as_data()) for weight, migrator in self.migrators],
+
+            "comparison_algorithm"     : self.comparison_algorithm.as_data(),
+
+            "do_remove_unbonded"       : self.do_remove_unbonded,
+            "bonding_tolerance"        : self.bonding_tolerance,
+
+            "mutation_batches"         : self.mutation_batches,
+            "sequential_mutations"     : self.sequential_mutations,
         }
 
-        results["generations"] = [
-            [ind.id for ind in gen]
-            for gen in self.generations
-        ]
-
-        results["population"] = [ind.id for ind in self.population]
-
-        results["population_ids"] = {
-            k : v.as_data()
-            for k, v in self.population_ids.items()
-        }
         return results
 
-    def save(self, file_path : str) -> None:
+    def save(self, file_path : str = "phaast_genetic") -> None:
         if not file_path.endswith(".json"): file_path+= ".json"
 
         with open(file_path, "w") as file:
@@ -494,14 +579,51 @@ class Genetic(SurfaceExplorator):
             file.write(json_string_f)
 
     @classmethod
-    def from_data(cls, data : dict[str, Any]) -> Self:
-        #return Genetic()
-        pass
+    def from_data(cls, data : GeneticData, computer : Optional[Computer] = None, calculator_key : str = "xtb") -> Genetic:
+        ### NOT WORKING RIGHT NOW (DON'T USE)
+        if computer is None:
+            computer = Computer()
+            xtb = XTB()
+            computer.add_calculator(calculator_key, xtb)
+
+        algorithm = Genetic(
+            population_size      = data["population_size"],
+            computer             = computer, 
+            calculator           = calculator_key,
+
+            mutations            = [(weight, import_object(obj_data)) for weight, obj_data in data["mutations"]], # type: ignore[override]
+            crossovers           = [(weight, import_object(obj_data)) for weight, obj_data in data["crossovers"]], # type: ignore[override],
+            migrators            = [(weight, import_object(obj_data)) for weight, obj_data in data["migrators"]], # type: ignore[override]
+
+            mutation_batches     = data["mutation_batches"],
+            sequential_mutations = data["sequential_mutations"],
+
+            comparison_algorithm = import_object(data["comparison_algorithm"]), # type: ignore[override]
+            do_remove_unbonded   = data["do_remove_unbonded"],
+
+            minimum_lifetime     = data["minimum_lifetime"],
+
+            end_loop_number      = data["end_loop_number"],
+            best_energy_num      = data["best_energy_num"],
+
+            bonding_tolerance    = data["bonding_tolerance"],
+
+            generate_population  = False,
+        )
+
+        return algorithm
+
 
     @classmethod
-    def load(cls, file_path : str) -> Self:
+    def load(cls, file_path : str) -> Genetic:
         with open(file_path, "r") as file:
-            data = json.load(file)
+            data : GeneticData = json.load(file)
+
+            # Pop Ids keys are not ints, just converting here
+            for k in data["population_ids"].keys():
+                data["population_ids"][int(k)] = data["population_ids"][k]
+                del data["population_ids"][k]
+
             return Genetic.from_data(data)
 
     def get_report(self) -> dict[str, Any]:
@@ -523,15 +645,11 @@ class Genetic(SurfaceExplorator):
             "Total Mating"             : self.total_mating,
             "Total Migrated"           : self.total_migrated,
         }
-        optimizeds = [ind for ind in self.population_ids.values() if isinstance(ind, OptimizedIndividual)]
-        report["Minima"] = sorted(
-            optimizeds,
-            key = lambda ind : ind.energy,
-        )[0:min(len(optimizeds), 50)]
+        report["Minima"] = [ind.as_data() for ind in self.get_best(self.best_energy_num)]
 
         return report
 
-    def save_report(self, file_path : str = "phaast_report.json"):
+    def save_report(self, file_path : str = "phaast_report"):
         if not file_path.endswith(".json"): file_path+= ".json"
 
         with open(file_path, "w") as file:
@@ -549,3 +667,9 @@ class Genetic(SurfaceExplorator):
             )
 
             file.write(json_string_f)
+
+    def get_best(self, n : int = 10) -> list[OptimizedIndividual]:
+        return sorted(
+            self.population,
+            key = lambda ind : ind.energy,
+        )[ : min(n, len(self.population) ) ]

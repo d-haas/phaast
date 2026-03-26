@@ -177,6 +177,9 @@ class Vector:
 
     def as_data(self) -> VectorData: ...
 
+    @classmethod
+    def from_data(cls, data : VectorData) -> Vector: ...
+
     def copy(self) -> 'Vector':
         """
         Returns an identical copy of the vector

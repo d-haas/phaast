@@ -1,8 +1,7 @@
 from abc import abstractmethod
 
 from phaast.structure import Structure
-from phaast.structure import Base
-from phaast.utils import JsonType
+from phaast.utils import ObjectData
 
 
 class Mutator:
@@ -13,7 +12,7 @@ class Mutator:
     def __call__(self, struct : Structure) -> Structure: ...
 
     @abstractmethod
-    def as_data(self) -> dict[str, JsonType]: ...
+    def as_data(self) -> ObjectData: ...
 
 class DisplacementMutator(Mutator):
     num : int
@@ -24,7 +23,7 @@ class DisplacementMutator(Mutator):
 
     def __call__(self, structure : Structure) -> Structure: ...
 
-    def as_data(self) -> dict[str, JsonType]: ...
+    def as_data(self) -> ObjectData: ...
 
 
 class PermuteMutator(Mutator):
@@ -33,7 +32,7 @@ class PermuteMutator(Mutator):
 
     def __call__(self, structure : Structure) -> Structure: ...
 
-    def as_data(self) -> dict[str, JsonType]: ...
+    def as_data(self) -> ObjectData: ...
 
 class TwistMutator(Mutator):
     min_angle : float
@@ -43,4 +42,4 @@ class TwistMutator(Mutator):
 
     def __call__(self, structure : Structure) -> Structure: ...
 
-    def as_data(self) -> dict[str, JsonType]: ...
+    def as_data(self) -> ObjectData: ...

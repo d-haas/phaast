@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, Callable, Iterable, Iterator, Optional, Self, TypedDict
 from phaast.structure.constants import *
-from phaast.utils import EmptyDict, JsonType
+from phaast.utils import ObjectData
 from phaast.vector import Vector, VectorData
 import tempfile
 
@@ -52,11 +52,6 @@ class Element:
     def __repr__(self) -> str:
         pass
 
-class BaseData(TypedDict):
-    import_path : Literal["phaast.structure.primitives.Base"]
-    args        : tuple[str]
-    kwargs      : EmptyDict
-
 
 class Base:
     elements : tuple[Element, ...]
@@ -77,7 +72,7 @@ class Base:
         """
         pass
 
-    def as_data(self) -> BaseData:
+    def as_data(self) -> ObjectData:
         """
         Return Base as a JSON-parseable object
         """
@@ -149,6 +144,10 @@ class Atom(Element):
         """
         Export to JSON importable dict
         """
+        pass
+
+    @classmethod
+    def from_data(cls, data : AtomData) -> Atom:
         pass
     
     def __reduce__(self):
@@ -262,12 +261,11 @@ class Structure:
         """
         pass
 
-    def plot(self, jmol_path = "jmol") -> None:
+    def plot(self) -> None:
         """
-        Open the structure in jmol (if available)
+        Open the structure in the phaast GUI (if available)
         """
         pass
-
 
     def copy(self) -> Self:
         """
@@ -285,6 +283,10 @@ class Structure:
         """
         Export to JSON importable dict
         """
+        pass
+
+    @classmethod
+    def from_data(cls, data : StructureData) -> Structure:
         pass
 
     def __reduce__(self) -> tuple[ Callable[..., Structure], tuple[Any, ...] ]:
@@ -361,6 +363,10 @@ class Molecule(Structure):
         """
         Export to JSON importable dict
         """
+        pass
+
+    @classmethod
+    def from_data(cls, data : MoleculeData) -> Molecule: # type: ignore[override]
         pass
 
     def __reduce__(self) -> tuple[ Callable[..., Molecule], tuple[tuple[Atom, ...], float] ]:

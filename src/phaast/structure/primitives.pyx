@@ -107,9 +107,9 @@ class Base:
             start = "",
         )
 
-    def as_data(self) -> dict[str, int]:
+    def as_data(self) -> dict:
         return {
-            "import" : "phaast.structure.primitives.Base",
+            "import_path" : "phaast.structure.primitives.Base",
             "args"   : (self.to_formula(),),
             "kwargs" : {},
         }
@@ -270,6 +270,10 @@ cdef class Atom(Element):
             "z" : self.z,
             "pos" : self.pos.as_data(),
         }
+
+    @classmethod
+    def from_data(self, data : dict) -> Atom:
+        return Atom(data["z"], Vector.from_data(data["pos"]))
     
     def __reduce__(self):
         return (create_atom, (self.z, self.pos))
@@ -482,18 +486,7 @@ cdef class Structure:
         """
         Open the structure in phaast-gui (if available)
         """
-        """
-        with self.to_temp_xyz() as xyz_file:
-            subprocess.run(
-                [
-                    jmol_path,
-                    xyz_file.name,
-                ],
-                capture_output = False,
-                stdout = subprocess.DEVNULL,
-                stderr = subprocess.DEVNULL,
-            )
-        """
+        pass
 
 
     def copy(self) -> Self:
@@ -524,6 +517,12 @@ cdef class Structure:
             "length" : self.length,
             "atoms"  : [atom.as_data() for atom in self.atoms],
         }
+
+    @classmethod
+    def from_data(cls, data : dict) -> Structure:
+        return Structure(
+            [Atom.from_data(atom_data) for atom_data in data["atoms"]]
+        )
 
     def __reduce__(self):
         return (create_structure, (tuple(self),))
@@ -681,6 +680,13 @@ cdef class Molecule(Structure):
         return super().as_data() | {
             "energy" : self.energy,
         }
+
+    @classmethod
+    def from_data(cls, data : dict) -> Molecule:
+        return Molecule(
+            [Atom.from_data(atom_data) for atom_data in data["atoms"]],
+            data["energy"],
+        )
 
     def __reduce__(self):
         return (create_molecule, (tuple(self), self.energy))

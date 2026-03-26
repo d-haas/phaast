@@ -107,7 +107,7 @@ cdef class PlaneMating:
     def as_data(self) -> dict:
         return {
             "name" : "Plane Cross-over",
-            "import" : "phaast.surface_explorator.genetic.crossover.PlaneMating",
+            "import_path" : "phaast.surface_explorator.genetic.crossover.PlaneMating",
             "args" : (),
             "kwargs" : {},
         }

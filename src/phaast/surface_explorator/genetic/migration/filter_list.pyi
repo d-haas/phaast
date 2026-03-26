@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Literal, Iterable
 
 from phaast.structure.constants import AtomicNumber
-from phaast.utils import JsonType
+from phaast.utils import ObjectData
 
 class FilterMode(Enum):
     NONE = 0
@@ -16,4 +16,4 @@ class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
 
     def is_permited(self, zi: AtomicNumber, zj: AtomicNumber) -> bool: ...
 
-    def as_data(self) -> dict[str, JsonType]: ...
+    def as_data(self) -> ObjectData: ...

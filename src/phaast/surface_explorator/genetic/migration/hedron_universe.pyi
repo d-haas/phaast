@@ -3,7 +3,7 @@ from typing import Literal, Optional
 from phaast.structure import Atom, Base, Structure
 from phaast.structure.constants import AtomicNumber
 from phaast.surface_explorator.genetic.migration import Migrator
-from phaast.utils import JsonType
+from phaast.utils import ObjectData
 from phaast.vector import Vector
 from phaast.surface_explorator.genetic.migration.filter_list import FilterList
 
@@ -43,4 +43,4 @@ class HedronMigrator(Migrator):
 
     def __call__(self) -> Structure: ...
 
-    def as_data(self) -> dict[str, JsonType]: ...
+    def as_data(self) -> ObjectData: ...

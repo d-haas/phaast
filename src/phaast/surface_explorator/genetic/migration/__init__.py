@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from phaast.structure import Structure
 from phaast.structure.constants import *
-from phaast.utils import JsonType
+from phaast.utils import ObjectData
 
 #@check_types
 class Migrator(ABC):
@@ -13,4 +13,4 @@ class Migrator(ABC):
     def __call__(self) -> Structure: ...
 
     @abstractmethod
-    def as_data(self) -> dict[str, JsonType]: ...
+    def as_data(self) -> ObjectData: ...

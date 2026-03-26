@@ -89,7 +89,7 @@ cdef class DisplacementMutator(Mutator):
             "num_displacement" : self.num,
             "min_displacement" : self.min_displacement,
             "max_displacement" : self.max_displacement,
-            "import"           : "phaast.surface_explorator.genetic.mutation.DisplacementMutator",
+            "import_path"      : "phaast.surface_explorator.genetic.mutation.DisplacementMutator",
             "args"             : (self.num, self.min_displacement, self.max_displacement),
             "kwargs"           : {},
         }
@@ -139,7 +139,7 @@ cdef class PermuteMutator(Mutator):
         return {
             "name"             : "Permutation Mutation",
             "num_permutations" : self.num,
-            "import"           : "phaast.surface_explorator.genetic.mutation.PermuteMutator",
+            "import_path"      : "phaast.surface_explorator.genetic.mutation.PermuteMutator",
             "args"             : (self.num,),
             "kwargs"           : {},
         }
@@ -200,7 +200,7 @@ cdef class TwistMutator(Mutator):
             "name"      : "Twist Mutation",
             "min_angle" : self.min_angle,
             "max_angle" : self.max_angle,
-            "import"           : "phaast.surface_explorator.genetic.mutation.TwistMutator",
-            "args"             : (self.min_angle, self.max_angle,),
-            "kwargs"           : {},
+            "import_path" : "phaast.surface_explorator.genetic.mutation.TwistMutator",
+            "args"        : (self.min_angle, self.max_angle,),
+            "kwargs"      : {},
         }

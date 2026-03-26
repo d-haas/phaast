@@ -351,3 +351,5 @@ os.chdir(actual_cwd)
 
 for i, mol in enumerate(best_list):
     mol.to_xyz(f"{args.output_prefix}{i}.xyz")
+
+genetic.save()

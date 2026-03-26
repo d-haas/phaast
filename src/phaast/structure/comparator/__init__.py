@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
+
+from phaast.utils import ObjectData
 if TYPE_CHECKING:
     from phaast.structure import Molecule
 
@@ -7,6 +9,8 @@ from phaast.structure.comparator.c_comparators import energy_difference, grigory
 
 class ComparisonAlgorithm(Protocol):
     def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:...
+
+    def as_data(self) -> ObjectData: ...
 
 class ComparisonSequence(ComparisonAlgorithm):
     __slots__ = ("algorithms",)
@@ -21,6 +25,13 @@ class ComparisonSequence(ComparisonAlgorithm):
 
         return False
 
+    def as_data(self) -> ObjectData:
+        return {
+            "import_path" : "phaast.structure.comparator.ComparisonSequence",
+            "args"        : tuple((algorithm.as_data() for algorithm in self.algorithms),),
+            "kwargs"      : {},
+        }
+
 class EnergyDifference(ComparisonAlgorithm):
     __slots__ = ("tolerance",)
 
@@ -29,6 +40,13 @@ class EnergyDifference(ComparisonAlgorithm):
 
     def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:
         return energy_difference(mol1, mol2, self.tolerance)
+
+    def as_data(self) -> ObjectData:
+        return {
+            "import_path" : "phaast.structure.comparator.EnergyDifference",
+            "args"        : (self.tolerance,),
+            "kwargs"      : {},
+        }
 
 class GrigoryanSpringborg(ComparisonAlgorithm):
     __slots__ = ("tolerance",)
@@ -40,6 +58,13 @@ class GrigoryanSpringborg(ComparisonAlgorithm):
 
     def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:
         return grigoryan_springborg(mol1, mol2, self.tolerance)
+
+    def as_data(self) -> ObjectData:
+        return {
+            "import_path" : "phaast.structure.comparator.GrigoryanSpringborg",
+            "args"        : (self.tolerance,),
+            "kwargs"      : {},
+        }
 
 class BondingLength(ComparisonAlgorithm):
     __slots__ = ("tolerance", "bonding_tolerance",)
@@ -53,3 +78,10 @@ class BondingLength(ComparisonAlgorithm):
 
     def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:
         return bonding_length(mol1, mol2, self.tolerance, self.bonding_tolerance)
+
+    def as_data(self) -> ObjectData:
+        return {
+            "import_path" : "phaast.structure.comparator.BondingLength",
+            "args"        : (self.tolerance, self.bonding_tolerance),
+            "kwargs"      : {},
+        }

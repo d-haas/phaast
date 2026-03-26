@@ -192,9 +192,12 @@ class HedronMigrator(Migrator):
                 
         return Structure([atom for atom in universe.atom_population])
 
-    def as_data(self) -> dict[str, JsonType]:
+    def as_data(self) -> dict:
         return {
-            "base" : self.base.as_data(),
+            "base"            : self.base.as_data(),
             "vertices_number" : self.n_vertices,
             "filter_list"     : self.filter_list.as_data(),
+            "import_path"     : "phaast.surface_explorator.genetic.migration.hedron_universe.HedronMigrator",
+            "args"            : (self.base.as_data(), self.n_vertices, self.filter_list.as_data()), 
+            "kwargs"          : {},
         }

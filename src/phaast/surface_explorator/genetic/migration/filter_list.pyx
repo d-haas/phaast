@@ -41,7 +41,7 @@ class FilterList(dict[tuple[AtomicNumber, AtomicNumber], Literal[True]]):
         return {
             "mode"     : filter_mode_to_str[self.mode],
             "bondings" : list(self.keys()),
-            "import"   : "phaast.surface_explorator.genetic.migration.filter_list.FilterList",
+            "import_path"   : "phaast.surface_explorator.genetic.migration.filter_list.FilterList",
             "args"     : (int(self.mode), list(self.keys())),
             "kwargs"   : {},
         }

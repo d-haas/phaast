@@ -301,5 +301,9 @@ cdef class Vector:
     def as_data(self) -> tuple:
         return (self.x, self.y, self.z)
 
+    @classmethod
+    def from_data(cls, data : tuple) -> Vector:
+        return Vector(*data)
+
     def __reduce__(self):
         return (create_vector, (self.x, self.y, self.z))
