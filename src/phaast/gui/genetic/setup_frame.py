@@ -1,10 +1,7 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
-if TYPE_CHECKING:
-    from phaast.gui.genetic.__main__ import MainFrame
 
 import tkinter as tk
-from tkinter import ttk
 
 from phaast.structure.comparator import ComparisonSequence, EnergyDifference, GrigoryanSpringborg
 from phaast.surface_explorator.genetic.crossover import PlaneMating
@@ -19,14 +16,12 @@ from phaast.surface_explorator.genetic import Genetic
 from phaast.gui.utils import TkDict
 
 
-class SetupFrame(ttk.Frame):
+class SetupFrame(tk.Frame):
 
-    root : MainFrame
     fields : TkDict
 
-    def __init__(self, master : MainFrame, *args, **kwargs):
+    def __init__(self, master : tk.Misc, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
-        self.root = master
         base_values : dict[str, dict[str, tuple[str, type, Any]]] = {
             "Main" : {
                 "stoichiometry"                : ("Stoichiometry"     , str  , ""),
@@ -62,12 +57,23 @@ class SetupFrame(ttk.Frame):
 
         self.fields = TkDict()
 
+        self.columnconfigure((0, 1), weight = 1)
         for frame_num, (category, fields) in enumerate(base_values.items()):
 
-            temp_frame = ttk.LabelFrame(self, text = category)
+            temp_frame = tk.LabelFrame(
+                self,
+                text = category,
+                background = "#1e1e2e",
+                foreground = "#cdd6f4",
+            )
 
             for i, (var, (name, tp, default)) in enumerate(fields.items()):
-                temp_label = ttk.Label(temp_frame, text = name)
+                temp_label = tk.Label(
+                    temp_frame,
+                    text = name,
+                    background = "#1e1e2e",
+                    foreground = "#cdd6f4",
+                )
 
                 if tp == str:
                     temp_var = tk.StringVar(self, value = default)
@@ -83,28 +89,40 @@ class SetupFrame(ttk.Frame):
                 self.fields[var] = temp_var
 
                 if tp == tuple:
-                    temp_entry = ttk.Combobox(temp_frame, values = default, textvariable = temp_var)
-                else:
-                    temp_entry = ttk.Entry(temp_frame, textvariable = temp_var)
+                    if TYPE_CHECKING:
+                        assert isinstance(temp_var, tk.StringVar)
 
-                temp_label.grid(row = i, column = 0)
-                temp_entry.grid(row = i, column = 1)
+                    temp_entry = tk.OptionMenu(
+                        temp_frame,
+                        temp_var,
+                        *default,
+                    )
+                    temp_entry.configure(
+                        background = "#11111b",
+                        foreground = "#cdd6f4",
+                    )
+                else:
+                    temp_entry = tk.Entry(
+                        temp_frame,
+                        textvariable = temp_var,
+                        background = "#11111b",
+                        foreground = "#cdd6f4",
+                        highlightbackground = "#313244",
+                        highlightcolor = "#585b70",
+                    )
+
+                temp_label.grid(sticky = tk.W, row = i, column = 0)
+                temp_entry.grid(sticky = tk.E, row = i, column = 1)
 
             temp_frame.grid(
+                sticky = tk.NSEW,
                 column = 0 if frame_num == 0 else 1,
                 row = 0 if frame_num < 2 else 1,
                 rowspan = 2 if frame_num == 0 else 1,
                 # side = tk.LEFT, anchor = tk.N
             )
 
-        start_button = ttk.Button(self, text = "Start", command = self.get_algorithm)
-        start_button.grid(
-            column = 0,
-            row = 2,
-            columnspan = 2,
-        )
-
-    def get_algorithm(self):
+    def get_algorithm(self) -> Genetic:
 
 
         base = Base(self.fields.stoichiometry)
@@ -175,18 +193,14 @@ class SetupFrame(ttk.Frame):
         else:
             do_remove_unbonded = False
 
-        loading_bar = ttk.Progressbar(self, value = 100)
-        loading_label = ttk.Label(self, text = "Generating population...")
-        loading_bar.grid(
-            column = 0,
-            row = 3,
-            columnspan = 2,
-        )
+        loading_label = tk.Label(self, text = "Generating population...")
         loading_label.grid(
             column = 0,
-            row = 4,
+            row = 2,
             columnspan = 2,
         )
+
+        self.update()
 
         genetic = Genetic(
             population_size = self.fields.population_size,
@@ -203,5 +217,7 @@ class SetupFrame(ttk.Frame):
 
             end_loop_number = self.fields.end_loop_number,
         )
+        
+        loading_label.grid_forget()
 
-        self.root.goto_genetic(genetic)
+        return genetic

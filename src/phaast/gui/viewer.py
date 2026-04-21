@@ -64,7 +64,8 @@ class MolViewer(OpenGLFrame):
         self.render_quality = 4
 
     def initgl(self):
-        pass
+        # Catppuccin (Mocha) crust color for background
+        gl.glClearColor(17/255, 17/255, 27/255, 1)
 
     def optimize_xtb(self, options : dict[str, Any]) -> None:
         previous_state = self.state

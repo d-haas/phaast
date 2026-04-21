@@ -1,196 +1,119 @@
 import tkinter as tk
-from tkinter import ttk
 
-from phaast.gui.constants import *
 from phaast.gui.menu import MenuBar
-from phaast.gui.mol_viewer import MolViewer
-
-from phaast.structure.constants import AtomicNumbers, AtomicRadi
+from phaast.gui.window import Window, create_new_window
 
 class GUI(tk.Tk):
+    menu : MenuBar
+    windows : dict[str, Window]
+
     def __init__(self):
         super().__init__()
+        self.menu = MenuBar(self)
+        self.windows = {}
 
-        self.setup_window()
+        self.last_id : None | str = None
+        self.last_wclick : tuple[int, int] = (0, 0)
+        self.last_wpos   : tuple[int, int] = (0, 0)
+        self.last_wsize  : tuple[int, int] = (0, 0)
+        self.last_wcursor : str = "arrow"
+        self.last_waction : str = ""
 
         self.setup()
 
-    def run(self):
-        self.mainloop()
-
-    def setup_window(self):
+    def setup(self):
         self.title("PHAAST - GUI")
         self.minsize(600,400)
-        #self.resizable(False, False)
         self.configure(
             background="#1e1e2e",
-            menu = MenuBar(self)
+            menu = self.menu,
         )
 
-
-    def setup(self):
-        self.input_widgets : list[ttk.Button | ttk.Entry] = []
-        self.viewer = MolViewer(self)
-        self.viewer.animate = 1
-        self.viewer.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
-        self.style = ttk.Style(self)
-        self.style.theme_use("clam")
-        for widget in ("TFrame", "TButton", "TMenubutton", "TEntry", "TLabel", "Treeview"):
-            self.style.configure(widget, background="#1e1e2e", foreground="#cdd6f4", fieldbackground="#1e1e2e", insertcolor="#cdd6f4")
-            self.style.map(widget, background=[("active", "#eff1f5")], foreground=[("active", "#4c4f69")])
-
-        #self.style.configure("phaast.TEntry", background="#1e1e2e", foreground="#cdd6f4")
-
-        upper_frame = ttk.Frame(self)
-
-        for name in ("add", "delete", "replace", "view", "move"):
-            button = ttk.Button(
-                upper_frame,
-                text = f"({name[0].upper()}){name[1:]}",
-                command = lambda n=name : setattr(self.viewer, "state", n),
-            )
-            self.input_widgets.append(button)
-            button.pack(side = tk.LEFT, padx = 5)
-
-        self.entry_var = tk.StringVar()
-        self.entry_var.trace("w", self.on_entry_change)
-        self.label_var = tk.StringVar()
-
-        entry_frame = ttk.Frame(upper_frame)
-        label = ttk.Label(entry_frame, textvariable=self.label_var, foreground = "red")
-        entry = ttk.Entry(entry_frame, width=5, textvariable = self.entry_var)
-        self.input_widgets.append(entry)
-        """
-        entry = ttk.OptionMenu(
-            entry_frame,
-            self.entry_var,
-            *[
-                AtomicSymbols[number]
-                for number
-                in sorted(list(AtomicSymbols.keys()))
-                if number in AtomicRadi
-            ]
+        self.bind("<B1-Motion>", self.on_click_motion)
+        self.bind(
+            "<ButtonRelease-1>",
+            lambda _ : (
+                setattr(self, "last_id", None),
+                self.configure(cursor = ""),
+            ),
         )
-        """
-        label.pack(side=tk.LEFT)
-        entry.pack(side=tk.LEFT)
-        entry_frame.pack(side = tk.LEFT, padx = 5)
 
-        upper_frame.pack(side = tk.TOP, pady=10)
-
-        ########################
-        ### XTB OPTIMIZATION ###
-        ########################
-        xtb_frame = ttk.Frame(self)
-        
-        button = ttk.Button(
-            xtb_frame,
-            text = "Optimize XTB",
-            command = lambda : self.viewer.optimize_xtb({k : v.get() for k, v in self.xtb_options.items()}),
-        )
-        self.input_widgets.append(button)
-        button.pack(side=tk.LEFT, padx = 5)
-
-        self.xtb_options : dict[str, tk.IntVar] = {}
-        for option, default in (
-            ("charge", 0),
-            ("etemp", 300),
-            ("gfn", 2),
-            ("threads", 1),
-        ):
-            option_frame = ttk.Frame(xtb_frame)
-            label = ttk.Label(option_frame, text = option+":")
-            self.xtb_options[option] = tk.IntVar(value = default)
-            entry = ttk.Entry(option_frame, textvariable = self.xtb_options[option], width=5)
-            self.input_widgets.append(entry)
-            label.pack(side=tk.LEFT)
-            entry.pack(side=tk.LEFT)
-            option_frame.pack(side=tk.LEFT, padx=5)
-
-        xtb_frame.pack(side = tk.TOP, pady = 10)
-
-        #########################
-        ### ORCA OPTIMIZATION ###
-        #########################
-        orca_frame = ttk.Frame(self)
-
-        button = ttk.Button(
-            orca_frame,
-            text = "Optimize ORCA",
-            command = lambda : self.viewer.optimize_orca({k : v.get() for k, v in self.orca_options.items()}),
-        )
-        self.input_widgets.append(button)
-        button.pack(side=tk.LEFT, padx = 5)
-
-        self.orca_options : dict[str, tk.IntVar | tk.StringVar] = {}
-        for option, default in (
-            ("functional", "HF"),
-            ("basis_set", "STO-3G"),
-            ("spin_multiplicity", 0),
-            ("charge", 0),
-            ("threads", 4),
-        ):
-            option_frame = ttk.Frame(orca_frame)
-            label = ttk.Label(option_frame, text = option.replace("_", " ").capitalize()+":")
-            if type(default) == str:
-                self.orca_options[option] = tk.StringVar(value = default)
-            elif type(default) == int:
-                self.orca_options[option] = tk.IntVar(value = default)
-            entry = ttk.Entry(option_frame, textvariable = self.orca_options[option], width=10)
-            self.input_widgets.append(entry)
-            label.pack(side=tk.LEFT)
-            entry.pack(side=tk.LEFT)
-            option_frame.pack(side=tk.LEFT, padx=5)
-
-        orca_frame.pack(side = tk.TOP, pady = 10)
-
-        options_frame = ttk.Frame(self)
-
-        self.quality_var = tk.IntVar(value = 1)
-        label = ttk.Label(options_frame, text = "Quality: ")
-        quality_scale = ttk.LabeledScale(
-            options_frame,
-            variable = self.quality_var,
-            from_ = 1, to = 8,
-        )
-        self.quality_var.set(4)
-        self.quality_var.trace(
-            "w",
-            self.on_quality_change,
-        )
-        label.pack(side = tk.LEFT)
-        quality_scale.pack(side = tk.LEFT)
-
-        options_frame.pack(side = tk.TOP)
-
-    def on_entry_change(self, *_):
-        string_var = self.entry_var.get()
-        if string_var.isdigit():
-            var_int = int(self.entry_var.get())
-            if var_int in AtomicRadi:
-                self.viewer.chosen_z = var_int
-
-                self.label_var.set(" ")
-            else:
-                self.label_var.set("*")
-
-        elif string_var and len(string_var) <= 2 and string_var in AtomicNumbers and AtomicNumbers[string_var] in AtomicRadi:
-            self.viewer.chosen_z = AtomicNumbers[string_var]
-
-            self.label_var.set(" ")
-
+    @property
+    def selected_window(self):
+        if self.last_id:
+            return self.windows[self.last_id]
         else:
-            self.label_var.set("*")
+            return None
 
-    def on_quality_change(self, *_):
-        self.viewer.render_quality = self.quality_var.get()
+    def create_window(self, w = 300, h = 340) -> Window:
+        id, window = create_new_window(self, w, h)
+        self.windows[id] = window
+        window.place(
+            anchor = tk.NW,
+            width = w,
+            height = h,
+        )
 
-    def disable_input(self):
-        for widget in self.input_widgets:
-            widget.configure(state = "disabled")
+        return window
 
-    def enable_input(self):
-        for widget in self.input_widgets:
-            widget.configure(state = "normal")
+    def on_click_motion(self, event : tk.Event):
+        if self.last_id:
+            window = self.windows[self.last_id]
+            x, y = event.x_root, event.y_root
+            w, h = self.last_wsize
+            dx, dy = (x - self.last_wclick[0], y - self.last_wclick[1])
+            pos_x, pos_y = self.last_wpos
+            if self.last_waction == "move":
+                window.place_configure(
+                    x = pos_x + dx,
+                    y = pos_y + dy,
+                    width = w,
+                    height = h,
+                )
+                window.lift()
+            
+            else:
+                new_x = pos_x
+                new_y = pos_y
+                new_w = w
+                new_h = h
+                if "t" in self.last_waction:
+                    # Limit window height to a defined minimum
+                    if h - dy < window.min_height:
+                        dy = h - window.min_height
 
+                    new_y = pos_y + dy
+                    new_h = h - dy
+                elif "b" in self.last_waction:
+                    # Limit window height to a defined minimum
+                    if h + dy < window.min_height:
+                        dy = window.min_height - h
+
+                    new_h = h + dy
+
+                if "l" in self.last_waction:
+                    # Limit window width to a defined minimum
+                    if w - dx < window.min_width:
+                        dx = w - window.min_width
+
+                    new_x = pos_x + dx
+                    new_w = w - dx
+                elif "r" in self.last_waction:
+                    # Limit window width to a defined minimum
+                    if w + dx < window.min_width:
+                        dx = window.min_width - w
+
+                    new_w = w + dx
+
+                #print(f"SIZE: ({new_w}, {new_h})")
+                window.place_configure(
+                    x = new_x,
+                    y = new_y,
+                    width = new_w,
+                    height = new_h,
+                )
+                window.lift()
+
+
+    def run(self):
+        self.mainloop()

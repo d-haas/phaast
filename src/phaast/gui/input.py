@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from phaast.gui.mol_viewer import MolViewer
+    from phaast.gui.viewer import MolViewer
 
 import sys
 
