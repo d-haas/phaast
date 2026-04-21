@@ -27,9 +27,11 @@ cpdef bool grigoryan_springborg(Molecule mol1, Molecule mol2, double tolerance):
 
     Thanks Amanda
     """
-
     # I was gonna try to optimize this with fancy parallel for-loops,
     # tho it might be wise to keep it this way for now.
+
+    # "Preguiça"
+    #   -Maguila
 
     cdef tuple dict_key
     cdef Vector diff
