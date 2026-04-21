@@ -74,7 +74,7 @@ class Orca(Calculator):
                 input_file.write(
                     "\n".join(
                         [
-                            f"!{self.functional} {self.basis_set} OPT",
+                            f"! {self.functional} {self.basis_set} OPT",
                             f"%PAL NPROCS {self.threads} END",
                             f"* xyz {self.charge} {self.spin_multiplicity}"
                         ]
@@ -83,8 +83,7 @@ class Orca(Calculator):
                         + ["*"]
                     )
                 )
-                # For some GD reason, the files needs to be read
-                # before xtb uses it (TF????)
+                input_file.flush()
                 input_file.read()
 
                 orca_path = shutil.which(self.orca_path)
@@ -107,7 +106,10 @@ class Orca(Calculator):
 
                 output_path = input_file.name+".xyz"
                 if os.path.exists(output_path):
-                    molecule = Molecule.from_xyz(output_path)
+                    try:
+                        molecule = Molecule.from_xyz(output_path)
+                    except:
+                        molecule = None
                 else:
                     molecule = None
 

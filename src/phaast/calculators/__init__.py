@@ -5,8 +5,6 @@ if TYPE_CHECKING:
 
 from abc import ABC, abstractmethod
 
-
-
 class Calculator(ABC):
     @abstractmethod
     def optimize(self, structure : Structure) -> Molecule | None:...
