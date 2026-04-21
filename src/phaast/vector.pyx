@@ -302,7 +302,7 @@ cdef class Vector:
         return (self.x, self.y, self.z)
 
     @classmethod
-    def from_data(cls, data : tuple) -> Vector:
+    def from_data(cls, data : tuple | list) -> Vector:
         return Vector(*data)
 
     def __reduce__(self):
