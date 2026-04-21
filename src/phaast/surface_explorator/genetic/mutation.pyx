@@ -47,7 +47,7 @@ cdef class DisplacementMutator(Mutator):
 
 
     def __call__(self, structure : Structure) -> Structure:
-        return self.ccall(structure)
+        return self.ccall(Structure(structure))
 
     @cython.boundscheck(False)
     cdef Structure ccall(self, Structure structure):
@@ -102,7 +102,7 @@ cdef class PermuteMutator(Mutator):
         self.num = num
 
     def __call__(self, structure : Structure) -> Structure:
-        return self.ccall(structure)
+        return self.ccall(Structure(structure))
 
     @cython.boundscheck(False)
     cdef Structure ccall(self, Structure structure):
@@ -163,7 +163,7 @@ cdef class TwistMutator(Mutator):
 
 
     def __call__(self, structure : Structure) -> Structure:
-        return self.ccall(structure)
+        return self.ccall(Structure(structure))
 
     @cython.boundscheck(False)
     cdef Structure ccall(self, Structure structure):
