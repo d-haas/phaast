@@ -1,5 +1,6 @@
 from typing import Any, TypedDict
 from . import typecheck, custom_iter, c_random
+import importlib
 
 type JsonType = dict[str | int, JsonType] | list[JsonType] | str | int | float | bool | None
 
@@ -15,9 +16,9 @@ def is_importable(obj : ObjectData | Any) -> bool:
     if isinstance(obj, dict):
         return all(
             (
-                "import_path" in obj,
-                "args" in obj,
-                "kwargs" in obj,
+                "import_path" in obj, isinstance(obj["import_path"], str),
+                "args" in obj, isinstance(obj["args"], (tuple, list)),
+                "kwargs" in obj, isinstance(obj["kwargs"], dict),
             )
         )
 
@@ -27,10 +28,14 @@ def is_importable(obj : ObjectData | Any) -> bool:
 def import_object(data : ObjectData) -> object:
     path_modules = data["import_path"].split(".")
 
+    """
     module = __import__(
         ".".join(path_modules[:-1]),
         fromlist = None,
     )
+    """
+
+    module = importlib.import_module(".".join(path_modules[:-1]))
 
     args = [
         import_object(arg) if is_importable(arg) else arg
@@ -45,6 +50,7 @@ def import_object(data : ObjectData) -> object:
     }
 
     return getattr(module, path_modules[-1])(*args, **kwargs)
+    #return module(*args, **kwargs)
 
 __all__ = [
     "typecheck",

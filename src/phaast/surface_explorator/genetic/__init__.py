@@ -21,6 +21,10 @@ from phaast.surface_explorator.genetic.individual import ChildIndividual, Indivi
 from phaast.utils import ObjectData, import_object
 from phaast.utils.custom_iter import distinct_pairs
 
+class GenerationData(TypedDict):
+    best_energy : list[float]
+    population  : list[int]
+
 class GeneticData(TypedDict):
 
     population_size          : int
@@ -48,9 +52,10 @@ class GeneticData(TypedDict):
     total_mating             : int
     total_migrated           : int
 
-    generations              : list[list[int]]
+    generations              : list[GenerationData]
     population               : list[int]
     population_ids           : dict[int, IndividualData]
+    max_id                   : int
 
     mutations                : list[tuple[float, ObjectData]]
     crossovers               : list[tuple[float, ObjectData]]
@@ -107,12 +112,14 @@ class GeneticComputer(Computer):
         )
 
         inds = [
-            MutantIndividual(mutant, ancestor, self.parent.max_id + i)
+            MutantIndividual(mutant, ancestor.id, self.parent.max_id + i)
             for i, (mutant, ancestor)
             in enumerate(zip(mutants, structs))
         ]
         self.parent.max_id+= len(inds)
-        for ind in inds: self.parent.population_ids[ind.id] = ind
+        for ind in inds:
+            self.parent.population_ids[ind.id] = ind
+            self.parent.population_ids[ind.ancestor].add_descendant(ind.id)
 
         self.parent.total_mutations+= len(mutants)
 
@@ -129,12 +136,15 @@ class GeneticComputer(Computer):
         )
 
         inds = [
-            ChildIndividual(child, parents, self.parent.max_id + i)
+            ChildIndividual(child, (parents[0].id, parents[1].id), self.parent.max_id + i)
             for i, (child, parents)
             in enumerate(zip(children, struct_pairs))
         ]
         self.parent.max_id+= len(inds)
-        for ind in inds: self.parent.population_ids[ind.id] = ind
+        for ind in inds:
+            self.parent.population_ids[ind.id] = ind
+            for parent_id in ind.parents:
+                self.parent.population_ids[parent_id].add_descendant(ind.id)
 
         self.parent.total_mating+= len(children)
 
@@ -166,12 +176,14 @@ class GeneticComputer(Computer):
         mols = [mol for mol in self.optimize(self.chosen_calculator, structs) if mol]
 
         inds = [
-            OptimizedIndividual(mol, struct, self.parent.max_id + i, mol.energy)
+            OptimizedIndividual(mol, struct.id, self.parent.max_id + i, mol.energy)
             for i, (mol, struct)
             in enumerate(zip(mols, structs))
         ]
         self.parent.max_id+= len(inds)
-        for ind in inds: self.parent.population_ids[ind.id] = ind
+        for ind in inds:
+            self.parent.population_ids[ind.id] = ind
+            self.parent.population_ids[ind.ancestor].add_descendant(ind.id)
 
         self.parent.total_optimizations+= len(list(structs)) # This list(...) is dumb and shouldn't be used... Anyway..
         self.parent.total_converged+= len(mols)
@@ -191,16 +203,29 @@ class GeneticComputer(Computer):
         return self.genetic_optimize(inds)
 
     def get_duplicate(self, i : int, inds : Sequence[OptimizedIndividual], comparison_algorithm : ComparisonAlgorithm) -> bool:
-        for j in range(i+1, len(inds)):
-            if comparison_algorithm(inds[i], inds[j]):
-                return True
+        i_id = inds[i].id
+        i_energy = inds[i].energy
+        for rng in ( range(i), range(i+1, len(inds)) ):
+            for j in rng:
+                j_id = inds[j].id
+                if comparison_algorithm(inds[i], inds[j]):
+                    j_energy = inds[j].energy
+                    if i_energy > j_energy:
+                        return True
+                    elif i_energy == j_energy and i_id > j_id:
+                        return True
+
         return False
 
     def get_duplicate_mask(self, inds : Sequence[OptimizedIndividual], comparison_algorithm : ComparisonAlgorithm) -> list[bool]:
         mask = self.parallelize(
-            [(i, inds, comparison_algorithm) for i in range(len(inds))],
+            [
+                (i, inds, comparison_algorithm)
+                for i in range(len(inds))
+            ],
             self.get_duplicate,
         )
+        self.parent.total_duplicates_removed+= mask.count(True)
         return mask
 
 
@@ -224,13 +249,14 @@ class Genetic(SurfaceExplorator):
     sequential_mutations : int
     mutation_batches : int
 
-    cycle_counter     : int
-    minimum_lifetime  : int
-    best_energy       : float
-    best_energies     : list[OptimizedIndividual]
-    best_energy_num   : int
-    best_energy_loops : int
-    max_id            : int
+    cycle_counter       : int
+    minimum_lifetime    : int
+    best_energy         : float
+    best_energies       : list[OptimizedIndividual]
+    best_energy_history : list[list[float]]
+    best_energy_num     : int
+    best_energy_loops   : int
+    max_id              : int
 
     total_optimizations          : int
     total_converged              : int
@@ -267,6 +293,8 @@ class Genetic(SurfaceExplorator):
         custom_population : list[Structure] | None = None,
 
         generate_population : bool = True,
+
+        loaded : bool = False,
     ):
         """
         Define initial variables for genetic algorithm
@@ -310,37 +338,39 @@ class Genetic(SurfaceExplorator):
                 "Population size is too small",
             )
 
-        if custom_population:
-            self.population+= self.computer.incorporate(custom_population)
+        if not loaded:
+            if custom_population:
+                self.population+= self.computer.incorporate(custom_population)
 
-        if generate_population:
-            migrator_total_weight = sum([weight for weight, _ in migrators])
-            for weight, migrator in migrators:
-                generated_num = floor(self.population_size*weight/migrator_total_weight)
-                self.population+= self.computer.genetic_optimize(
-                    self.computer.migrate(
-                        generated_num,
-                        migrator,
+            if generate_population:
+                migrator_total_weight = sum([weight for weight, _ in migrators])
+                for weight, migrator in migrators:
+                    generated_num = floor(self.population_size*weight/migrator_total_weight)
+                    self.population+= self.computer.genetic_optimize(
+                        self.computer.migrate(
+                            generated_num,
+                            migrator,
+                        )
                     )
-                )
 
+            self.generations.append(self.population.copy())
 
-        self.generations.append(self.population.copy())
+            self.best_energies = sorted(self.population, key = lambda mol : mol.energy)[:min(self.best_energy_num, len(self.population))]
+            self.best_energy = self.best_energies[0].energy
+            self.best_energy_history = [[ind.energy for ind in self.best_energies], ]
+
+        else:
+            self.best_energies = []
+            self.best_energy = 0
+            self.best_energy_history = []
+
 
         self.operations_weight = sum([
             weight for weight, _
             in mutations+crossovers+migrators
         ])
 
-        # Generation parameters
-        self.best_energies = sorted(self.population, key = lambda mol : mol.energy)[:min(self.best_energy_num, len(self.population))]
-        self.best_energy = self.best_energies[0].energy
-
-        #Statistics variables (start with prefix "total")
-
     def remove_duplicates(self) -> None:
-
-        pop_size_before : int = len(self.population)
 
         self.population = [
             ind
@@ -349,12 +379,8 @@ class Genetic(SurfaceExplorator):
                 self.population,
                 self.computer.get_duplicate_mask(self.population, self.comparison_algorithm),
             )
-            if not is_duplicate
+            if not is_duplicate #or ( ind in self.best_energies )
         ]
-
-        pop_size_after : int = len(self.population)
-
-        self.total_duplicates_removed = pop_size_before - pop_size_after
 
     def migrate(self) -> list[OptimizedIndividual]:
         migrated : list[Individual] = []
@@ -478,16 +504,27 @@ class Genetic(SurfaceExplorator):
         self.total_not_bonded_removed+= pop_size_before - pop_size_after
 
     def get_best_energy(self) -> None:
-        new_best_energies : list[OptimizedIndividual] = sorted(self.population, key = lambda mol : mol.energy)[:min(self.best_energy_num, len(self.population))]
+        new_best_energies : list[OptimizedIndividual] = sorted(
+            self.population,
+            key = lambda mol : mol.energy,
+        )[ : min( self.best_energy_num, len(self.population) ) ]
 
-        ind_diffs = [ind_a is not ind_b for ind_a, ind_b in zip(self.best_energies, new_best_energies)]
-
-        if any(ind_diffs):
-            self.best_energies = new_best_energies
-            self.best_energy = new_best_energies[0].energy
-            self.best_energy_loops = 0
+        if len(new_best_energies) == len(self.best_energies):
+            ind_equals = [
+                ind_a.id == ind_b.id or self.comparison_algorithm(ind_a, ind_b)
+                for ind_a, ind_b
+                in zip(self.best_energies, new_best_energies)
+            ]
+            if not all(ind_equals):
+                self.best_energy_loops = 0
+            else:
+                self.best_energy_loops+= 1
         else:
             self.best_energy_loops+= 1
+
+        self.best_energies = new_best_energies
+        self.best_energy = new_best_energies[0].energy
+        self.best_energy_history.append( [ind.energy for ind in self.best_energies] )
 
     def loop(self) -> bool:
 
@@ -503,17 +540,23 @@ class Genetic(SurfaceExplorator):
             mutants  : list[OptimizedIndividual] = self.mutate()
         else:
             children, mutants = [], []
+
+
         migrated : list[OptimizedIndividual] = self.migrate()
 
-        self.population+= children + mutants + migrated
+        self.population+= children
+        self.population+= mutants
+        self.population+= migrated
 
-        self.remove_unfeasible()
+        #self.remove_unfeasible()
         if self.do_remove_unbonded:
             self.remove_unbonded()
 
         self.remove_duplicates()
 
         self.get_best_energy()
+        if self.best_energy_loops == 0:
+            print("Energy minima reseted")
 
         self.generations.append(self.population.copy())
 
@@ -540,9 +583,16 @@ class Genetic(SurfaceExplorator):
             "total_mating"             : self.total_mating,
             "total_migrated"           : self.total_migrated,
 
-            "generations"              : [ [ind.id for ind in gen] for gen in self.generations ],
+            "generations"              : [
+                {
+                    "best_energy" : self.best_energy_history[i],
+                    "population"  : [ind.id for ind in gen],
+                }
+                for i, gen in enumerate(self.generations)
+            ],
             "population"               : [ind.id for ind in self.population],
             "population_ids"           : { k : v.as_data() for k, v in self.population_ids.items() },
+            "max_id"                   : self.max_id,
 
             "mutations"                : [(weight, mutation.as_data()) for weight, mutation in self.mutations],
             "crossovers"               : [(weight, crossover.as_data()) for weight, crossover in self.crossovers],
@@ -562,7 +612,8 @@ class Genetic(SurfaceExplorator):
     def save(self, file_path : str = "phaast_genetic") -> None:
         if not file_path.endswith(".json"): file_path+= ".json"
 
-        with open(file_path, "w") as file:
+        with open(file_path, "w") as file: 
+
             json_string = json.dumps(
                 self.as_data(),
                 sort_keys = True,
@@ -570,6 +621,7 @@ class Genetic(SurfaceExplorator):
             )
 
             # Removal of indentation in numeric lists was done with AI (improve that shit later)
+            # No, I ain't gonna learn regex
             json_string_f = re.sub(
                 r'\[[\s\d,\.\-]+\]',
                 lambda match: re.sub(r'\s+', ' ', match.group(0)).replace('[ ', '[').replace(' ]', ']'),
@@ -585,6 +637,10 @@ class Genetic(SurfaceExplorator):
             computer = Computer()
             xtb = XTB()
             computer.add_calculator(calculator_key, xtb)
+
+        population_ids = PopulationRegister()
+        for k, v in data["population_ids"].items():
+            population_ids[k] = Individual.from_data(v)
 
         algorithm = Genetic(
             population_size      = data["population_size"],
@@ -608,8 +664,32 @@ class Genetic(SurfaceExplorator):
 
             bonding_tolerance    = data["bonding_tolerance"],
 
-            generate_population  = False,
+            loaded               = True,
         )
+
+        algorithm.population_ids = population_ids
+        algorithm.generations = [
+            [
+                cast(OptimizedIndividual, population_ids[id])
+                for id in gen["population"]
+            ] for gen in data["generations"]
+        ]
+        algorithm.best_energy_history = [
+            gen["best_energy"]
+            for gen in data["generations"]
+        ]
+        algorithm.best_energies = [
+            cast(OptimizedIndividual, population_ids[id])
+            for id in data["best_energies"]
+        ]
+        algorithm.population = [
+            cast(OptimizedIndividual, population_ids[id])
+            for id in data["population"]
+        ]
+
+        for attr, value in data.items():
+            if isinstance(value, (int, float, bool)):
+                setattr(algorithm, attr, value)
 
         return algorithm
 
@@ -620,9 +700,11 @@ class Genetic(SurfaceExplorator):
             data : GeneticData = json.load(file)
 
             # Pop Ids keys are not ints, just converting here
-            for k in data["population_ids"].keys():
-                data["population_ids"][int(k)] = data["population_ids"][k]
-                del data["population_ids"][k]
+            data["population_ids"] = {
+                int(k) : v
+                for k, v
+                in data["population_ids"].items()
+            }
 
             return Genetic.from_data(data)
 
@@ -644,17 +726,24 @@ class Genetic(SurfaceExplorator):
             "Total Mutations"          : self.total_mutations,
             "Total Mating"             : self.total_mating,
             "Total Migrated"           : self.total_migrated,
+
+            "Migration Time"           : self.computer.migration_time,
+            "Crossover Time"           : self.computer.crossover_time,
+            "Mutation Time"            : self.computer.mutation_time,
+            "Optimization Time"        : self.computer.optimization_time,
+
+            "Minima"                   : [ind.as_data() for ind in self.get_best(self.best_energy_num)],
         }
-        report["Minima"] = [ind.as_data() for ind in self.get_best(self.best_energy_num)]
 
         return report
 
-    def save_report(self, file_path : str = "phaast_report"):
+    def save_report(self, file_path : str = "phaast_report") -> None:
         if not file_path.endswith(".json"): file_path+= ".json"
 
-        with open(file_path, "w") as file:
+        with open(file_path, "w") as file: 
+
             json_string = json.dumps(
-                self.as_data(),
+                self.get_report(),
                 sort_keys = True,
                 indent = "  ",
             )

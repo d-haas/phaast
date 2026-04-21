@@ -4,7 +4,7 @@ from cython.parallel import prange
 from phaast.vector cimport Vector
 from cpython cimport array
 
-import sys
+import sys, time
 
 from typing import Any, Callable, Iterable, Iterator, Optional, Self
 
@@ -90,7 +90,7 @@ class Base:
         """
         return iter(self.elements)
 
-    def to_formula(self) -> dict[str, int]:
+    def to_formula(self) -> str:
         element_counter = {}
         for element in self.elements:
             if element.symbol in element_counter:
@@ -98,13 +98,12 @@ class Base:
             else:
                 element_counter[element.symbol] = 1
 
-        return sum(
+        return "".join(
             [
                 symbol+str(num)
                 for symbol, num
                 in element_counter.items()
             ],
-            start = "",
         )
 
     def as_data(self) -> dict:
