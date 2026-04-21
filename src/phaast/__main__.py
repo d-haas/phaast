@@ -1,8 +1,8 @@
 import argparse
 import time
-import os
 
 from phaast.structure.comparator import BondingLength, ComparisonSequence, EnergyDifference, GrigoryanSpringborg
+from phaast.structure.primitives import Molecule
 from phaast.surface_explorator.genetic.crossover import PlaneMating
 from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMigrator
 from phaast.surface_explorator.genetic.mutation import DisplacementMutator, PermuteMutator, TwistMutator
@@ -19,24 +19,33 @@ arg_parser.add_argument(
     help = "The structure composition (example = C6H6)",
 )
 
+"""
 arg_parser.add_argument(
     "output_prefix",
     help = "Prefix of the output files (a prefix of \"OUTPUT\" will result in files named OUTPUT0, OUTPUT1, ...)",
 )
+"""
 
 arg_parser.add_argument(
-    "--return_number",
+    "--return-number",
     type = int,
-    default = 10,
+    default = 100,
     help = "Number of least energy molecules to return at the end of the algorithm (default = %(default)s)",
 )
 
 arg_parser.add_argument(
     "-pop",
-    "--population_size",
+    "--population-size",
     type = int,
     default = 10000,
     help = "Number of molecules in the population (default = %(default)s)",
+)
+
+arg_parser.add_argument(
+    "-best-num",
+    type = int,
+    default = 10,
+    help = "Number of unchanged minima to consider algorithm termination (default = %(default)s)",
 )
 
 arg_parser.add_argument(
@@ -62,7 +71,7 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
-    "--xtb_path",
+    "--xtb-path",
     type = str,
     default = "xtb",
     help = "Path to be used for the xtb binary (default = %(default)s)",
@@ -70,7 +79,7 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     "-et",
-    "--energy_threshold",
+    "--energy-threshold",
     type = float,
     default = 1e-3,
     help = "Maximum energy difference [in hartree] so molecules are considered alike (default = %(default)s)",
@@ -78,84 +87,84 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     "-gt",
-    "--geometry_threshold",
+    "--geometry-threshold",
     type = float,
     default = 0.87,
     help = "Maximum geometry difference so molecules are considered the same so one of them is discarded [must be a value between 0 and 1] (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--mut_disp_w",
+    "--mut-disp-w",
     type = float,
     default = 3,
     help = "Mutation displacement weight (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--mut_perm_w",
+    "--mut-perm-w",
     type = float,
     default = 2,
     help = "Mutation permutation weight (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--mut_twist_w",
+    "--mut-twist-w",
     type = float,
     default = 1,
     help = "Mutation twist weight (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--crov_w",
+    "--crov-w",
     type = float,
     default = 1,
     help = "Crossing-over weight (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--migr_w",
+    "--migr-w",
     type = float,
     default = 1,
     help = "Migrator weight (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--mut_disp_min",
+    "--mut-disp-min",
     type = float,
     default = 1.3,
     help = "Minimum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--mut_disp_max",
+    "--mut-disp-max",
     type = float,
     default = 2.3,
     help = "Maximum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--mut_disp_num",
+    "--mut-disp-num",
     type = int,
     default = 1,
     help = "Number of atoms to move in mutations of atomic displacement (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--mut_perm_num",
+    "--mut-perm-num",
     type = int,
     default = 0,
     help = "Number of permutations in mutations of that type (default = Half the number of atoms)",
 )
 
 arg_parser.add_argument(
-    "--mut_twist_min_angle",
+    "--mut-twist-min-angle",
     type = float,
     default = 90,
     help = "Minimum angle to be used in twist mutations (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--mut_twist_max_angle",
+    "--mut-twist-max-angle",
     type = float,
     default = 270,
     help = "Maximum angle to be used in twist mutations (default = %(default)s)",
@@ -163,31 +172,31 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     "-loops",
-    "--end_loop_number",
+    "--end-loop-number",
     default = 11,
     type = int,
     help = "Number of loops the algorithm will run with the least energy molecule until a new one is found, terminating it (default = %(default)s)",
 )
 
 arg_parser.add_argument(
-    "--comparison_algorithm",
-    default = "grigoryan_springborg",
+    "--comparison-algorithm",
+    default = "grigoryan-springborg",
     type = str,
     help = """Algorithm to be used for structures comparison, the recomendes usage is:
-\t- \"grigoryan_springborg\" for clusters;
-\t- \"bonding_length\" for organic and general shaped structures (check --comparison_bonding_tolerance too);
+\t- \"grigoryan-springborg\" for clusters;
+\t- \"bonding-length\" for organic and general shaped structures (check --comparison-bonding-tolerance too);
 (default = %(default)s)""",
 )
 
 arg_parser.add_argument(
-    "--comparison_bonding_tolerance",
+    "--comparison-bonding-tolerance",
     default = 0.25,
     type = float,
-    help = "Distance tolerable so two atoms can be considered bonded within the haas_oliveira molecule comparison algorithm",
+    help = "Distance tolerable so two atoms can be considered bonded within the bonding-length molecule comparison algorithm",
 )
 
 arg_parser.add_argument(
-    "--remove_unbonded",
+    "--remove-unbonded",
     default = "always",
     help = """Choose to not remove unbonded structures from genetic algorithm population
 \t- \"always\": Remove unbonded in every loop;
@@ -196,6 +205,19 @@ arg_parser.add_argument(
 (default = %(default)s)""",
 )
 
+arg_parser.add_argument(
+    "--benchmark-structure",
+    default = "",
+    type = str,
+    help = """Input Molecule (xyz with energy) to be used at the end to determine if the benchmark was successfull of not""",
+)
+
+arg_parser.add_argument(
+    "--benchmark-num",
+    default = 100,
+    type = int,
+    help = """Number of benchmarks to run to define a result"""
+)
 
 arg_parser.add_argument(
     "-v",
@@ -204,12 +226,6 @@ arg_parser.add_argument(
 )
 
 args = arg_parser.parse_args()
-print(f"Args: {args}")
-
-actual_cwd = os.getcwd()
-os.chdir(
-    "/".join(__file__.split("/")[:-1])
-)
 
 from phaast.calculators.xtb import XTB
 from phaast.computer import Computer
@@ -278,12 +294,12 @@ bonding_length_comparator = BondingLength(args.geometry_threshold, bonding_toler
 
 
 match args.comparison_algorithm:
-    case "bonding_length":
+    case "bonding-length":
         comparison_algorithm = ComparisonSequence(
             EnergyDifference(args.energy_threshold),
             bonding_length_comparator,
         )
-    case "grigoryan_springborg":
+    case "grigoryan-springborg":
         comparison_algorithm = ComparisonSequence(
             EnergyDifference(args.energy_threshold),
             grigoryan_springborg,
@@ -299,57 +315,107 @@ if args.remove_unbonded == "always":
 else:
     do_remove_unbonded = False
 
-genetic = Genetic(
-    population_size = args.population_size,
-    computer = computer,
-    calculator = "xtb",
+def new_genetic() -> Genetic:
+    return Genetic(
+        population_size = args.population_size,
+        computer = computer,
+        calculator = "xtb",
 
-    mutations = mutators,
-    crossovers = crossover, #type: ignore
-    migrators = migrator, #type: ignore
+        mutations = mutators,
+        crossovers = crossover, #type: ignore
+        migrators = migrator, #type: ignore
 
-    comparison_algorithm = comparison_algorithm,
+        comparison_algorithm = comparison_algorithm,
 
-    do_remove_unbonded = do_remove_unbonded,
+        do_remove_unbonded = do_remove_unbonded,
 
-    end_loop_number = args.end_loop_number,
-)
+        end_loop_number = args.end_loop_number,
 
-while genetic.loop():
+        best_energy_num = args.best_num,
+    )
+
+def run_genetic(
+    save_name = "phaast_genetic",
+    report_name = "phaast_report",
+    output_name = "OUTPUT_PHAAST_",
+):
+    genetic = new_genetic()
+    while genetic.loop():
+        print("╔"+"═"*57+"╗")
+        print("║"+f" Generation {genetic.cycle_counter} done".ljust(57)+"║")
+        print("║"+f" Best energy: {genetic.best_energy}".ljust(57)+"║")
+        print("║"+f" Population size: {len(genetic.population)}".ljust(57)+"║")
+        print("╚"+"═"*57+"╝")
+
+        genetic.save(f"{save_name}_temp")
+        genetic.save(save_name)
+
+    end = time.monotonic_ns()
+    delta_time = (end - start)/1e9
+
+    if args.remove_unbonded == "final":
+        genetic.remove_unbonded()
+
+    best = sorted(
+        genetic.population,
+        key = lambda mol: mol.energy,
+    )
+
+    best_list = best[0 : min(len(best), args.return_number)]
+
     print("╔"+"═"*57+"╗")
-    print("║"+f" Generation {genetic.cycle_counter} done".ljust(57)+"║")
-    print("║"+f" Best energy: {genetic.best_energy}".ljust(57)+"║")
-    print("║"+f" Population size: {len(genetic.population)}".ljust(57)+"║")
+    print("║"+f"The process is done. Elapsed time: {round(delta_time)} s".ljust(57)+"║")
+    print("║"+f"Total optimizations: {genetic.total_optimizations} ({genetic.computer.optimization_time} s)".ljust(57)+"║")
+    print("║"+f"Total converged: {genetic.total_converged}".ljust(57)+"║")
+    print("║"+f"Total duplicates removed: {genetic.total_duplicates_removed}".ljust(57)+"║")
+    print("║"+f"Total unfeasible removed: {genetic.total_unfeasible_removed}".ljust(57)+"║")
+    print("║"+f"Total not-bonded removed: {genetic.total_not_bonded_removed}".ljust(57)+"║")
+    print("║"+f"Total migration: {genetic.total_migrated} ({genetic.computer.migration_time} s)".ljust(57)+"║")
+    print("║"+f"Total mutations: {genetic.total_mutations} ({genetic.computer.mutation_time} s)".ljust(57)+"║")
+    print("║"+f"Total crossovers: {genetic.total_mating} ({genetic.computer.crossover_time} s)".ljust(57)+"║")
     print("╚"+"═"*57+"╝")
 
-end = time.monotonic_ns()
-delta_time = (end - start)/1e9
 
-if args.remove_unbonded == "final":
-    genetic.remove_unbonded()
+    max_num_len = len(str( len(best_list)-1 ))
+    for i, mol in enumerate(best_list):
+        out_num = str(i).rjust(max_num_len, "0")
+        mol.to_xyz(f"{output_name}{out_num}.xyz")
 
-best = sorted(
-    genetic.population,
-    key = lambda mol: mol.energy,
-)
+    genetic.save(save_name)
+    genetic.save_report(report_name)
 
-best_list = best[0 : min(len(best), args.return_number)]
+    return genetic
 
-print("╔"+"═"*57+"╗")
-print("║"+f"The process is done. Elapsed time: {round(delta_time)} s".ljust(57)+"║")
-print("║"+f"Total optimizations: {genetic.total_optimizations}".ljust(57)+"║")
-print("║"+f"Total converged: {genetic.total_converged}".ljust(57)+"║")
-print("║"+f"Total duplicates removed: {genetic.total_duplicates_removed}".ljust(57)+"║")
-print("║"+f"Total unfeasible removed: {genetic.total_unfeasible_removed}".ljust(57)+"║")
-print("║"+f"Total not-bonded removed: {genetic.total_not_bonded_removed}".ljust(57)+"║")
-print("║"+f"Total migration: {genetic.total_migrated}".ljust(57)+"║")
-print("║"+f"Total mutations: {genetic.total_mutations}".ljust(57)+"║")
-print("║"+f"Total crossovers: {genetic.total_mating}".ljust(57)+"║")
-print("╚"+"═"*57+"╝")
+if args.benchmark_structure:
+    benchmark_mol = Molecule.from_xyz(args.benchmark_structure)
+    max_num_len = len(str( args.benchmark_num-1 ))
+    accumulated_success = 0
+    for i in range(args.benchmark_num):
+        out_num = str(i).rjust(max_num_len, "0")
+        genetic = run_genetic(
+            save_name = f"phaast_genetic_benchmark_{out_num}",
+            report_name = f"phaast_report_{out_num}",
+            output_name = f"OUTPUT_PHAAST_{out_num}_",
+        )
+        best = sorted(
+            genetic.population,
+            key = lambda mol: mol.energy,
+        )
+        best_list = best[0 : min(len(best), args.return_number)]
+        best_found = []
+        for j, mol in enumerate(best_list):
+            if comparison_algorithm(mol, benchmark_mol):
+                best_found.append(j)
 
-os.chdir(actual_cwd)
+        if best_found:
+            accumulated_success+= 1
 
-for i, mol in enumerate(best_list):
-    mol.to_xyz(f"{args.output_prefix}{i}.xyz")
+        print("╔"+"═"*57+"╗")
+        print("║"+" "*57+"║")
+        print("║"+f"Benchmark status: {accumulated_success}/{i+1} ({accumulated_success/(i+1)} %)".ljust(57)+"║")
+        print("║"+" "*57+"║")
+        print("╚"+"═"*57+"╝")
 
-genetic.save()
+
+else:
+    run_genetic()
