@@ -32,6 +32,10 @@ Homepage = "https://github.com/D-Haas/phaast"
 Documentation = "https://d-haas.github.io/phaast/main.html"
 Issues = "https://github.com/D-Haas/phaast/issues"
 
+[project.scripts]
+phaast = "phaast.__main__:main"
+phaast-gui = "phaast.gui.__main__:main"
+
 [build-system]
 requires = [
   "setuptools >= 80.0.0",
