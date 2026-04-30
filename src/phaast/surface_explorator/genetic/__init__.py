@@ -80,6 +80,7 @@ class GeneticComputer(Computer):
     crossover_time_ns    : int
     migration_time_ns    : int
     optimization_time_ns : int
+    duplicate_time_ns    : int
     def __init__(self, parent : Genetic, computer : Computer, calculator : str):
         super().__init__(computer.cpu_count_limit)
         self.parent = parent
@@ -89,6 +90,7 @@ class GeneticComputer(Computer):
         self.crossover_time_ns    = 0
         self.migration_time_ns    = 0
         self.optimization_time_ns = 0
+        self.duplicate_time_ns    = 0
 
     @property
     def mutation_time(self) -> float:
@@ -102,6 +104,9 @@ class GeneticComputer(Computer):
     @property
     def optimization_time(self):
         return self.optimization_time_ns/1e9
+    @property
+    def duplicate_time(self):
+        return self.duplicate_time_ns/1e9
 
     def mutate(self, structs : Iterable[Individual], mutator : Mutator) -> list[MutantIndividual]:
         start = time.monotonic_ns()
@@ -218,6 +223,8 @@ class GeneticComputer(Computer):
         return False
 
     def get_duplicate_mask(self, inds : Sequence[OptimizedIndividual], comparison_algorithm : ComparisonAlgorithm) -> list[bool]:
+        start = time.monotonic_ns()
+
         mask = self.parallelize(
             [
                 (i, inds, comparison_algorithm)
@@ -226,6 +233,9 @@ class GeneticComputer(Computer):
             self.get_duplicate,
         )
         self.parent.total_duplicates_removed+= mask.count(True)
+
+        self.duplicate_time_ns+= time.monotonic_ns()-start
+
         return mask
 
 
@@ -731,6 +741,7 @@ class Genetic(SurfaceExplorator):
             "Crossover Time"           : self.computer.crossover_time,
             "Mutation Time"            : self.computer.mutation_time,
             "Optimization Time"        : self.computer.optimization_time,
+            "Duplicate removal time"   : self.computer.duplicate_time,
 
             "Minima"                   : [ind.as_data() for ind in self.get_best(self.best_energy_num)],
         }
@@ -762,3 +773,39 @@ class Genetic(SurfaceExplorator):
             self.population,
             key = lambda ind : ind.energy,
         )[ : min(n, len(self.population) ) ]
+
+    #Using list constructor as default might result in some shenanigans
+    def status(self, fields : list[str] = []):
+        return "\n".join(
+            [
+                "╔"+"═"*57+"╗",
+            ] + [
+                "║"+line.ljust(57)+"║"
+                for line in fields
+            ] + [
+                "║"+f" Generation {self.cycle_counter} done".ljust(57)+"║",
+                "║"+f" Best energy: {self.best_energy}{"*" if self.best_energy_loops == 0 else ""}".ljust(57)+"║",
+                "║"+f" Population size: {len(self.population)}".ljust(57)+"║",
+                "╚"+"═"*57+"╝",
+            ],
+        )
+
+    def statistics(self, fields : list[str] = []) -> str:
+        return "\n".join(
+            [
+                "╔"+"═"*57+"╗",
+            ] + [
+                "║"+line.ljust(57)+"║"
+                for line in fields
+            ] + [
+                "║"+f"Total optimizations: {self.total_optimizations} ({self.computer.optimization_time} s)".ljust(57)+"║",
+                "║"+f"Total converged: {self.total_converged}".ljust(57)+"║",
+                "║"+f"Total duplicates removed: {self.total_duplicates_removed} ({self.computer.duplicate_time} s)".ljust(57)+"║",
+                "║"+f"Total unfeasible removed: {self.total_unfeasible_removed}".ljust(57)+"║",
+                "║"+f"Total not-bonded removed: {self.total_not_bonded_removed}".ljust(57)+"║",
+                "║"+f"Total migration: {self.total_migrated} ({self.computer.migration_time} s)".ljust(57)+"║",
+                "║"+f"Total mutations: {self.total_mutations} ({self.computer.mutation_time} s)".ljust(57)+"║",
+                "║"+f"Total crossovers: {self.total_mating} ({self.computer.crossover_time} s)".ljust(57)+"║",
+                "╚"+"═"*57+"╝",
+            ]
+        )
