@@ -212,8 +212,8 @@ class GeneticComputer(Computer):
         i_energy = inds[i].energy
         for rng in ( range(i), range(i+1, len(inds)) ):
             for j in rng:
-                j_id = inds[j].id
                 if comparison_algorithm(inds[i], inds[j]):
+                    j_id = inds[j].id
                     j_energy = inds[j].energy
                     if i_energy > j_energy:
                         return True
@@ -365,13 +365,13 @@ class Genetic(SurfaceExplorator):
 
             self.generations.append(self.population.copy())
 
-            self.best_energies = sorted(self.population, key = lambda mol : mol.energy)[:min(self.best_energy_num, len(self.population))]
-            self.best_energy = self.best_energies[0].energy
+            self.best_energies       = sorted(self.population, key = lambda mol : mol.energy)[:min(self.best_energy_num, len(self.population))]
+            self.best_energy         = self.best_energies[0].energy
             self.best_energy_history = [[ind.energy for ind in self.best_energies], ]
 
         else:
-            self.best_energies = []
-            self.best_energy = 0
+            self.best_energies       = []
+            self.best_energy         = 0
             self.best_energy_history = []
 
 
@@ -514,23 +514,32 @@ class Genetic(SurfaceExplorator):
         self.total_not_bonded_removed+= pop_size_before - pop_size_after
 
     def get_best_energy(self) -> None:
+        """
+        Refresh algorithm's energy list with the new one
+        and reset energy loop counter if it has changed
+        or add 1 otherwise
+        """
         new_best_energies : list[OptimizedIndividual] = sorted(
+            # New energies
             self.population,
-            key = lambda mol : mol.energy,
+            key = lambda ind : (ind.energy, ind.id),
         )[ : min( self.best_energy_num, len(self.population) ) ]
 
         if len(new_best_energies) == len(self.best_energies):
-            ind_equals = [
+            ind_equals : list[bool] = [
+                # A list that determines if the last best energies are equal to
+                # the new ones, even if the structure are not the same
+                # (but are geometrically/energetically equal)
                 ind_a.id == ind_b.id or self.comparison_algorithm(ind_a, ind_b)
                 for ind_a, ind_b
                 in zip(self.best_energies, new_best_energies)
             ]
-            if not all(ind_equals):
-                self.best_energy_loops = 0
-            else:
+            if all(ind_equals):
                 self.best_energy_loops+= 1
+            else:
+                self.best_energy_loops = 0
         else:
-            self.best_energy_loops+= 1
+            self.best_energy_loops = 0
 
         self.best_energies = new_best_energies
         self.best_energy = new_best_energies[0].energy
@@ -565,8 +574,6 @@ class Genetic(SurfaceExplorator):
         self.remove_duplicates()
 
         self.get_best_energy()
-        if self.best_energy_loops == 0:
-            print("Energy minima reseted")
 
         self.generations.append(self.population.copy())
 
