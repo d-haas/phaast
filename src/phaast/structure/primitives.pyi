@@ -90,6 +90,7 @@ def create_atom(atomic_number : AtomicNumber, pos : Vector) -> Atom:
 class AtomData(TypedDict):
     z   : int
     pos : VectorData
+    charge : float
 
 class Atom(Element):
     """
@@ -97,6 +98,7 @@ class Atom(Element):
     in space
     """
     pos : Vector
+    p_charge : float
     def __init__(self, atomic_number : AtomicNumber, pos : Optional[Vector] = None):
         pass
 

@@ -196,13 +196,16 @@ cdef class Atom(Element):
     """
 
     pos : Vector
+    p_charge : double
 
-    def __init__(self, atomic_number : cython.uint, pos : Vector = None):
+    def __init__(self, atomic_number : cython.uint, pos : Vector = None, charge : cython.double = 0):
         super().__init__(atomic_number)
         if pos:
             self.pos = pos.copy()
         else:
             self.pos = Vector()
+
+        self.p_charge = charge
 
     def is_touching(self, other : Self, bonding_tolerance : float = 0) -> bool:
         """
@@ -268,11 +271,12 @@ cdef class Atom(Element):
         return {
             "z" : self.z,
             "pos" : self.pos.as_data(),
+            "charge" : self.p_charge,
         }
 
     @classmethod
     def from_data(self, data : dict) -> Atom:
-        return Atom(data["z"], Vector.from_data(data["pos"]))
+        return Atom(data["z"], Vector.from_data(data["pos"]), data["charge"])
     
     def __reduce__(self):
         return (create_atom, (self.z, self.pos))

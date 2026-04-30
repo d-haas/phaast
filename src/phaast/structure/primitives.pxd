@@ -6,6 +6,7 @@ cdef class Element:
 cpdef Atom create_atom(unsigned int atomic_number, Vector pos)
 cdef class Atom(Element):
     cdef public Vector pos
+    cdef public double p_charge
 
 cpdef Structure create_structure(object atoms)
 cdef class Structure:

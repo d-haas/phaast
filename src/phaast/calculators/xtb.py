@@ -87,6 +87,14 @@ class XTB(Calculator):
 
                 if os.path.exists(dir+"/xtbopt.xyz"):
                     molecule = Molecule.from_xyz(dir+"/xtbopt.xyz")
+                    with open(dir+"/charges") as chrg_file:
+                        charges : list[float] = [
+                            float(line)
+                            for line
+                            in chrg_file.read().splitlines()
+                        ]
+                    for atom, charge in zip(molecule, charges):
+                        atom.p_charge = charge
                 else:
                     molecule = None
 
