@@ -5,7 +5,7 @@ from phaast.utils import ObjectData
 
 from phaast.structure import Molecule
 
-from phaast.structure.comparator.c_comparators import grigoryan_springborg, bonding_length
+from phaast.structure.comparator.c_comparators import charge_difference, grigoryan_springborg, bonding_length
 
 class ComparisonAlgorithm(Protocol):
     def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:...
@@ -22,12 +22,13 @@ class ComparisonSequence(ComparisonAlgorithm):
         self.algorithms = algorithms
 
     def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:
-        for algorithm in self.algorithms:
-            if algorithm(mol1, mol2):
-                return True
-
-        return False
-
+        return all(
+            (
+                algorithm(mol1, mol2)
+                for algorithm
+                in self.algorithms
+            )
+        )
 
     def as_data(self) -> ObjectData:
         return {
@@ -89,5 +90,23 @@ class BondingLength(ComparisonAlgorithm):
         return {
             "import_path" : "phaast.structure.comparator.BondingLength",
             "args"        : (self.tolerance, self.bonding_tolerance),
+            "kwargs"      : {},
+        }
+
+class ChargeComparator(ComparisonAlgorithm):
+    __slots__ = ("tolerance",)
+
+    tolerance : float
+
+    def __init__(self, tolerance : float):
+        self.tolerance = tolerance
+
+    def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:
+        return charge_difference(Molecule(mol1, mol1.energy), Molecule(mol2, mol2.energy), self.tolerance)
+
+    def as_data(self) -> ObjectData:
+        return {
+            "import_path" : "phaast.structure.comparator.ChargeComparator",
+            "args"        : (self.tolerance,),
             "kwargs"      : {},
         }

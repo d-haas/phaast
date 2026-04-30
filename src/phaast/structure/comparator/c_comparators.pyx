@@ -1,4 +1,4 @@
-from libc.math cimport fabs
+from libc.math cimport fabs, sqrt
 from phaast.vector cimport Vector
 from phaast.structure.primitives cimport Molecule
 from cython.parallel import prange
@@ -69,7 +69,7 @@ cpdef bool grigoryan_springborg(Molecule mol1, Molecule mol2, double tolerance):
         ])
 
     # Calculate final value of Grigoryan-Springborg algorithm
-    cdef double q = ( ( 2/(atoms_num*(atoms_num-1)) ) * sum_distances_squared_diff )**.5
+    cdef double q = sqrt( ( 2/(atoms_num*(atoms_num-1)) ) * sum_distances_squared_diff )
     cdef double s = 1 / ( 1 + q )
 
     return s > tolerance
@@ -102,3 +102,38 @@ cpdef bool bonding_length(Molecule mol1, Molecule mol2, double tolerance, double
 
     # Use said variable (with positive value) to obtain a number between 1 and 0
     return 1 / (1 + square_distances_difference_sum) > tolerance
+
+cpdef bool charge_difference(Molecule mol1, Molecule mol2, double tolerance):
+
+    cdef int atoms_num = len(mol1) # Number of atoms in structure
+
+    #Check if number of atoms is the same in both structures
+    assert mol1.is_equal_to(mol2), "Both structure should have the same number of atoms"
+
+    charges1 = {}
+    for atom in mol1:
+        if atom.z in charges1:
+            charges1[atom.z].append(atom.p_charge)
+        else:
+            charges1[atom.z] = [atom.p_charge]
+
+    charges2 = {}
+    for atom in mol2:
+        if atom.z in charges2:
+            charges2[atom.z].append(atom.p_charge)
+        else:
+            charges2[atom.z] = [atom.p_charge]
+
+    cdef double sum_distances_squared_diff = 0
+    for z in charges1:
+        sum_distances_squared_diff+= sum([
+            ( c1 - c2 )**2
+            for c1, c2
+            in zip(charges1[z], charges2[z])
+        ])
+
+
+    cdef double q = sqrt( sum_distances_squared_diff/atoms_num )
+    cdef double s = 1 / ( 1 + q )
+
+    return s > tolerance
