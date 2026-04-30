@@ -49,6 +49,7 @@ class MenuBar(tk.Menu):
         genetic_frame = GeneticFrame(
             window.child,
             algorithm = algorithm,
+            gui = self.root,
         )
 
         play_button = tk.Button(

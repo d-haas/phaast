@@ -41,7 +41,7 @@ class ViewerOptions(tk.Menu):
         )
 
     def new_window_xyz(self):
-        structure = self.viewer.structure.copy()
+        structure = Structure(self.viewer.structure).copy()
         structure.center_mass()
 
         window = self.root.create_window(w = 590, h = 340)

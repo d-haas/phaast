@@ -4,8 +4,12 @@ import threading
 import time
 from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple, cast
 
+if TYPE_CHECKING:
+    from phaast.gui.gui import GUI
+
 import tkinter as tk
 
+from phaast.gui.viewer_window import ViewerOptions
 from phaast.structure import Structure
 from phaast.structure.primitives import Atom
 from phaast.surface_explorator.genetic.individual import ChildIndividual, Individual, MutantIndividual, OptimizedIndividual
@@ -338,7 +342,7 @@ class GeneticFrame(tk.Frame):
     is_running : bool
     has_ended : bool
 
-    def __init__(self, master : tk.Misc, algorithm : Genetic, *args, **kwargs):
+    def __init__(self, master : tk.Misc, algorithm : Genetic, gui : GUI, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.algorithm = algorithm
         self.is_running = False
@@ -352,6 +356,7 @@ class GeneticFrame(tk.Frame):
 
         self.viewer = MolViewer(self)
         self.viewer.animate = 1
+        self.menu = ViewerOptions(self.viewer, gui)
         self.generation_list = GenerationList(
             self,
             algorithm = self.algorithm,
