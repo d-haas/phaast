@@ -112,7 +112,7 @@ class GeneticComputer(Computer):
         start = time.monotonic_ns()
 
         mutants = self.parallelize(
-            ((struct,) for struct in structs),
+            [(struct,) for struct in structs],
             mutator,
         )
 
