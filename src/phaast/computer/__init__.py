@@ -12,19 +12,17 @@ from typing import Any, Callable, Iterable, overload
 
 from phaast.structure import Molecule, Structure
 
-
 from phaast.calculators import Calculator
 
 class BaseComputer(ABC):
     cpu_count_limit : int # Maximum number of processes the computer can handle (or performs the best)
-    #memory_limit : int # Maximum memory the software can use (in KiB)
-    #calculators : list[Calculator] 
     calculators : dict[str, Calculator] 
-    #max_processes : dict[Calculator, int] # Calculators that will be used the for software
 
     @abstractmethod
-    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule | None]:
-        pass
+    def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule | None]: ...
+
+    @abstractmethod
+    def parallelize[T](self, args : Iterable[tuple[Any, ...]] | int, func : Callable[..., T], chunksize : int | None = None) -> list[T]: ...
 
 
 class Computer(BaseComputer):
@@ -64,18 +62,27 @@ class Computer(BaseComputer):
             return [mol for mol in molecules]
 
     def parallelize[T](self, args : Iterable[tuple[Any, ...]] | int, func : Callable[..., T], chunksize : int | None = None) -> list[T]:
+        """
+        Run any task in parallel
+        Since its supposed to run with the genetic algorithm,
+        chunksize was tuned for that purpose
+        (huge quantities of processes (>>> cpu_count))
+        """
+
         with Pool(self.cpu_count_limit) as pool:
             if isinstance(args, int):
                 return pool.starmap(
                     func,
                     [() for _ in range(args)],
-                    chunksize=chunksize,
+                    chunksize=chunksize if chunksize else args//self.cpu_count_limit,
                 )
             else:
+                size_args = sum((1 for _ in args),)
+                chunk_size = chunksize if chunksize else max(round((size_args/self.cpu_count_limit)/100), 1)
                 return pool.starmap(
                     func,
                     args,
-                    chunksize=chunksize,
+                    chunksize = chunk_size,
                 )
 
     def add_calculator(self, key : str, calculator : Calculator) -> None:
