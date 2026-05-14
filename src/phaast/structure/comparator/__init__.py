@@ -22,13 +22,10 @@ class ComparisonSequence(ComparisonAlgorithm):
         self.algorithms = algorithms
 
     def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:
-        return all(
-            (
-                algorithm(mol1, mol2)
-                for algorithm
-                in self.algorithms
-            )
-        )
+        for algorithm in self.algorithms:
+            if not algorithm(mol1, mol2):
+                return False
+        return True
 
     def as_data(self) -> ObjectData:
         return {
@@ -42,7 +39,7 @@ class EnergyDifference(ComparisonAlgorithm):
 
     tolerance : float
 
-    def __init__(self, tolerance : float = 1e-4):
+    def __init__(self, tolerance : float = 5e-5):
         self.tolerance = tolerance
 
     def __call__(self, mol1 : Molecule, mol2 : Molecule) -> bool:
