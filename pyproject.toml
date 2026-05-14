@@ -48,7 +48,7 @@ build-backend = "setuptools.build_meta"
 ext-modules = [
 # Independent (cimported) modules 
   { name = "phaast.utils.c_random", sources = ["src/phaast/utils/c_random.pyx"] },
-  { name = "phaast.vector", sources = ["src/phaast/vector.pyx"] },
+  { name = "phaast.vector", sources = ["src/phaast/vector.py"] },
 
 # Structure
   { name = "phaast.structure.primitives", sources = ["src/phaast/structure/primitives.pyx"] },
