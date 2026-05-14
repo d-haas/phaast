@@ -1,6 +1,8 @@
 from __future__ import annotations
 import time
 from typing import Any, Iterable, Optional, Sequence, TypedDict, cast, TYPE_CHECKING
+
+from phaast.structure.constants import AtomicNumber
 if TYPE_CHECKING:
     from phaast.surface_explorator.genetic.individual import IndividualData
 import random
@@ -74,8 +76,8 @@ class PopulationRegister(dict[int, Individual]):
             super().__setitem__(key, value)
 
 class GeneticComputer(Computer):
-    parent : Genetic
-    chosen_calculator : str
+    parent               : Genetic
+    chosen_calculator    : str
     mutation_time_ns     : int
     crossover_time_ns    : int
     migration_time_ns    : int
@@ -251,6 +253,7 @@ class Genetic(SurfaceExplorator):
 
     comparison_algorithm : ComparisonAlgorithm
     do_remove_unbonded   : bool
+    do_remove_unfeasible : bool
 
     mutations  : list[tuple[float, Mutator]]
     crossovers : list[tuple[float, Crossover]]
@@ -291,6 +294,7 @@ class Genetic(SurfaceExplorator):
 
         comparison_algorithm : ComparisonAlgorithm = GrigoryanSpringborg(0.85),
         do_remove_unbonded    : bool = True,
+        do_remove_unfeasible  : bool = False,
 
         minimum_lifetime : int = -1,
 
@@ -567,9 +571,8 @@ class Genetic(SurfaceExplorator):
         self.population+= mutants
         self.population+= migrated
 
-        #self.remove_unfeasible()
-        if self.do_remove_unbonded:
-            self.remove_unbonded()
+        if self.do_remove_unfeasible: self.remove_unfeasible()
+        if self.do_remove_unbonded: self.remove_unbonded()
 
         self.remove_duplicates()
 

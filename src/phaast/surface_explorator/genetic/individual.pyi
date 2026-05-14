@@ -40,35 +40,6 @@ class Individual(Structure):
     @classmethod
     def from_data(cls, data : IndividualData) -> Individual: ... # type: ignore[override]
 
-    """
-    @classmethod
-    def from_data(cls, data : IndividualData) -> Individual: # type: ignore[override]
-        if data["type"] == "default":
-            ind = Individual(
-                Molecule.from_data(data),
-                data["id"],
-            )
-
-        elif data["type"] == "child":
-            data : ChildIndividualData = cast(ChildIndividualData, data)
-            ind = ChildIndividual(
-                Molecule.from_data(data),
-                (dummy_individual, dummy_individual),
-                data["id"],
-            )
-            ind.parent_a = data["parent_a"]
-            ind.parent_b = data["parent_b"]
-
-        elif data["type"] == "mutant":
-            data = MutantIndividualData = cast(MutantIndividualData, data)
-            ind = MutantIndividual(
-                Molecule.from_data(data),
-                dummy_individual,
-                data["id"],
-            )
-    """
-
-
 class ChildIndividual(Individual):
     parents : tuple[int, int]
 

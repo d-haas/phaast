@@ -2,12 +2,19 @@ import argparse
 import time
 
 from phaast.structure.comparator import BondingLength, ChargeComparator, ComparisonSequence, EnergyDifference, GrigoryanSpringborg
-from phaast.structure.primitives import Molecule
+from phaast.structure.primitives import Molecule, Structure
 from phaast.surface_explorator.genetic.crossover import PlaneMating
 from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMigrator
 from phaast.surface_explorator.genetic.mutation import DisplacementMutator, PermuteMutator, TwistMutator
 
+from phaast.calculators.xtb import XTB
+from phaast.computer import Computer
+from phaast.structure import Base
+from phaast.surface_explorator.genetic.migration.filter_list import FilterList, FilterMode
+from phaast.surface_explorator.genetic import Genetic
+
 def main():
+    print("Test version 2026.05.13c")
     arg_parser = argparse.ArgumentParser(
         prog="P.H.A.A.S.T",
         description="A heuristic-algorithm-driven software made for global minima search",
@@ -83,7 +90,7 @@ def main():
         "-et",
         "--energy-threshold",
         type = float,
-        default = 1e-3,
+        default = 5e-5,
         help = "Maximum energy difference [in hartree] so molecules are considered alike (default = %(default)s)",
     )
 
@@ -91,7 +98,7 @@ def main():
         "-gt",
         "--geometry-threshold",
         type = float,
-        default = 0.85,
+        default = 0.80,
         help = "Maximum geometry difference so molecules are considered the same so one of them is discarded [must be a value between 0 and 1] (default = %(default)s)",
     )
 
@@ -99,7 +106,7 @@ def main():
         "-ct",
         "--charge-threshold",
         type = float,
-        default = 0.95,
+        default = 0.90,
         help = "Maximum partial charge difference so molecules are considered the same so one of them is discarded [must be a value between 0 and 1] (default = %(default)s)",
     )
 
@@ -141,14 +148,14 @@ def main():
     arg_parser.add_argument(
         "--mut-disp-min",
         type = float,
-        default = 1.3,
+        default = 1.0,
         help = "Minimum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
     )
 
     arg_parser.add_argument(
         "--mut-disp-max",
         type = float,
-        default = 2.3,
+        default = 3.0,
         help = "Maximum distance (Å) to be used in mutation of atomic displacement (default = %(default)s)",
     )
 
@@ -162,7 +169,7 @@ def main():
     arg_parser.add_argument(
         "--mut-perm-num",
         type = int,
-        default = 0,
+        default = 1,
         help = "Number of permutations in mutations of that type (default = Half the number of atoms)",
     )
 
@@ -210,21 +217,26 @@ def main():
         default = "always",
         help = """Choose to not remove unbonded structures from genetic algorithm population
     \t- \"always\": Remove unbonded in every loop;
-    \t- \"final\": Remove only from final population to not contaminate results;
-    \t- \"never\": Do not remove unbonded;
+    \t- \"final\" : Remove only from final population to not contaminate results;
+    \t- \"never\" : Do not remove unbonded;
     (default = %(default)s)""",
+    )
+
+    arg_parser.add_argument(
+        "--remove-unfeasible",
+        action="store_true",
     )
 
     arg_parser.add_argument(
         "--benchmark-structure",
         default = "",
         type = str,
-        help = """Input Molecule (xyz with energy) to be used at the end to determine if the benchmark was successfull of not""",
+        help = """Input Molecule (xyz with energy optimized from xTB, Orca or Phaast) to be used at the end to determine if the benchmark was successfull of not""",
     )
 
     arg_parser.add_argument(
         "--benchmark-num",
-        default = 100,
+        default = 10,
         type = int,
         help = """Number of benchmarks to run to define a result"""
     )
@@ -236,12 +248,6 @@ def main():
     )
 
     args = arg_parser.parse_args()
-
-    from phaast.calculators.xtb import XTB
-    from phaast.computer import Computer
-    from phaast.structure import Base
-    from phaast.surface_explorator.genetic.migration.filter_list import FilterList, FilterMode
-    from phaast.surface_explorator.genetic import Genetic
 
     base = Base(args.stoichiometry)
 
@@ -309,13 +315,13 @@ def main():
         case "bonding-length":
             comparison_algorithm = ComparisonSequence(
                 EnergyDifference(args.energy_threshold),
-                ChargeComparator(args.charge_threshold),
+                #ChargeComparator(args.charge_threshold),
                 bonding_length_comparator,
             )
         case "grigoryan-springborg":
             comparison_algorithm = ComparisonSequence(
                 EnergyDifference(args.energy_threshold),
-                ChargeComparator(args.charge_threshold),
+                #ChargeComparator(args.charge_threshold),
                 grigoryan_springborg,
             )
         case _:
@@ -342,6 +348,8 @@ def main():
             comparison_algorithm = comparison_algorithm,
 
             do_remove_unbonded = do_remove_unbonded,
+
+            do_remove_unfeasible = args.remove_unfeasible,
 
             end_loop_number = args.end_loop_number,
 
@@ -392,7 +400,13 @@ def main():
         return genetic
 
     if args.benchmark_structure:
-        benchmark_mol = Molecule.from_xyz(args.benchmark_structure)
+        benchmark_mol = computer.optimize(
+            "xtb",
+            Structure.from_xyz(args.benchmark_structure),
+        )
+        if not benchmark_mol:
+            raise RuntimeError("Benchmark structure did not converge")
+
         max_num_len = len(str( args.benchmark_num-1 ))
         accumulated_success = 0
         for i in range(args.benchmark_num):
