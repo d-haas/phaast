@@ -42,7 +42,7 @@ class Computer(BaseComputer):
     def optimize(self, calculator_key : str, structures : Structure) -> Molecule | None:...
     @overload
     def optimize(self, calculator_key : str, structures : Iterable[Structure]) -> list[Molecule | None]:...
-    def optimize(self, calculator_key : str, structures : Structure | Iterable[Structure]) -> Molecule | None | list[Molecule | None]:
+    def optimize(self, calculator_key : str, structures : Structure | Iterable[Structure], chunksize : int | None = None) -> Molecule | None | list[Molecule | None]:
         """
         Execute Structures optimization for a list of Structures
         turning them into a list of Molecules
@@ -55,9 +55,12 @@ class Computer(BaseComputer):
 
         else:
             with Pool(self.cpu_count_limit) as pool:
+                size_args = sum((1 for _ in structures),)
+                chunk_size = chunksize if chunksize else max(round((size_args/self.cpu_count_limit)/100), 1)
                 molecules : list[Molecule | None] = pool.map(
                     self.calculators[calculator_key].optimize,
                     structures,
+                    chunksize = chunk_size,
                 )
             return [mol for mol in molecules]
 
