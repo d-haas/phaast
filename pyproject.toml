@@ -1,6 +1,6 @@
 [project]
 name = "phaast"
-version = "0.0.2"
+version = "0.1.0"
 authors = [
   { name="Daniel Haas", email="danielhaas.ufrj@gmail.com" },
   { name="Ricardo R. Oliveira", email="rrodrigues.iq@gmail.com" },
@@ -9,8 +9,9 @@ description = """A modular framework for global minimum search based on heuristi
 readme = "README.md"
 requires-python = ">= 3.13"
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Free Threading",
   "Environment :: Console",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Cython",
