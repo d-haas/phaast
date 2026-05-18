@@ -1,8 +1,9 @@
 import argparse
 import time
 
+from phaast import __version__ as version
 from phaast.structure.comparator import BondingLength, ChargeComparator, ComparisonSequence, EnergyDifference, GrigoryanSpringborg
-from phaast.structure.primitives import Molecule, Structure
+from phaast.structure.primitives import Structure
 from phaast.surface_explorator.genetic.crossover import PlaneMating
 from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMigrator
 from phaast.surface_explorator.genetic.mutation import DisplacementMutator, PermuteMutator, TwistMutator
@@ -14,9 +15,9 @@ from phaast.surface_explorator.genetic.migration.filter_list import FilterList, 
 from phaast.surface_explorator.genetic import Genetic
 
 def main():
-    print("Test version 2026.05.13c")
+    print("Test version 2026.05.15d")
     arg_parser = argparse.ArgumentParser(
-        prog="P.H.A.A.S.T",
+        prog=f"GET-PHAAST ({version})",
         description="A heuristic-algorithm-driven software made for global minima search",
         epilog="Thanks for choosing Phaast",
         formatter_class = argparse.RawTextHelpFormatter,
@@ -46,7 +47,7 @@ def main():
         "-pop",
         "--population-size",
         type = int,
-        default = 500,
+        default = 250,
         help = "Number of molecules in the population (default = %(default)s)",
     )
 
@@ -98,7 +99,7 @@ def main():
         "-gt",
         "--geometry-threshold",
         type = float,
-        default = 0.80,
+        default = 0.61,
         help = "Maximum geometry difference so molecules are considered the same so one of them is discarded [must be a value between 0 and 1] (default = %(default)s)",
     )
 
@@ -224,7 +225,8 @@ def main():
 
     arg_parser.add_argument(
         "--remove-unfeasible",
-        action="store_true",
+        default = True,
+        type = bool,
     )
 
     arg_parser.add_argument(
