@@ -6,14 +6,12 @@ from libc.math cimport NAN
 from phaast.structure.primitives cimport Atom, Structure, Molecule
 
 cdef class Individual(Molecule):
-    generations_alive : cython.uint
     descendants : list[cython.uint]
     id : cython.uint
 
     def __init__(self, atoms_or_mol : Iterable[Atom], id : cython.uint, double energy = NAN, tuple descendants = ()):
         super().__init__(atoms_or_mol, energy)
 
-        self.generations_alive = 0
         self.descendants : list[cython.uint] = list(descendants)
         self.id = id
 
@@ -33,7 +31,6 @@ cdef class Individual(Molecule):
     def as_data(self):
         return super().as_data() | {
             "type"              : "default",
-            "generations_alive" : self.generations_alive,
             "id"                : self.id,
             "descendants"       : self.descendants,
         }

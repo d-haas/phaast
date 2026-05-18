@@ -8,7 +8,6 @@ from phaast.structure.primitives import MoleculeData
 dummy_individual : Individual
 
 class IndividualData(MoleculeData):
-    generations_alive : int
     id : int
     descendants : list[int]
     type        : str
@@ -24,7 +23,6 @@ class OptimizedIndividualData(IndividualData):
     ancestor : int
 
 class Individual(Structure):
-    generations_alive : int
     id : int
     descendants : list[int]
     energy      : float
