@@ -1,4 +1,4 @@
-from phaast.vector cimport Vector
+from phaast.vector cimport Vector, Vec
 
 cdef class Element:
     cdef public unsigned int z
@@ -20,3 +20,16 @@ cdef class Molecule(Structure):
     cdef public double energy
 
     cpdef bool is_bonded(self, double bonding_tolerance=*)
+
+cdef struct CAtom:
+    unsigned int z
+    Vec pos
+
+cdef struct CStructure:
+    CAtom* atoms
+    unsigned int length
+
+cdef struct CMolecule:
+    CAtom* atoms
+    unsigned int length
+    double energy
