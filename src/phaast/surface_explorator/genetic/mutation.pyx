@@ -38,10 +38,9 @@ cdef class DisplacementMutator(Mutator):
         self,
         num : cython.uint = 1,
         min_displacement : cython.double = 0.7,
-        max_displacement : cython.double = 2.3,
+        max_displacement : cython.double = 3.0,
     ):
         self.num = num
-
         self.min_displacement = min_displacement
         self.max_displacement = max_displacement
 
@@ -56,7 +55,13 @@ cdef class DisplacementMutator(Mutator):
         cdef unsigned int i
         cdef double min_displacement = self.min_displacement
         cdef double max_displacement = self.max_displacement
-        cdef unsigned int length = len(new_structure)
+        cdef unsigned int num
+        if self.num > 0:
+            num = self.num
+        else:
+            num = len(new_structure)
+
+        cdef unsigned int length = random.randint(1, num) #len(new_structure)
         cdef Vec[:] rand_vecs = cvarray(shape=(length,), itemsize=sizeof(Vec), format="ddd")
         cdef Vec[:] rand_displacements = cvarray(shape=(length,), itemsize=sizeof(Vec), format="ddd")
         cdef double[:] rand_vec_mods = cvarray(shape=(length,), itemsize=sizeof(double), format="d")
@@ -74,10 +79,15 @@ cdef class DisplacementMutator(Mutator):
             rand_displacements[i].y = rand_distances[i]*rand_vecs[i].y/rand_vec_mods[i]
             rand_displacements[i].z = rand_distances[i]*rand_vecs[i].z/rand_vec_mods[i]
 
-        for i in range(length):
-            new_structure.atoms[i].pos.x+= rand_displacements[i].x
-            new_structure.atoms[i].pos.y+= rand_displacements[i].y
-            new_structure.atoms[i].pos.z+= rand_displacements[i].z
+        for i, atom_id  in enumerate(
+            random.sample(
+                range(len(new_structure)),
+                k = length,
+            )
+        ): #range(length):
+            new_structure.atoms[atom_id].pos.x+= rand_displacements[i].x
+            new_structure.atoms[atom_id].pos.y+= rand_displacements[i].y
+            new_structure.atoms[atom_id].pos.z+= rand_displacements[i].z
 
         new_structure.center_mass()
 
