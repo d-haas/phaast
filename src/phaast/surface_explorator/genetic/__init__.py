@@ -2,7 +2,6 @@ from __future__ import annotations
 import time
 from typing import Any, Iterable, Optional, Sequence, TypedDict, cast, TYPE_CHECKING
 
-from phaast.structure.constants import AtomicNumber
 if TYPE_CHECKING:
     from phaast.surface_explorator.genetic.individual import IndividualData
 import random
@@ -242,11 +241,12 @@ class GeneticComputer(Computer):
 
 
 class Genetic(SurfaceExplorator):
-    population_size : int
-    population      : list[OptimizedIndividual]
-    generations     : list[list[OptimizedIndividual]]
-    population_ids  : PopulationRegister
-    end_loop_number : int
+    population_growth : int
+    population_limit  : int
+    population        : list[OptimizedIndividual]
+    generations       : list[list[OptimizedIndividual]]
+    population_ids    : PopulationRegister
+    end_loop_number   : int
 
     calculator          : str
     computer            : GeneticComputer
@@ -269,6 +269,7 @@ class Genetic(SurfaceExplorator):
     best_energy_history : list[list[float]]
     best_energy_num     : int
     best_energy_loops   : int
+    last_diff           : list[bool]
     max_id              : int
 
     total_optimizations          : int
@@ -291,6 +292,8 @@ class Genetic(SurfaceExplorator):
         migrators  : list[tuple[float, Migrator]],
         sequential_mutations : int = 1,
         mutation_batches : int = 10,
+
+        population_limit : int = 0,
 
         comparison_algorithm : ComparisonAlgorithm = GrigoryanSpringborg(0.85),
         do_remove_unbonded    : bool = True,
@@ -317,7 +320,12 @@ class Genetic(SurfaceExplorator):
         self.population_ids = PopulationRegister()
         self.max_id   = 0
         self.population : list[OptimizedIndividual] = []
-        self.population_size = population_size
+        self.population_growth = population_size
+        if population_limit and population_limit > 0:
+            self.population_limit = population_limit
+        else:
+            self.population_limit = population_size
+
         self.generations = []
         self.mutations = mutations
         self.crossovers = crossovers
@@ -328,6 +336,7 @@ class Genetic(SurfaceExplorator):
 
         self.comparison_algorithm = comparison_algorithm
         self.do_remove_unbonded   = do_remove_unbonded
+        self.do_remove_unfeasible = do_remove_unfeasible
 
         self.end_loop_number      = end_loop_number
         self.cycle_counter        = 0
@@ -359,7 +368,7 @@ class Genetic(SurfaceExplorator):
             if generate_population:
                 migrator_total_weight = sum([weight for weight, _ in migrators])
                 for weight, migrator in migrators:
-                    generated_num = floor(self.population_size*weight/migrator_total_weight)
+                    generated_num = floor(self.population_growth*weight/migrator_total_weight)
                     self.population+= self.computer.genetic_optimize(
                         self.computer.migrate(
                             generated_num,
@@ -379,6 +388,7 @@ class Genetic(SurfaceExplorator):
             self.best_energy_history = []
 
 
+        self.last_diff : list[bool] = []
         self.operations_weight = sum([
             weight for weight, _
             in mutations+crossovers+migrators
@@ -400,7 +410,7 @@ class Genetic(SurfaceExplorator):
         migrated : list[Individual] = []
 
         for weight, migrator in self.migrators:
-            op_num : int = floor(self.population_size*weight/self.operations_weight)
+            op_num : int = floor(self.population_growth*weight/self.operations_weight)
 
             migrated+= self.computer.migrate(op_num, migrator)
 
@@ -412,7 +422,7 @@ class Genetic(SurfaceExplorator):
         children : list[ChildIndividual] = []
 
         for weight, crossover in self.crossovers:
-            op_num : int = floor(self.population_size*weight/self.operations_weight)
+            op_num : int = floor(self.population_growth*weight/self.operations_weight)
 
             pairs : list[tuple[Individual, Individual]] = list(distinct_pairs(self.population))
             chosen_parents = random.choices(
@@ -444,12 +454,13 @@ class Genetic(SurfaceExplorator):
                 weight for weight, _
                 in self.mutations
             ])/self.mutation_batches
-            op_num : int = floor(self.population_size*mutations_weight/self.operations_weight)
+            op_num : int = floor(self.population_growth*mutations_weight/self.operations_weight)
 
             for pool in operation_pools:
                 temp_mutants = random.choices(
                     self.population,
                     k = op_num,
+                    #weights = [ind.energy**2 for ind in self.population],
                 )
 
                 for operation in pool:
@@ -462,11 +473,12 @@ class Genetic(SurfaceExplorator):
 
         else:
             for weight, mutation in self.mutations:
-                op_num : int = floor(self.population_size*weight/self.operations_weight)
+                op_num : int = floor(self.population_growth*weight/self.operations_weight)
 
                 chosen_mutants = random.choices(
                     self.population,
                     k = op_num,
+                    weights = [ind.energy**2 for ind in self.population],
                 )
                 mutants+= self.computer.mutate(
                     chosen_mutants,
@@ -478,27 +490,31 @@ class Genetic(SurfaceExplorator):
         return mutant_molecules
 
     def remove_unfeasible(self) -> None:
+        """
         min_energy : float = min(
-            [mol.energy for mol in self.population]
+            [ind.energy for ind in self.population]
         )
         max_energy : float = max(
-            [mol.energy for mol in self.population]
+            [ind.energy for ind in self.population]
         )
         median_energy : float = (min_energy + max_energy)/2
-
+        """
         pop_size_before = len(self.population)
 
-        for ind in self.population:
-            ind.generations_alive+= 1
-
+        """
         self.population = [
             ind for ind in self.population
             if (
-                ind.energy <= median_energy or
-                ind.generations_alive <= self.minimum_lifetime or
+                #ind.energy <= median_energy or
+                ind.energy <= avg_energy or
                 ind in self.best_energies
             )
         ]
+        """
+        self.population = sorted(
+            self.population,
+            key = lambda ind : ind.energy,
+        )[:min(self.population_limit, len(self.population))]
 
         pop_size_after = len(self.population)
 
@@ -510,14 +526,14 @@ class Genetic(SurfaceExplorator):
 
         self.population = [
             ind for ind in self.population
-            if ind.is_bonded(self.bonding_tolerance) or ind.generations_alive <= self.minimum_lifetime
+            if ind.is_bonded(self.bonding_tolerance) #or ind.generations_alive <= self.minimum_lifetime
         ]
 
         pop_size_after = len(self.population)
 
         self.total_not_bonded_removed+= pop_size_before - pop_size_after
 
-    def get_best_energy(self) -> None:
+    def get_best_energy(self) -> list[bool]:
         """
         Refresh algorithm's energy list with the new one
         and reset energy loop counter if it has changed
@@ -543,11 +559,14 @@ class Genetic(SurfaceExplorator):
             else:
                 self.best_energy_loops = 0
         else:
+            ind_equals = []
             self.best_energy_loops = 0
 
         self.best_energies = new_best_energies
         self.best_energy = new_best_energies[0].energy
         self.best_energy_history.append( [ind.energy for ind in self.best_energies] )
+
+        return [not i for i in ind_equals]
 
     def loop(self) -> bool:
 
@@ -571,12 +590,12 @@ class Genetic(SurfaceExplorator):
         self.population+= mutants
         self.population+= migrated
 
-        if self.do_remove_unfeasible: self.remove_unfeasible()
         if self.do_remove_unbonded: self.remove_unbonded()
+        if self.do_remove_unfeasible: self.remove_unfeasible()
 
         self.remove_duplicates()
 
-        self.get_best_energy()
+        self.last_diff = self.get_best_energy()
 
         self.generations.append(self.population.copy())
 
@@ -584,7 +603,7 @@ class Genetic(SurfaceExplorator):
 
     def as_data(self) -> GeneticData:
         results : GeneticData = {
-            "population_size"          : self.population_size,
+            "population_size"          : self.population_growth,
             "end_loop_number"          : self.end_loop_number,
 
             "cycle_counter"            : self.cycle_counter,
@@ -730,7 +749,7 @@ class Genetic(SurfaceExplorator):
 
     def get_report(self) -> dict[str, Any]:
         report = {
-            "Population Size"          : self.population_size,
+            "Population Size"          : self.population_growth,
             "End Loop Number"          : self.end_loop_number,
 
             "Cycle Counter"            : self.cycle_counter,
@@ -788,34 +807,34 @@ class Genetic(SurfaceExplorator):
     def status(self, fields : list[str] = []):
         return "\n".join(
             [
-                "╔"+"═"*57+"╗",
+                "╔"+"═"*59+"╗",
             ] + [
-                "║"+line.ljust(57)+"║"
+                "║"+line.ljust(59)+"║"
                 for line in fields
             ] + [
-                "║"+f" Generation {self.cycle_counter} done".ljust(57)+"║",
-                "║"+f" Best energy: {self.best_energy}{"*" if self.best_energy_loops == 0 else ""}".ljust(57)+"║",
-                "║"+f" Population size: {len(self.population)}".ljust(57)+"║",
-                "╚"+"═"*57+"╝",
+                "║"+f" Generation {self.cycle_counter} done".ljust(59)+"║",
+                "║"+f" Best energy: {self.best_energy}{[i for i, dif in enumerate(self.last_diff) if dif] if any(self.last_diff) else ""}".ljust(59)+"║",
+                "║"+f" Population size: {len(self.population)}".ljust(59)+"║",
+                "╚"+"═"*59+"╝",
             ],
         )
 
     def statistics(self, fields : list[str] = []) -> str:
         return "\n".join(
             [
-                "╔"+"═"*57+"╗",
+                "╔"+"═"*59+"╗",
             ] + [
-                "║"+line.ljust(57)+"║"
+                "║"+line.ljust(59)+"║"
                 for line in fields
             ] + [
-                "║"+f"Total optimizations: {self.total_optimizations} ({self.computer.optimization_time} s)".ljust(57)+"║",
-                "║"+f"Total converged: {self.total_converged}".ljust(57)+"║",
-                "║"+f"Total duplicates removed: {self.total_duplicates_removed} ({self.computer.duplicate_time} s)".ljust(57)+"║",
-                "║"+f"Total unfeasible removed: {self.total_unfeasible_removed}".ljust(57)+"║",
-                "║"+f"Total not-bonded removed: {self.total_not_bonded_removed}".ljust(57)+"║",
-                "║"+f"Total migration: {self.total_migrated} ({self.computer.migration_time} s)".ljust(57)+"║",
-                "║"+f"Total mutations: {self.total_mutations} ({self.computer.mutation_time} s)".ljust(57)+"║",
-                "║"+f"Total crossovers: {self.total_mating} ({self.computer.crossover_time} s)".ljust(57)+"║",
-                "╚"+"═"*57+"╝",
+                "║"+f"Total optimizations: {self.total_optimizations} ({self.computer.optimization_time} s)".ljust(59)+"║",
+                "║"+f"Total converged: {self.total_converged}".ljust(59)+"║",
+                "║"+f"Total duplicates removed: {self.total_duplicates_removed} ({self.computer.duplicate_time} s)".ljust(59)+"║",
+                "║"+f"Total unfeasible removed: {self.total_unfeasible_removed}".ljust(59)+"║",
+                "║"+f"Total not-bonded removed: {self.total_not_bonded_removed}".ljust(59)+"║",
+                "║"+f"Total migration: {self.total_migrated} ({self.computer.migration_time} s)".ljust(59)+"║",
+                "║"+f"Total mutations: {self.total_mutations} ({self.computer.mutation_time} s)".ljust(59)+"║",
+                "║"+f"Total crossovers: {self.total_mating} ({self.computer.crossover_time} s)".ljust(59)+"║",
+                "╚"+"═"*59+"╝",
             ]
         )
