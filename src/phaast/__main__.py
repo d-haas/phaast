@@ -15,7 +15,7 @@ from phaast.surface_explorator.genetic.migration.filter_list import FilterList, 
 from phaast.surface_explorator.genetic import Genetic
 
 def main():
-    print("Test version 2026.05.15d")
+    print("Test version 2026.05.19a")
     arg_parser = argparse.ArgumentParser(
         prog=f"GET-PHAAST ({version})",
         description="A heuristic-algorithm-driven software made for global minima search",
@@ -91,7 +91,7 @@ def main():
         "-et",
         "--energy-threshold",
         type = float,
-        default = 5e-5,
+        default = 1e-3,
         help = "Maximum energy difference [in hartree] so molecules are considered alike (default = %(default)s)",
     )
 
@@ -99,7 +99,7 @@ def main():
         "-gt",
         "--geometry-threshold",
         type = float,
-        default = 0.61,
+        default = 0.625,
         help = "Maximum geometry difference so molecules are considered the same so one of them is discarded [must be a value between 0 and 1] (default = %(default)s)",
     )
 
