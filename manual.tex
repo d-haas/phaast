@@ -106,11 +106,11 @@
 
 \section{Usage}
 
-PHAAST has two main non-optional and positional arguments, \lstinline{STOICHIOMETRY}, which defines the atoms that will compose the searched minima, and \lstinline{OUTPUT_PREFIX}, a starting name given to the resulting minima that will be stored in xyz format.
+PHAAST has one main non-optional and positional arguments, \lstinline{STOICHIOMETRY}, which defines the atoms that will compose the searched minima, and flags that will adjust the search parameters.
 The command can be summarized in:
 
 \begin{lstlisting}
-  python -m phaast [OPTIONS] STOICHIOMETRY OUTPUT_PREFIX  
+  phaast [OPTIONS] STOICHIOMETRY
 \end{lstlisting}
 
 \subsection{Options}
@@ -119,10 +119,10 @@ All other option arguments can be found on the help section, which is shown with
 \begin{lstlisting}
 -h, --help            show this help message and exit
 
---return_number RETURN_NUMBER
+--return-number RETURN-NUMBER
   Number of least energy molecules to return at the end of the algorithm (default = 50)
 
--pop, --population_size POPULATION_SIZE
+-pop, --population-size POPULATION-SIZE
   Number of molecules in the population (default = 5000)
 
 -c, --charge CHARGE   Structure's charge (default = 0)
@@ -130,64 +130,64 @@ All other option arguments can be found on the help section, which is shown with
 -t, --threads THREADS
   Number of threads to be used by the algorithm (default = number of threads on cpu)
 
--xtbt, --xtb-threads XTB_THREADS
+-xtbt, --xtb-threads XTB-THREADS
   Number of threads to be used by each -t xtb instance (default = 4)
 
---xtb_path XTB_PATH
+--xtb-path XTB-PATH
   Path to be used for the xtb binary (default = xtb)
 
--et, --energy_threshold ENERGY_THRESHOLD
+-et, --energy-threshold ENERGY-THRESHOLD
   Maximum energy difference [in hartree] so molecules are considered alike (default = 0.001)
 
--gt, --geometry_threshold GEOMETRY_THRESHOLD
+-gt, --geometry-threshold GEOMETRY-THRESHOLD
   Maximum geometry difference so molecules are considered the same so one of them is discarded [must be a value between 0 and 1] (default = 0.87)
 
---mut_disp_w MUT_DISP_W
+--mut-disp-w MUT-DISP-W
   Mutation displacement weight (default = 3)
 
---mut_perm_w MUT_PERM_W
+--mut-perm-w MUT-PERM-W
   Mutation permutation weight (default = 2)
 
---mut_twist_w MUT_TWIST_W
+--mut-twist-w MUT-TWIST-W
   Mutation twist weight (default = 1)
 
---crov_w CROV_W
+--crov-w CROV-W
   Crossing-over weight (default = 1)
 
---migr_w MIGR_W
+--migr-w MIGR-W
   Migrator weight (default = 1)
 
---mut_disp_min MUT_DISP_MIN
+--mut-disp-min MUT-DISP-MIN
   Minimum distance (A) to be used in mutation of atomic displacement (default = 1.3)
 
---mut_disp_max MUT_DISP_MAX
+--mut-disp-max MUT-DISP-MAX
   Maximum distance (A) to be used in mutation of atomic displacement (default = 2.3)
 
---mut_disp_num MUT_DISP_NUM
+--mut-disp-num MUT-DISP-NUM
   Number of atoms to move in mutations of atomic displacement (default = 1)
 
---mut_perm_num MUT_PERM_NUM
+--mut-perm-num MUT-PERM-NUM
   Number of permutations in mutations of that type (default = Half the number of atoms)
 
---mut_twist_min_angle MUT_TWIST_MIN_ANGLE
+--mut-twist-min-angle MUT-TWIST-MIN-ANGLE
   Minimum angle to be used in twist mutations (default = 90)
 
---mut_twist_max_angle MUT_TWIST_MAX_ANGLE
+--mut-twist-max-angle MUT-TWIST-MAX-ANGLE
   Maximum angle to be used in twist mutations (default = 270)
 
--loops, --end_loop_number END_LOOP_NUMBER
+-loops, --end-loop-number END-LOOP-NUMBER
   Number of loops the algorithm will run with the least energy molecule until a new one is found, terminating it (default = 11)
 
---comparison_algorithm COMPARISON_ALGORITHM
+--comparison-algorithm COMPARISON-ALGORITHM
   Algorithm to be used for structures comparison, the recomendes usage is:
-    - "grigoryan_springborg" for clusters;
-    - "bonding_length" for organic and general shaped structures (check --comparison_bonding_tolerance too);
-    (default = grigoryan_springborg)
+    - "grigoryan-springborg" for clusters;
+    - "bonding-length" for organic and general shaped structures (check --comparison-bonding-tolerance too);
+    (default = grigoryan-springborg)
 
---comparison_bonding_tolerance COMPARISON_BONDING_TOLERANCE
+--comparison-bonding-tolerance COMPARISON-BONDING-TOLERANCE
   Distance tolerable so two atoms can be considered bonded within the molecule comparison algorithm and bonding tests
 
---remove_unbonded REMOVE_UNBONDED
+--remove-unbonded REMOVE-UNBONDED
   Choose to not remove unbonded structures from genetic algorithm population
     - "always": Remove unbonded in every loop;
     - "final": Remove only from final population to not contaminate results;
@@ -199,7 +199,7 @@ All other option arguments can be found on the help section, which is shown with
 
 \subsubsection{Return number}
 
-Changing the \lstinline{return_number} will return more or less structures at the end of the algorithm, there's no additional overhead to that, since the structures have already been optimized up to that point.
+Changing the \lstinline{return-number} will return more or less structures at the end of the algorithm, there's no additional overhead to that, since the structures have already been optimized up to that point.
 It is useful when the calculator used to optimize the structures is not so accurate on the energy values and a better optimization (on a more refined functional/basisset) is needed at the end of the algorithm, hence justifying a smaller return number.
 
 \subsubsection{Population size}
@@ -209,9 +209,11 @@ Despite how it sounds, this argument doesn't define a cap or a direct control on
 Number of processes (or threads if you are using a GIL-disabled python instance) used for paralelizing the expensive tasks on the genetic algorithm.
 
 \subsubsection{Weights}
-All the \lstinline{--*_w} arguments define the proportions of how each operation will be applied.
-For instance, \lstinline{--mut_disp_w}, \lstinline{--mut_perm_w} and \lstinline{--mut_twist_w} define all mutation weights, if they're the same value, all mutations will occur in the same proportion.
+All the \lstinline{--*-w} arguments define the proportions of how each operation will be applied.
+For instance, \lstinline{--mut-disp-w}, \lstinline{--mut-perm-w} and \lstinline{--mut-twist-w} define all mutation weights, if they're the same value, all mutations will occur in the same proportion.
 
+\subsubsection{Benchmarks}
+A user can run a benchmark to measure the success rate and speed of the framework usign the \lstinline{--benchmark-structure minimum.xyz} flag, which will run \lstinline{--benchmark-num} benchmarks and provide how many of those were able to find the \lstinline{minimum.xyz} structure among the \lstinline{--return-number} minima of each run.
 
 
 \end{document}
