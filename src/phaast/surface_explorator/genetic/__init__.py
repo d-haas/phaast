@@ -287,9 +287,9 @@ class Genetic(SurfaceExplorator):
         computer : Computer,
         calculator : str,
 
-        mutations  : list[tuple[float, Mutator]],
-        crossovers : list[tuple[float, Crossover]],
-        migrators  : list[tuple[float, Migrator]],
+        mutations  : list[tuple[float, type[Mutator]]],
+        crossovers : list[tuple[float, type[Crossover]]],
+        migrators  : list[tuple[float, type[Migrator]]],
         sequential_mutations : int = 1,
         mutation_batches : int = 10,
 
@@ -804,7 +804,7 @@ class Genetic(SurfaceExplorator):
         )[ : min(n, len(self.population) ) ]
 
     #Using list constructor as default might result in some shenanigans
-    def status(self, fields : list[str] = []):
+    def status(self, fields : Iterable[str] = ()):
         return "\n".join(
             [
                 "╔"+"═"*59+"╗",
@@ -813,7 +813,7 @@ class Genetic(SurfaceExplorator):
                 for line in fields
             ] + [
                 "║"+f" Generation {self.cycle_counter} done".ljust(59)+"║",
-                "║"+f" Best energy: {self.best_energy}{[i for i, dif in enumerate(self.last_diff) if dif] if any(self.last_diff) else ""}".ljust(59)+"║",
+                "║"+f" Best energy: {self.best_energy}{"*" if any(self.last_diff) else ""}".ljust(59)+"║",
                 "║"+f" Population size: {len(self.population)}".ljust(59)+"║",
                 "╚"+"═"*59+"╝",
             ],
