@@ -48,7 +48,7 @@ class XTB(Calculator):
             args+= ["--chrg", str(self.charge)]
         if self.etemp:
             args+= ["--etemp", str(self.etemp)]
-        if self.gfn:
+        if isinstance(self.gfn, int):
             args+= ["--gfn", str(self.gfn)]
         if self.cycles:
             args+= ["--cycles", str(self.cycles)]
