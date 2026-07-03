@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-import multiprocessing, sys
+import sys
+from multiprocessing import cpu_count
 
-if sys._is_gil_enabled():
+if (not hasattr(sys, "_is_gil_enabled")) or sys._is_gil_enabled():
     from multiprocessing import Pool
+    has_gil : bool = True
 else:
     from multiprocessing.dummy import Pool
+    has_gil : bool = False
 
 from typing import Any, Callable, Iterable, overload
 
@@ -31,8 +34,8 @@ class Computer(BaseComputer):
         cpu_count_limit : int = 0,
     ):
         # Set core count on computer automatically if it was not set
-        max_core_count = multiprocessing.cpu_count()
-        assert isinstance(cpu_count_limit, int) and 0<=cpu_count_limit<=max_core_count, "core_count_limit should be an int and between 0 and the number of cores available"
+        max_core_count = cpu_count()
+        assert isinstance(cpu_count_limit, int) and 0<=cpu_count_limit, "core_count_limit should be an int above or equal to 0"
         self.cpu_count_limit = max_core_count if cpu_count_limit == 0 else cpu_count_limit
 
         #Set calculators dictionary
@@ -69,15 +72,17 @@ class Computer(BaseComputer):
         Run any task in parallel
         Since its supposed to run with the genetic algorithm,
         chunksize was tuned for that purpose
-        (huge quantities of processes (>>> cpu_count))
+        (huge quantities of processes (way more than cpu_count))
         """
 
         with Pool(self.cpu_count_limit) as pool:
             if isinstance(args, int):
+                size_args = args
+                chunk_size = chunksize if chunksize else max(round((size_args/self.cpu_count_limit)/100), 1)
                 return pool.starmap(
                     func,
                     [() for _ in range(args)],
-                    chunksize=chunksize if chunksize else args//self.cpu_count_limit,
+                    chunksize = chunk_size,
                 )
             else:
                 size_args = sum((1 for _ in args),)
