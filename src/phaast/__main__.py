@@ -2,7 +2,7 @@ import argparse
 import time
 
 from phaast import __version__ as version
-from phaast.structure.comparator import BondingLength, ChargeComparator, ComparisonSequence, EnergyDifference, GrigoryanSpringborg
+from phaast.structure.comparator import ComparisonSequence, EnergyDifference, GrigoryanSpringborg
 from phaast.structure.primitives import Structure
 from phaast.surface_explorator.genetic.crossover import PlaneMating
 from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMigrator
@@ -15,7 +15,7 @@ from phaast.surface_explorator.genetic.migration.filter_list import FilterList, 
 from phaast.surface_explorator.genetic import Genetic
 
 def main():
-    print("Test version 2026.05.19a")
+    print("Test version 2026.06.19a")
     arg_parser = argparse.ArgumentParser(
         prog=f"GET-PHAAST ({version})",
         description="A heuristic-algorithm-driven software made for global minima search",
@@ -47,7 +47,7 @@ def main():
         "-pop",
         "--population-size",
         type = int,
-        default = 250,
+        default = 500,
         help = "Number of molecules in the population (default = %(default)s)",
     )
 
@@ -81,6 +81,13 @@ def main():
     )
 
     arg_parser.add_argument(
+        "-gfn", "--xtb-gfn",
+        type = int,
+        default = 2,
+        help = "Version of GFN method used (default = %(default)s)",
+    )
+
+    arg_parser.add_argument(
         "--xtb-path",
         type = str,
         default = "xtb",
@@ -91,7 +98,7 @@ def main():
         "-et",
         "--energy-threshold",
         type = float,
-        default = 1e-3,
+        default = 5e-3,
         help = "Maximum energy difference [in hartree] so molecules are considered alike (default = %(default)s)",
     )
 
@@ -196,15 +203,15 @@ def main():
         help = "Number of loops the algorithm will run with the least energy molecule until a new one is found, terminating it (default = %(default)s)",
     )
 
-    arg_parser.add_argument(
-        "--comparison-algorithm",
-        default = "grigoryan-springborg",
-        type = str,
-        help = """Algorithm to be used for structures comparison, the recomendes usage is:
-    \t- \"grigoryan-springborg\" for clusters;
-    \t- \"bonding-length\" for organic and general shaped structures (check --comparison-bonding-tolerance too);
-    (default = %(default)s)""",
-    )
+    #arg_parser.add_argument(
+    #    "--comparison-algorithm",
+    #    default = "grigoryan-springborg",
+    #    type = str,
+    #    help = """Algorithm to be used for structures comparison, the recomendes usage is:
+    #\t- \"grigoryan-springborg\" for clusters;
+    #\t- \"bonding-length\" for organic and general shaped structures (check --comparison-bonding-tolerance too);
+    #(default = %(default)s)""",
+    #)
 
     arg_parser.add_argument(
         "--comparison-bonding-tolerance",
@@ -257,6 +264,7 @@ def main():
         charge = args.charge,
         threads = args.xtb_threads,
         xtb_path = args.xtb_path,
+        gfn = args.xtb_gfn,
     )
 
     computer = Computer(
@@ -310,26 +318,11 @@ def main():
     ]
 
     grigoryan_springborg = GrigoryanSpringborg(args.geometry_threshold)
-    bonding_length_comparator = BondingLength(args.geometry_threshold, bonding_tolerance = args.comparison_bonding_tolerance)
-
-
-    match args.comparison_algorithm:
-        case "bonding-length":
-            comparison_algorithm = ComparisonSequence(
-                EnergyDifference(args.energy_threshold),
-                #ChargeComparator(args.charge_threshold),
-                bonding_length_comparator,
-            )
-        case "grigoryan-springborg":
-            comparison_algorithm = ComparisonSequence(
-                EnergyDifference(args.energy_threshold),
-                #ChargeComparator(args.charge_threshold),
-                grigoryan_springborg,
-            )
-        case _:
-            raise ValueError(
-                f"Incompatible comparison_algorithm: {args.comparison_algorithm}"
-            )
+    comparison_algorithm = ComparisonSequence(
+        EnergyDifference(args.energy_threshold),
+        #ChargeComparator(args.charge_threshold),
+        grigoryan_springborg,
+    )
 
     assert args.remove_unbonded in ("always", "final", "never"), "Wrong remove_unbonded option"
     if args.remove_unbonded == "always":
@@ -369,7 +362,7 @@ def main():
         while genetic.loop():
             print(genetic.status())
 
-            genetic.save(f"{save_name}_temp")
+            genetic.save(f"{save_name}_tmp")
             genetic.save(save_name)
 
         end = time.monotonic_ns()
@@ -387,7 +380,13 @@ def main():
 
         print(
             genetic.statistics(
-                [f"The process is done. Elapsed time: {round(delta_time)} s"]
+                [
+                    f"GET-PHAAST ({version})",
+                    f"Algorithm terminated in {genetic.cycle_counter} generations",
+                    f"Total elapsed time: {round(delta_time, 2)} s",
+                    f"Elapsed time per generation: {round(delta_time/genetic.cycle_counter, 2)} s",
+                    f"",
+                ]
             ),
         )
 
@@ -431,11 +430,11 @@ def main():
             if best_found:
                 accumulated_success+= 1
 
-            print("╔"+"═"*57+"╗")
-            print("║"+" "*57+"║")
-            print("║"+f"Benchmark status: {accumulated_success}/{i+1} ({"%.2f" % (100*accumulated_success/(i+1))} %)".ljust(57)+"║")
-            print("║"+" "*57+"║")
-            print("╚"+"═"*57+"╝")
+            print("╔"+"═"*59+"╗")
+            print("║"+" "*59+"║")
+            print("║"+f"Benchmark status: {accumulated_success}/{i+1} ({"%.2f" % (100*accumulated_success/(i+1))} %)".ljust(59)+"║")
+            print("║"+" "*59+"║")
+            print("╚"+"═"*59+"╝")
 
 
     else:
