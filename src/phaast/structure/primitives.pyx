@@ -216,7 +216,7 @@ cdef class Atom(Element):
         bonding_tolerance is added as a tolerance variable
         to increase the radius of either one of the atoms
         """
-        return (self.pos - other.pos).mod_sqr <= (self.radius + other.radius)**2 + bonding_tolerance
+        return (self.pos - other.pos).mod_sqr <= (self.radius + other.radius + bonding_tolerance)**2
 
 
     def __str__(self) -> str:
