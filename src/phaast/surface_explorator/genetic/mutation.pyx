@@ -1,3 +1,4 @@
+# cython: freethreading_compatible = True
 from abc import abstractmethod
 from math import tau
 import random

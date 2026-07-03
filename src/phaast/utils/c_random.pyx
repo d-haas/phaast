@@ -1,3 +1,4 @@
+# cython: freethreading_compatible = True
 from libc.time cimport time
 from libc.stdlib cimport rand, srand, RAND_MAX
 

@@ -1,3 +1,4 @@
+# cython: freethreading_compatible = True
 from abc import abstractmethod
 import random
 from bisect import insort

@@ -1,3 +1,4 @@
+# cython: freethreading_compatible = True
 import cython
 from cython.view cimport array as cvarray
 from cython.parallel import prange
