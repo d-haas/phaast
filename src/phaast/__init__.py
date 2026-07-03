@@ -1,5 +1,5 @@
 """
-    Python implementation of P.H.A.A.S.T
+    Python implementation of GET-PHAAST
     (Phaast Heuristic Algorithm for Atomic Structure Tuning)
 
     A framework for dynamic application of heuristic algorithms
