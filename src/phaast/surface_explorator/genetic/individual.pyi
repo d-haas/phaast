@@ -33,6 +33,11 @@ class Individual(Structure):
 
     def add_descendant(self, ind_id : int) -> None: ...
 
+    def as_bytes(self) -> bytes: ...
+
+    @classmethod
+    def from_bytes(cls, data : bytes) -> Individual: ... # type: ignore[override]
+
     def as_data(self) -> IndividualData: ...
 
     @classmethod
@@ -58,3 +63,5 @@ class OptimizedIndividual(Individual, Molecule):
     def __init__(self, atoms_or_mol : Iterable[Atom], ancestor : int, id : int, energy : float): ...
 
     def as_data(self) -> OptimizedIndividualData: ...
+
+    def from_data(cls, data : OptimizedIndividualData) -> OptimizedIndividual: ... # type: ignore[override]

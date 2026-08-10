@@ -25,10 +25,11 @@ from phaast.gui.constants import *
 from phaast.gui.input import InputHandler
 
 class MolViewer(OpenGLFrame):
-    def __init__(self, parent : GUI | tk.Misc, *args, **kwargs):
+    def __init__(self, parent : GUI | tk.Misc, debug : bool = False, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
 
         self.parent = parent
+        self.debug = debug
 
         self.rotation = Vector()
         self.translation = Vector()
@@ -61,7 +62,7 @@ class MolViewer(OpenGLFrame):
         self.projection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
         self.viewport = gl.glGetIntegerv(gl.GL_VIEWPORT)
 
-        self.render_quality = 4
+        self.render_quality = 8
 
     def initgl(self):
         # Catppuccin (Mocha) crust color for background
@@ -274,14 +275,30 @@ class MolViewer(OpenGLFrame):
     def draw_mol(self):
         post_render : Atom | None = None
         for atom in self.structure:
+
+            atom_color = ATOM_COLORS_RGB[atom.z]
+
+            if self.debug:
+                bond_color = cast(
+                    tuple[float, float, float],
+                    tuple(
+                        ( i/3 for i in ATOM_COLORS_RGB[atom.z] ),
+                    ),
+                )
+            else:
+                bond_color = atom_color
+
             for other in self.structure:
                 if atom is not other and atom.is_touching(other, 0.5):
-                    if self.render_quality <= 4:
+                    
+
+                    if self.render_quality <= 8:
                         renderer.draw_cylinder(
-                            atom.pos + sqrt(15*(atom.radius**2)/64)*(other.pos-atom.pos).normalized(),
-                            atom.pos + (other.pos - atom.pos) * atom.radius/(atom.radius+other.radius),
-                            r1 = (atom.radius+other.radius)/16, r2 = (atom.radius+other.radius)/16,
-                            color = ATOM_COLORS_RGB[atom.z],
+                            atom.pos,# + sqrt(15*(atom.radius**2)/64)*(other.pos-atom.pos).normalized(),
+                            atom.pos + (other.pos - atom.pos) * (atom.radius/(atom.radius+other.radius)+0.001),
+                            r1 = 0.051,#(atom.radius+other.radius)/16,
+                            r2 = 0.051,#(atom.radius+other.radius)/16,
+                            color = bond_color,
                             quality = self.render_quality*4,
                         )
                     else:
@@ -290,7 +307,7 @@ class MolViewer(OpenGLFrame):
                             atom.pos + sqrt(15*(atom.radius**2)/64)*(other.pos-atom.pos).normalized(),
                             atom.pos + (other.pos - atom.pos) * atom.radius/(atom.radius+other.radius),
                             r1 = atom.radius/8, r2 = (atom.radius+other.radius)/32,
-                            color = ATOM_COLORS_RGB[atom.z],
+                            color = bond_color,
                             segments = self.render_quality*4,
                             quality = self.render_quality*4,
                         )
@@ -301,7 +318,7 @@ class MolViewer(OpenGLFrame):
                 renderer.draw_sphere(
                     atom.pos,
                     atom.radius/2,
-                    ATOM_COLORS_RGB[atom.z],
+                    atom_color,
                     quality = self.render_quality*4,
                 )
 
@@ -355,8 +372,9 @@ class MolViewer(OpenGLFrame):
         gl.glColorMaterial(gl.GL_FRONT, gl.GL_AMBIENT_AND_DIFFUSE)
         gl.glShadeModel(gl.GL_SMOOTH)
 
-        gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, [0.0,300.0,0.0,0.0])
-        gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, [3.0,3.0,3.0,1.0])
+        if not self.debug:
+            gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, [0.0,300.0,0.0,0.0])
+            gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, [3.0,3.0,3.0,1.0])
 
         gl.glViewport(
             0,

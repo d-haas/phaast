@@ -1,21 +1,27 @@
-# cython: freethreading_compatible = True
+from __future__ import annotations
+from Cython import uint
 import cython
-from cython.view cimport array as cvarray
+
+import tempfile
+from typing import Any, Iterable, Iterator, Self
+
+if cython.compiled:
+    from cython.cimports.cython.view import array as cvarray
+    from cython.cimports.phaast.vector import Vector
+    from cython.cimports.cpython import array
+    from cython.cimports.libcpp import bool as cbool
+else:
+    from phaast.vector import Vector
+
 from cython.parallel import prange
-from phaast.vector cimport Vector
-from cpython cimport array
-
-import sys, time
-
-from typing import Any, Callable, Iterable, Iterator, Optional, Self
 
 from phaast.structure.constants import *
 from phaast.vector import Vector
-import subprocess, tempfile
 import struct
 
 @cython.auto_pickle(True)
-cdef class Element:
+@cython.cclass
+class Element:
     """
     Class representing an atomic element
     mostly used for Stoichiometry expressions
@@ -186,18 +192,20 @@ class Base:
         return tuple(elements)
 
 
-cpdef Atom create_atom(unsigned int atomic_number, Vector pos):
+@cython.ccall
+def create_atom(atomic_number : cython.uint, pos : Vector) -> Atom:
     return Atom(atomic_number, pos)
 
 @cython.auto_pickle(True)
-cdef class Atom(Element):
+@cython.cclass
+class Atom(Element):
     """
     Atom class that represents an atom
     in space
     """
 
     pos : Vector
-    p_charge : double
+    p_charge : cython.double
 
     def __init__(self, atomic_number : cython.uint, pos : Vector = None, charge : cython.double = 0):
         super().__init__(atomic_number)
@@ -208,7 +216,8 @@ cdef class Atom(Element):
 
         self.p_charge = charge
 
-    def is_touching(self, other : Self, bonding_tolerance : float = 0) -> bool:
+    @cython.ccall
+    def is_touching(self, other : Atom, bonding_tolerance : cython.double = 0) -> cbool:
         """
         Checks if bonding radius of both atoms
         are touching or overlapping
@@ -216,7 +225,7 @@ cdef class Atom(Element):
         bonding_tolerance is added as a tolerance variable
         to increase the radius of either one of the atoms
         """
-        return (self.pos - other.pos).mod_sqr <= (self.radius + other.radius + bonding_tolerance)**2
+        return (self.pos - other.pos).mod_sqr <= (self.radius + other.radius)**2 + bonding_tolerance
 
 
     def __str__(self) -> str:
@@ -256,23 +265,17 @@ cdef class Atom(Element):
         """
         return f"{self.symbol} {self.pos.x} {self.pos.y} {self.pos.z}"
 
-    def as_bytes(self) -> bytes:
+    def to_bytes(self) -> bytes:
         """
         Convert atom data to bytes
         """
         return struct.pack(
-            b"Qddd",
+            b"Iddd",
             self.z,
             self.pos.x,
             self.pos.y,
             self.pos.z,
         )
-
-    @classmethod
-    def from_bytes(self, data : bytes) -> Atom:
-        a_num, x, y, z = struct.unpack_from("Qddd", data)
-        print(f"Z! {a_num}")
-        return Atom(a_num, Vector(x, y, z))
 
     def as_data(self) -> dict:
         return {
@@ -288,11 +291,13 @@ cdef class Atom(Element):
     def __reduce__(self):
         return (create_atom, (self.z, self.pos))
 
-cpdef Structure create_structure(object atoms):
+@cython.ccall
+def create_structure(atoms) -> Structure:
     return Structure(atoms)
 
 @cython.auto_pickle(True)
-cdef class Structure:
+@cython.cclass
+class Structure:
     """
     Main class for representing molecular/cluster
     structure geometry
@@ -511,28 +516,16 @@ cdef class Structure:
             ],
         )
 
-    def as_bytes(self) -> bytes:
+    def to_bytes(self) -> bytes:
         """
         Convert structure data to bytes
         """
-        r = struct.pack(b"Q", len(self))
+        r = struct.pack(b"I", len(self))
 
         for atom in self:
-            r+= atom.as_bytes()
+            r+= atom.to_bytes()
 
         return r
-
-    @classmethod
-    def from_bytes(cls, data : bytes) -> Structure:
-        length, = struct.unpack_from("Q", data)
-        head_size = struct.calcsize("Q")
-        atom_b_size = struct.calcsize("Qddd")
-        return Structure(
-            [
-                Atom.from_bytes(data[head_size + i*atom_b_size:])
-                for i in range(length)
-            ]
-        )
 
     def as_data(self) -> dict:
         return {
@@ -687,29 +680,16 @@ cdef class Molecule(Structure):
             self.energy,
         )
 
-    def as_bytes(self) -> bytes:
+    def to_bytes(self) -> bytes:
         """
         Convert molecule data to bytes
         """
-        r = struct.pack(b"Qd", len(self), self.energy)
+        r = struct.pack(b"Id", len(self), self.energy)
 
         for atom in self:
-            r+= atom.as_bytes()
+            r+= atom.to_bytes()
 
         return r
-
-    @classmethod
-    def from_bytes(cls, data : bytes) -> Molecule:
-        length, energy = struct.unpack_from("Qd", data)
-        head_size = struct.calcsize("Qd")
-        atom_b_size = struct.calcsize("Qddd")
-        return Molecule(
-            [
-                Atom.from_bytes(data[head_size + (i*atom_b_size):])
-                for i in range(length)
-            ],
-            energy,
-        )
 
     def as_data(self) -> dict:
         return super().as_data() | {

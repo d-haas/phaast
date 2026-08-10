@@ -1,3 +1,4 @@
 {
   "exclude" : ["**/build", "**/dist", "**/.git", "**/__pycache__"],
+  "ignore" : ["**/cython/cimports/**"]
 }

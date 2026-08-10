@@ -1,7 +1,7 @@
 # cython: freethreading_compatible = True
 from __future__ import annotations
 from typing import Any, Iterator, Union
-import cython
+import cython, struct
 
 if cython.compiled:
     from cython.cimports.libc.math import sqrt, sin, cos # type: ignore
@@ -374,6 +374,18 @@ class Vector:
             self.y,
             self.z,
         )
+
+    def as_bytes(self) -> bytes:
+        return struct.pack(
+            b"ddd",
+            self.x,
+            self.y,
+            self.z,
+        )
+
+    @classmethod
+    def from_bytes(cls, data : bytes) -> Vector:
+        return Vector(*struct.unpack_from(b"ddd", data))
 
     def as_data(self) -> tuple:
         return (self.x, self.y, self.z)

@@ -2,6 +2,8 @@ from typing import Any, Iterator, Union, overload
 
 type VectorData = tuple[float, float, float]
 
+
+
 class Vector:
     x : float
     y : float
@@ -190,3 +192,13 @@ class Vector:
     def __getstate__(self) -> tuple[float, float, float]: ...
 
     def __setstate__(self, state : tuple[float, float, float]) -> None:...
+
+    def example(self):
+        v1 = Vector(3,2,1)
+        v2 = Vector(1,2,3)
+        dot = v1*v2 # 10
+        mul = v1*2  # (  6, 4,   2)
+        div = v2/2  # ( .5, 1, 1.5)
+        sum = v1+v2 # (  4, 4,   4)
+        sub = v1-v2 # (  2, 0,  -2)
+        #...

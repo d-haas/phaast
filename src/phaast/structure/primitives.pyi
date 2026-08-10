@@ -320,7 +320,10 @@ class Molecule(Structure):
         """
         pass
 
-    def get_bondings_lenghts(self, bonding_tolerance : float = 0.1) -> dict[tuple[AtomicNumber, AtomicNumber], list[float]]:
+    def get_bondings_lenghts(
+        self,
+        bonding_tolerance : float = 0.1
+    ) -> dict[tuple[AtomicNumber, AtomicNumber], list[float]]:
         pass
 
     @staticmethod
@@ -368,7 +371,13 @@ class Molecule(Structure):
         pass
 
     @classmethod
-    def from_data(cls, data : MoleculeData) -> Molecule: # type: ignore[override]
+    def from_data( # type: ignore[override]
+        cls,
+        data : MoleculeData
+    ) -> Molecule:
+        """
+        Import to JSON importable dict
+        """
         pass
 
     def __reduce__(self) -> tuple[ Callable[..., Molecule], tuple[tuple[Atom, ...], float] ]:

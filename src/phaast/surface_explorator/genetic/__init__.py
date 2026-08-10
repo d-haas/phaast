@@ -4,10 +4,8 @@ from typing import Any, Iterable, Optional, Sequence, TypedDict, cast, TYPE_CHEC
 
 if TYPE_CHECKING:
     from phaast.surface_explorator.genetic.individual import IndividualData
-import random
-import re
+import json, random, re, base64
 from math import floor
-import json
 
 from phaast.calculators.xtb import XTB
 from phaast.computer import Computer
@@ -56,6 +54,7 @@ class GeneticData(TypedDict):
     generations              : list[GenerationData]
     population               : list[int]
     population_ids           : dict[int, IndividualData]
+    #population_ids           : list[str]
     max_id                   : int
 
     mutations                : list[tuple[float, ObjectData]]
@@ -65,14 +64,37 @@ class GeneticData(TypedDict):
     comparison_algorithm     : ObjectData
 
 class PopulationRegister(dict[int, Individual]):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, init : dict[int, Individual] = {}):
+        super().__init__(init)
 
     def __setitem__(self, key : int, value : Individual):
         if key in self:
             raise KeyError(f"Id [{repr(key)}] was already set in this population:\n{self}")
         else:
             super().__setitem__(key, value)
+
+    def as_data(self, max_id) -> list[str]:
+        population_bins : list[str] = []
+        for i in range(max_id):
+            if i in self:
+                population_bins.append(
+                    base64.b64encode(self[i].as_bytes()).decode("ascii")
+                )
+            else:
+                population_bins.append("")
+
+        return population_bins
+
+
+    @classmethod
+    def from_data(cls, data : list[str]) -> PopulationRegister:
+        return PopulationRegister(
+            {
+                i : Individual.from_bytes(base64.b64decode(v.encode("ascii")))
+                for i, v in enumerate(data)
+                if v
+            }
+        )
 
 class GeneticComputer(Computer):
     parent               : Genetic
@@ -133,7 +155,12 @@ class GeneticComputer(Computer):
 
         return inds
 
-    def crossover(self, struct_pairs : Iterable[tuple[Individual, Individual]], crossover : Crossover) -> list[ChildIndividual]:
+    def crossover(
+        self,
+        struct_pairs : Iterable[tuple[Individual, Individual]],
+        crossover : Crossover
+    ) -> list[ChildIndividual]:
+
         start = time.monotonic_ns()
 
         children = self.parallelize(
@@ -287,9 +314,9 @@ class Genetic(SurfaceExplorator):
         computer : Computer,
         calculator : str,
 
-        mutations  : list[tuple[float, type[Mutator]]],
-        crossovers : list[tuple[float, type[Crossover]]],
-        migrators  : list[tuple[float, type[Migrator]]],
+        mutations  : list[tuple[float, Mutator]],
+        crossovers : list[tuple[float, Crossover]],
+        migrators  : list[tuple[float, Migrator]],
         sequential_mutations : int = 1,
         mutation_batches : int = 10,
 
@@ -319,7 +346,7 @@ class Genetic(SurfaceExplorator):
         self.computer = GeneticComputer(self, computer, calculator)
         self.population_ids = PopulationRegister()
         self.max_id   = 0
-        self.population : list[OptimizedIndividual] = []
+        self.population = []
         self.population_growth = population_size
         if population_limit and population_limit > 0:
             self.population_limit = population_limit
@@ -407,6 +434,9 @@ class Genetic(SurfaceExplorator):
         ]
 
     def migrate(self) -> list[OptimizedIndividual]:
+        """
+        Run the migration algorithm and return the optimized individuals as a list.
+        """
         migrated : list[Individual] = []
 
         for weight, migrator in self.migrators:
@@ -419,6 +449,10 @@ class Genetic(SurfaceExplorator):
         return migrated_individuals
 
     def reproduce(self) -> list[OptimizedIndividual]:
+        """
+        Run the crossover algorithms for random individuals in population and
+        return the optimized children as a list.
+        """
         children : list[ChildIndividual] = []
 
         for weight, crossover in self.crossovers:
@@ -440,12 +474,16 @@ class Genetic(SurfaceExplorator):
         return children_individuals
 
     def mutate(self) -> list[OptimizedIndividual]:
+        """
+        Run the mutation algorithms for random individuals in population and
+        return the optimized ancestors as a list.
+        """
         mutants : list[MutantIndividual] = []
 
         if self.sequential_mutations > 1:
             operation_pools = [
                 random.choices(
-                    *list(zip(*self.mutations))[::-1], # This is basically both lists of mutators and weights
+                    *list(zip(*self.mutations))[::-1],
                     k = self.sequential_mutations,
                 )
                 for _ in range(self.mutation_batches)
@@ -454,7 +492,9 @@ class Genetic(SurfaceExplorator):
                 weight for weight, _
                 in self.mutations
             ])/self.mutation_batches
-            op_num : int = floor(self.population_growth*mutations_weight/self.operations_weight)
+            op_num : int = floor(
+                self.population_growth*mutations_weight/self.operations_weight,
+            )
 
             for pool in operation_pools:
                 temp_mutants = random.choices(
@@ -473,7 +513,9 @@ class Genetic(SurfaceExplorator):
 
         else:
             for weight, mutation in self.mutations:
-                op_num : int = floor(self.population_growth*weight/self.operations_weight)
+                op_num : int = floor(
+                    self.population_growth*weight/self.operations_weight,
+                )
 
                 chosen_mutants = random.choices(
                     self.population,
@@ -485,32 +527,18 @@ class Genetic(SurfaceExplorator):
                     mutation,
                 )
 
-        mutant_molecules : list[OptimizedIndividual] = self.computer.genetic_optimize(mutants)
+        mutant_molecules : list[OptimizedIndividual]
+        mutant_molecules = self.computer.genetic_optimize(mutants)
 
         return mutant_molecules
 
     def remove_unfeasible(self) -> None:
         """
-        min_energy : float = min(
-            [ind.energy for ind in self.population]
-        )
-        max_energy : float = max(
-            [ind.energy for ind in self.population]
-        )
-        median_energy : float = (min_energy + max_energy)/2
+        Cap population by defined ceil (self.population_limit) keeping the least
+        energy individuals.
         """
         pop_size_before = len(self.population)
 
-        """
-        self.population = [
-            ind for ind in self.population
-            if (
-                #ind.energy <= median_energy or
-                ind.energy <= avg_energy or
-                ind in self.best_energies
-            )
-        ]
-        """
         self.population = sorted(
             self.population,
             key = lambda ind : ind.energy,
@@ -521,7 +549,9 @@ class Genetic(SurfaceExplorator):
         self.total_unfeasible_removed+= pop_size_before - pop_size_after
 
     def remove_unbonded(self) -> None:
-
+        """
+        Removed unbonded states
+        """
         pop_size_before = len(self.population)
 
         self.population = [
@@ -535,9 +565,8 @@ class Genetic(SurfaceExplorator):
 
     def get_best_energy(self) -> list[bool]:
         """
-        Refresh algorithm's energy list with the new one
-        and reset energy loop counter if it has changed
-        or add 1 otherwise
+        Refresh algorithm's energy list with the new ones and reset energy loop
+        counter if it has changed or add 1 otherwise
         """
         new_best_energies : list[OptimizedIndividual] = sorted(
             # New energies
@@ -569,7 +598,10 @@ class Genetic(SurfaceExplorator):
         return [not i for i in ind_equals]
 
     def loop(self) -> bool:
-
+        """
+        Run the main Genetic Algorithm's loop, returning true if it should
+        continue or not (termination criteria met).
+        """
         if len(self.population) == 0:
             print("Population was erradicated, can't proceed correctly with algorithm")
         if len(self.population) < 10:
@@ -601,7 +633,12 @@ class Genetic(SurfaceExplorator):
 
         return self.best_energy_loops < self.end_loop_number
 
+
     def as_data(self) -> GeneticData:
+        """
+        Wrap the actual state of the genetic algorithm as a GeneticData type,
+        which can be stored as a JSON file for later import.
+        """
         results : GeneticData = {
             "population_size"          : self.population_growth,
             "end_loop_number"          : self.end_loop_number,
@@ -631,6 +668,7 @@ class Genetic(SurfaceExplorator):
             ],
             "population"               : [ind.id for ind in self.population],
             "population_ids"           : { k : v.as_data() for k, v in self.population_ids.items() },
+            #"population_ids"           : self.population_ids.as_data(self.max_id),
             "max_id"                   : self.max_id,
 
             "mutations"                : [(weight, mutation.as_data()) for weight, mutation in self.mutations],
@@ -649,6 +687,9 @@ class Genetic(SurfaceExplorator):
         return results
 
     def save(self, file_path : str = "phaast_genetic") -> None:
+        """
+        Save the algorithm as a json file.
+        """
         if not file_path.endswith(".json"): file_path+= ".json"
 
         with open(file_path, "w") as file: 
@@ -656,30 +697,20 @@ class Genetic(SurfaceExplorator):
             json_string = json.dumps(
                 self.as_data(),
                 sort_keys = True,
-                indent = "  ",
             )
 
-            # Removal of indentation in numeric lists was done with AI (improve that shit later)
-            # No, I ain't gonna learn regex
-            json_string_f = re.sub(
-                r'\[[\s\d,\.\-]+\]',
-                lambda match: re.sub(r'\s+', ' ', match.group(0)).replace('[ ', '[').replace(' ]', ']'),
-                json_string
-            )
-
-            file.write(json_string_f)
+            file.write(json_string)
 
     @classmethod
     def from_data(cls, data : GeneticData, computer : Optional[Computer] = None, calculator_key : str = "xtb") -> Genetic:
-        ### NOT WORKING RIGHT NOW (DON'T USE)
         if computer is None:
             computer = Computer()
             xtb = XTB()
             computer.add_calculator(calculator_key, xtb)
 
         population_ids = PopulationRegister()
-        for k, v in data["population_ids"].items():
-            population_ids[k] = Individual.from_data(v)
+        for i, v in data["population_ids"].items():
+            population_ids[int(i)] = Individual.from_data(v)
 
         algorithm = Genetic(
             population_size      = data["population_size"],
@@ -737,14 +768,6 @@ class Genetic(SurfaceExplorator):
     def load(cls, file_path : str) -> Genetic:
         with open(file_path, "r") as file:
             data : GeneticData = json.load(file)
-
-            # Pop Ids keys are not ints, just converting here
-            data["population_ids"] = {
-                int(k) : v
-                for k, v
-                in data["population_ids"].items()
-            }
-
             return Genetic.from_data(data)
 
     def get_report(self) -> dict[str, Any]:
@@ -788,14 +811,7 @@ class Genetic(SurfaceExplorator):
                 indent = "  ",
             )
 
-            # Removal of indentation in numeric lists was done with AI (improve that shit later)
-            json_string_f = re.sub(
-                r'\[[\s\d,\.\-]+\]',
-                lambda match: re.sub(r'\s+', ' ', match.group(0)).replace('[ ', '[').replace(' ]', ']'),
-                json_string
-            )
-
-            file.write(json_string_f)
+            file.write(json_string)
 
     def get_best(self, n : int = 10) -> list[OptimizedIndividual]:
         return sorted(
@@ -820,21 +836,38 @@ class Genetic(SurfaceExplorator):
         )
 
     def statistics(self, fields : list[str] = []) -> str:
+        fields = fields if fields else []
+
+        lines = fields + [
+            f"Total optimizations: {self.total_optimizations} "
+            f"({self.computer.optimization_time} s)",
+
+            f"Total converged: {self.total_converged}",
+
+            f"Total duplicates removed: {self.total_duplicates_removed} "
+            f"({self.computer.duplicate_time} s)",
+
+            f"Total unfeasible removed: {self.total_unfeasible_removed}",
+
+            f"Total not-bonded removed: {self.total_not_bonded_removed}",
+
+            f"Total migration: {self.total_migrated} "
+            f"({self.computer.migration_time} s)",
+
+            f"Total mutations: {self.total_mutations} "
+            f"({self.computer.mutation_time} s)",
+
+            f"Total crossovers: {self.total_mating} "
+            f"({self.computer.crossover_time} s)",
+        ]
+
         return "\n".join(
             [
-                "╔"+"═"*59+"╗",
+                f"╔{"═"*59}╗",
             ] + [
-                "║"+line.ljust(59)+"║"
-                for line in fields
+                f"║{line.ljust(59)}║"
+                for line in lines
             ] + [
-                "║"+f"Total optimizations: {self.total_optimizations} ({self.computer.optimization_time} s)".ljust(59)+"║",
-                "║"+f"Total converged: {self.total_converged}".ljust(59)+"║",
-                "║"+f"Total duplicates removed: {self.total_duplicates_removed} ({self.computer.duplicate_time} s)".ljust(59)+"║",
-                "║"+f"Total unfeasible removed: {self.total_unfeasible_removed}".ljust(59)+"║",
-                "║"+f"Total not-bonded removed: {self.total_not_bonded_removed}".ljust(59)+"║",
-                "║"+f"Total migration: {self.total_migrated} ({self.computer.migration_time} s)".ljust(59)+"║",
-                "║"+f"Total mutations: {self.total_mutations} ({self.computer.mutation_time} s)".ljust(59)+"║",
-                "║"+f"Total crossovers: {self.total_mating} ({self.computer.crossover_time} s)".ljust(59)+"║",
-                "╚"+"═"*59+"╝",
+                f"╚{"═"*59}╝",
             ]
         )
