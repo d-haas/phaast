@@ -39,6 +39,10 @@ class MenuBar(tk.Menu):
             command = self.open_genetic,
         )
         self.file.add_command(
+            label = "New xyz",
+            command = self.new_xyz,
+        )
+        self.file.add_command(
             label = "Open xyz",
             command = self.open_xyz,
         )
@@ -137,7 +141,6 @@ class MenuBar(tk.Menu):
 
         energy_visualizer.pack(fill = tk.BOTH, expand = True)
 
-
     def open_viewer(self):
         window = self.root.create_window()
 
@@ -176,6 +179,14 @@ class MenuBar(tk.Menu):
                 expand = True,
             )
 
+    def new_xyz(self):
+        window = self.root.create_window(w = 590, h = 340)
+
+        viewer = ViewerWindow(window.child, self.root)
+        viewer.pack(
+            fill = tk.BOTH,
+            expand = True,
+        )
         
 
 

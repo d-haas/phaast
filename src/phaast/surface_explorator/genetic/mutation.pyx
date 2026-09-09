@@ -20,14 +20,14 @@ from phaast.utils.custom_iter import distinct_pairs
 
 cdef class Mutator:
     #@abstractmethod
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self) -> None:
         pass
 
     #@abstractmethod
     def __call__(self, struct : Structure) -> Structure:
         pass
 
-    def as_date(self) -> dict:
+    def as_data(self) -> dict:
         pass
 
 cdef class DisplacementMutator(Mutator):
@@ -185,7 +185,7 @@ cdef class TwistMutator(Mutator):
 
         new_structure.center_mass()
 
-        rotations : tuple[float, float] = (
+        rotations : tuple[float, ...] = (
             get_rand_uniform(0, tau),
             get_rand_uniform(0, tau),
         )

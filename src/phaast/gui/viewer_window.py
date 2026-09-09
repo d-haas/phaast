@@ -1,14 +1,19 @@
 from __future__ import annotations
+import threading
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from phaast.gui.gui import GUI
 
+import multiprocessing
 import tkinter as tk
 from tkinter import filedialog
 
 from phaast.gui.viewer import MolViewer
 from phaast.structure.constants import AtomicNumbers, AtomicRadi
 from phaast.structure.primitives import Structure
+
+from phaast.calculators.orca import Orca
+from phaast.calculators.xtb import XTB
 
 
 class ViewerOptions(tk.Menu):
@@ -62,6 +67,10 @@ class ViewerOptions(tk.Menu):
 
         self.viewer.structure.to_xyz(file.name)
 
+ground_colors = {
+    "foreground" : "#cdd6f4",
+    "background" : "#1e1e2e",
+}
 class ViewerControls(tk.Frame):
     def __init__(self, master : tk.Misc, viewer : MolViewer):
         super().__init__(
@@ -75,6 +84,13 @@ class ViewerControls(tk.Frame):
             background = "#1e1e2e",
         )
 
+        lower_frame = tk.Frame(
+            self,
+            background = "#1e1e2e",
+        )
+
+        self.opt_disabled : list[tk.Button] = []
+
         for name in ("add", "delete", "replace", "view", "move"):
             button = tk.Button(
                 upper_frame,
@@ -84,6 +100,7 @@ class ViewerControls(tk.Frame):
                 background="#6c7086",
                 activebackground="#6c7086",
             )
+            self.opt_disabled.append(button)
             button.pack(side = tk.LEFT, padx = 5)
 
         self.entry_var = tk.StringVar()
@@ -108,15 +125,75 @@ class ViewerControls(tk.Frame):
             foreground = "#cdd6f4",
             background="#6c7086",
             activebackground="#6c7086",
-            command = lambda : print("Optimization Logic")
+            command = self.optimize,
         )
+        self.opt_disabled.append(opt_button)
         label.pack(side=tk.LEFT)
         entry.pack(side=tk.LEFT)
         entry_frame.pack(side = tk.LEFT, padx = 5)
 
         opt_button.pack(side = tk.RIGHT)
 
-        upper_frame.pack(side = tk.TOP, pady=10)
+        self.functional_var = tk.StringVar(value = "xtb")
+        self.basisset_var = tk.StringVar(value = "")
+        self.charge_var = tk.IntVar(value = 0)
+        self.spin_var = tk.IntVar(value = 1)
+        self.threads_var = tk.IntVar(value = 0)
+
+        tk.Label(
+            lower_frame,
+            text = "Functional: ",
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Entry(
+            lower_frame, width = 7,
+            textvariable = self.functional_var,
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Label(
+            lower_frame,
+            text = "Basis set: ",
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Entry(
+            lower_frame, width = 7,
+            textvariable = self.basisset_var,
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Label(
+            lower_frame,
+            text = "Charge: ",
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Entry(
+            lower_frame, width = 3,
+            textvariable = self.charge_var,
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Label(
+            lower_frame,
+            text = "Spin Multiplicity: ",
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Entry(
+            lower_frame, width = 3,
+            textvariable = self.spin_var,
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Label(
+            lower_frame,
+            text = "Threads: ",
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        tk.Entry(
+            lower_frame, width = 3,
+            textvariable = self.threads_var,
+            **ground_colors, #type: ignore
+        ).pack(side = tk.LEFT)
+        
+
+        upper_frame.pack(side = tk.TOP, pady=5)
+        lower_frame.pack(side = tk.TOP, pady=5)
 
     def on_entry_change(self, *_):
         string_var = self.entry_var.get()
@@ -136,6 +213,40 @@ class ViewerControls(tk.Frame):
 
         else:
             self.label_var.set("*")
+
+    def optimize(self):
+        for button in self.opt_disabled:
+            button["state"] = "disabled"
+        def opt_loop():
+            if self.threads_var.get() <= 0:
+                threads  = max(multiprocessing.cpu_count()//2, 1)
+            else:
+                threads = self.threads_var.get()
+
+            if self.functional_var.get() != "xtb":
+                calc = Orca(
+                    functional = self.functional_var.get(), #type: ignore
+                    basis_set = self.basisset_var.get(), #type: ignore
+                    spin_multiplicity = self.spin_var.get(),
+                    charge = self.charge_var.get(),
+                    threads = threads,
+                )
+                for mol in calc.optimize_trj(self.viewer.structure):
+                    if mol:
+                        self.viewer.structure = mol
+            else:
+                calc = XTB(
+                    charge = self.charge_var.get(),
+                    threads = threads,
+                )
+                mol = calc.optimize(self.viewer.structure)
+                if mol:
+                    self.viewer.structure = mol
+            for button in self.opt_disabled:
+                button["state"] = "normal"
+
+        threading.Thread(target = opt_loop).start()
+
 
 class ViewerWindow(tk.Frame):
     def __init__(self, master : tk.Misc, gui : GUI):

@@ -1,12 +1,23 @@
+# cython: freethreading_compatible = True
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable
+
+if TYPE_CHECKING:
+    time : Callable[[Any], cython.long] = lambda _: 0
+    RANDMAX : cython.long = 0
+    rand : Callable[[], cython.long] = lambda : 0
+    srand : Callable[[cython.long], None] = lambda _: None
+
 import cython
+from cython.cimports.libc.time import time #type: ignore
+from cython.cimports.libc.stdlib import srand, rand, RAND_MAX #type: ignore
+
 
 srand(time(cython.NULL))
 
-@nogil
+@cython.nogil
 @cython.cfunc
-@noexcept
+@cython.exceptval(check=False)
 def get_rand() -> cython.double:
     cython.declare(
         num = cython.ulong,
@@ -18,9 +29,9 @@ def get_rand() -> cython.double:
 
     return result
 
-@nogil
+@cython.nogil
 @cython.cfunc
-@noexcept
+@cython.exceptval(check=False)
 def get_randint(a : cython.int, b : cython.int) -> cython.ulong:
     cython.declare(
         num = cython.ulong,
@@ -29,8 +40,8 @@ def get_randint(a : cython.int, b : cython.int) -> cython.ulong:
 
     return (num % (b - a)) + a
 
-@nogil
+@cython.nogil
 @cython.cfunc
-@noexcept
+@cython.exceptval(check=False)
 def get_rand_uniform(a : cython.double, b : cython.double) -> cython.double:
     return get_rand()*(b - a) + a 

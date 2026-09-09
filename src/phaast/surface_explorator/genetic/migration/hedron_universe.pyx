@@ -124,7 +124,7 @@ cdef class HedronUniverse:
 
         for atom in self.atom_population:
             if self.bond_filter.is_permited(atomic_number, atom.z):
-                radius : cython.double = AtomicRadi[atomic_number] + atom.radius
+                radius = AtomicRadi[atomic_number] + atom.radius
                 for point in HedronPositions[self.n_vertices]:
                     new_position = atom.pos + point*radius
                     new_atom = Atom(atomic_number, new_position)

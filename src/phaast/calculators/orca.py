@@ -115,7 +115,7 @@ class Orca(Calculator):
 
         return molecule
 
-    def optimize_trj(self, structure : Structure) -> Generator[Molecule, Molecule, Literal[True]]:
+    def optimize_trj(self, structure : Structure) -> Generator[Structure, Molecule, Literal[True]]:
         if not len(structure):
             raise ValueError(
                 "Structure is empty, is this some kind of joke?",
@@ -163,7 +163,9 @@ class Orca(Calculator):
                 )
                 thread.start()
                 line_number = 0
-                while thread.is_alive():
+                check_once = True
+                while thread.is_alive() or check_once:
+                    check_once = False
                     output_path = input_file.name+"_trj.xyz"
                     if os.path.exists(output_path):
                         with open(output_path) as file:

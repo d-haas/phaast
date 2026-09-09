@@ -8,8 +8,9 @@ os.environ["PYOPENGL_PLATFORM"] = "glx"
 
 import tkinter as tk
 from math import acos, cos, degrees, sin, sqrt
-import threading
 
+import OpenGL
+OpenGL.USE_ACCELERATE = False
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 
@@ -67,41 +68,6 @@ class MolViewer(OpenGLFrame):
     def initgl(self):
         # Catppuccin (Mocha) crust color for background
         gl.glClearColor(17/255, 17/255, 27/255, 1)
-
-    def optimize_xtb(self, options : dict[str, Any]) -> None:
-        previous_state = self.state
-        self.state = "view"
-        if not isinstance(self.parent, tk.Misc):
-            self.parent.disable_input()
-
-        calc = XTB(**options)
-
-        mol = calc.optimize(self.structure)
-
-        if mol:
-            self.structure = mol
-
-        self.state = previous_state
-        if not isinstance(self.parent, tk.Misc):
-            self.parent.enable_input()
-
-    def optimize_orca(self, options : dict[str, Any]) -> None:
-        previous_state = self.state
-        self.state = "view"
-        if not isinstance(self.parent, tk.Misc):
-            self.parent.disable_input()
-
-        calc = Orca(**options)
-
-        def temp_optimize_trj():
-            for mol in calc.optimize_trj(self.structure):
-                self.structure = mol
-            self.state = previous_state
-            if not isinstance(self.parent, tk.Misc):
-                self.parent.enable_input()
-
-        thread = threading.Thread(target = temp_optimize_trj)
-        thread.start()
 
     def update_quaternion(self):
         ##############################
@@ -412,14 +378,3 @@ class MolViewer(OpenGLFrame):
                 self.draw_deletion()
 
         gl.glPopMatrix()
-
-
-    """
-    def rotate_by_quat(self, pos : Vector) -> Vector:
-        rot_axis = Vector(*self.rotation_quaternion[1:4])
-        rot_w = self.rotation_quaternion[0]
-
-        #return pos + rot_w*rot_axis.cross(pos) + 2.0*rot_axis.cross(rot_axis.cross(pos))
-        t = 2.0 * rot_axis.cross(pos)
-        return pos + (rot_w * t) + rot_axis.cross(t)
-    """

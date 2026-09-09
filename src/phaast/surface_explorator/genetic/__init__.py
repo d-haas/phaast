@@ -1,10 +1,13 @@
 from __future__ import annotations
 import time
-from typing import Any, Iterable, Optional, Sequence, TypedDict, cast, TYPE_CHECKING
+from typing import Any, Iterable, Sequence, TypedDict, cast, TYPE_CHECKING
+
+from phaast.calculators import Calculator
+from phaast.structure.primitives import Molecule
 
 if TYPE_CHECKING:
     from phaast.surface_explorator.genetic.individual import IndividualData
-import json, random, re, base64
+import json, random, base64
 from math import floor
 
 from phaast.calculators.xtb import XTB
@@ -27,6 +30,8 @@ class GenerationData(TypedDict):
 class GeneticData(TypedDict):
 
     population_size          : int
+    population_growth        : int
+    population_limit         : int
     end_loop_number          : int
 
     do_remove_unbonded       : bool
@@ -104,11 +109,9 @@ class GeneticComputer(Computer):
     migration_time_ns    : int
     optimization_time_ns : int
     duplicate_time_ns    : int
-    def __init__(self, parent : Genetic, computer : Computer, calculator : str):
-        super().__init__(computer.cpu_count_limit)
+    def __init__(self, parent : Genetic, cpu_count_limit : int):
+        super().__init__(cpu_count_limit)
         self.parent = parent
-        self.calculators = computer.calculators
-        self.chosen_calculator : str = calculator
         self.mutation_time_ns     = 0
         self.crossover_time_ns    = 0
         self.migration_time_ns    = 0
@@ -203,29 +206,40 @@ class GeneticComputer(Computer):
 
         return inds
 
-    def genetic_optimize(self, structs : Iterable[Individual]) -> list[OptimizedIndividual]:
+    def genetic_optimize(self, inds : Iterable[Individual], calculator : Calculator) -> list[OptimizedIndividual]:
         start = time.monotonic_ns()
 
-        mols = [mol for mol in self.optimize(self.chosen_calculator, structs) if mol]
+        mols = self.parallelize(
+            [(ind,) for ind in inds],
+            calculator.optimize,
+        )
+        mol_ind_pairs = cast(
+            list[tuple[Molecule, Individual]],
+            [
+                pair for pair
+                in zip(mols, inds)
+                if pair[0] # if mol
+            ],
+        )
 
-        inds = [
+        new_inds = [
             OptimizedIndividual(mol, struct.id, self.parent.max_id + i, mol.energy)
             for i, (mol, struct)
-            in enumerate(zip(mols, structs))
+            in enumerate(mol_ind_pairs)
         ]
-        self.parent.max_id+= len(inds)
-        for ind in inds:
+        self.parent.max_id+= len(new_inds)
+        for ind in new_inds:
             self.parent.population_ids[ind.id] = ind
             self.parent.population_ids[ind.ancestor].add_descendant(ind.id)
 
-        self.parent.total_optimizations+= len(list(structs)) # This list(...) is dumb and shouldn't be used... Anyway..
-        self.parent.total_converged+= len(mols)
+        self.parent.total_optimizations+= len(mols) # This list(...) is dumb and shouldn't be used... Anyway..
+        self.parent.total_converged+= len(new_inds)
 
         self.optimization_time_ns+= time.monotonic_ns()-start
 
-        return inds
+        return new_inds
 
-    def incorporate(self, structs : list[Structure]) -> list[OptimizedIndividual]:
+    def incorporate(self, structs : list[Structure], calculator : Calculator) -> list[OptimizedIndividual]:
         inds = [
             Individual(struct, self.parent.max_id + i)
             for i, struct in enumerate(structs)
@@ -233,7 +247,7 @@ class GeneticComputer(Computer):
         self.parent.max_id+= len(inds)
         for ind in inds: self.parent.population_ids[ind.id] = ind
 
-        return self.genetic_optimize(inds)
+        return self.genetic_optimize(inds, calculator)
 
     def get_duplicate(self, i : int, inds : Sequence[OptimizedIndividual], comparison_algorithm : ComparisonAlgorithm) -> bool:
         i_id = inds[i].id
@@ -275,7 +289,7 @@ class Genetic(SurfaceExplorator):
     population_ids    : PopulationRegister
     end_loop_number   : int
 
-    calculator          : str
+    calculator          : Calculator
     computer            : GeneticComputer
 
     comparison_algorithm : ComparisonAlgorithm
@@ -311,8 +325,8 @@ class Genetic(SurfaceExplorator):
     def __init__(
         self,
         population_size : int,
-        computer : Computer,
-        calculator : str,
+        cpu_count  : int,
+        calculator : Calculator,
 
         mutations  : list[tuple[float, Mutator]],
         crossovers : list[tuple[float, Crossover]],
@@ -343,7 +357,8 @@ class Genetic(SurfaceExplorator):
         """
         Define initial variables for genetic algorithm
         """
-        self.computer = GeneticComputer(self, computer, calculator)
+        self.computer = GeneticComputer(self, cpu_count)
+        self.calculator = calculator
         self.population_ids = PopulationRegister()
         self.max_id   = 0
         self.population = []
@@ -390,7 +405,7 @@ class Genetic(SurfaceExplorator):
 
         if not loaded:
             if custom_population:
-                self.population+= self.computer.incorporate(custom_population)
+                self.population+= self.computer.incorporate(custom_population, self.calculator)
 
             if generate_population:
                 migrator_total_weight = sum([weight for weight, _ in migrators])
@@ -400,7 +415,8 @@ class Genetic(SurfaceExplorator):
                         self.computer.migrate(
                             generated_num,
                             migrator,
-                        )
+                        ),
+                        self.calculator,
                     )
 
             self.generations.append(self.population.copy())
@@ -444,7 +460,9 @@ class Genetic(SurfaceExplorator):
 
             migrated+= self.computer.migrate(op_num, migrator)
 
-        migrated_individuals = self.computer.genetic_optimize(migrated)
+        migrated_individuals = self.computer.genetic_optimize(
+            migrated, self.calculator,
+        )
 
         return migrated_individuals
 
@@ -469,7 +487,9 @@ class Genetic(SurfaceExplorator):
                 crossover,
             )
 
-        children_individuals = self.computer.genetic_optimize(children)
+        children_individuals = self.computer.genetic_optimize(
+            children, self.calculator,
+        )
 
         return children_individuals
 
@@ -528,7 +548,9 @@ class Genetic(SurfaceExplorator):
                 )
 
         mutant_molecules : list[OptimizedIndividual]
-        mutant_molecules = self.computer.genetic_optimize(mutants)
+        mutant_molecules = self.computer.genetic_optimize(
+            mutants, self.calculator,
+        )
 
         return mutant_molecules
 
@@ -641,6 +663,8 @@ class Genetic(SurfaceExplorator):
         """
         results : GeneticData = {
             "population_size"          : self.population_growth,
+            "population_growth"        : self.population_growth,
+            "population_limit"         : self.population_limit,
             "end_loop_number"          : self.end_loop_number,
 
             "cycle_counter"            : self.cycle_counter,
@@ -702,20 +726,27 @@ class Genetic(SurfaceExplorator):
             file.write(json_string)
 
     @classmethod
-    def from_data(cls, data : GeneticData, computer : Optional[Computer] = None, calculator_key : str = "xtb") -> Genetic:
-        if computer is None:
-            computer = Computer()
-            xtb = XTB()
-            computer.add_calculator(calculator_key, xtb)
+    def from_data(cls, data : GeneticData, cpu_count : int = 0, calculator : Calculator = XTB()) -> Genetic:
 
         population_ids = PopulationRegister()
         for i, v in data["population_ids"].items():
             population_ids[int(i)] = Individual.from_data(v)
 
+        if "population_limit" in data:
+            population_limit = data["population_limit"]
+        else:
+            population_limit = data["population_size"]
+
+        if "population_growth" in data:
+            population_growth = data["population_growth"]
+        else:
+            population_growth = data["population_size"]
+
         algorithm = Genetic(
-            population_size      = data["population_size"],
-            computer             = computer, 
-            calculator           = calculator_key,
+            population_size      = population_growth,
+            population_limit     = population_limit,
+            cpu_count            = cpu_count,
+            calculator           = calculator,
 
             mutations            = [(weight, import_object(obj_data)) for weight, obj_data in data["mutations"]], # type: ignore[override]
             crossovers           = [(weight, import_object(obj_data)) for weight, obj_data in data["crossovers"]], # type: ignore[override],
@@ -765,10 +796,10 @@ class Genetic(SurfaceExplorator):
 
 
     @classmethod
-    def load(cls, file_path : str) -> Genetic:
+    def load(cls, file_path : str, cpu_count : int = 0, calculator : Calculator = XTB()) -> Genetic:
         with open(file_path, "r") as file:
             data : GeneticData = json.load(file)
-            return Genetic.from_data(data)
+            return Genetic.from_data(data, cpu_count, calculator)
 
     def get_report(self) -> dict[str, Any]:
         report = {

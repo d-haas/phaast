@@ -9,13 +9,14 @@ from phaast.surface_explorator.genetic.migration.hedron_universe import HedronMi
 from phaast.surface_explorator.genetic.mutation import DisplacementMutator, PermuteMutator, TwistMutator
 
 from phaast.calculators.xtb import XTB
+from phaast.calculators.orca import Orca
 from phaast.computer import Computer
 from phaast.structure import Base
 from phaast.surface_explorator.genetic.migration.filter_list import FilterList, FilterMode
 from phaast.surface_explorator.genetic import Genetic
 
 def main():
-    print("Test version 2026.06.19a")
+    print("Test version 2026.08.17a")
     arg_parser = argparse.ArgumentParser(
         prog=f"GET-PHAAST ({version})",
         description="A heuristic-algorithm-driven software made for global minima search",
@@ -74,7 +75,27 @@ def main():
     )
 
     arg_parser.add_argument(
-        "-xtbt", "--xtb-threads",
+        "--basis-set",
+        type = str,
+        default = "",
+        help = "Basis set as represented in orca, such as STO-3G (Using this flag imply there will also be a --functional if needed)"
+    )
+
+    arg_parser.add_argument(
+        "--functional",
+        type = str,
+        default = "",
+        help = "Functional as represented in orca, such as HF (Using this flag imply there will also be a --basis-set if needed)"
+    )
+
+    arg_parser.add_argument(
+        "--spin-multiplicity",
+        type = int,
+        default = 0,
+    )
+
+    arg_parser.add_argument(
+        "--opt-threads", "-xtbt", "--xtb-threads",
         type = int,
         default = 4,
         help = "Number of threads to be used by each -t xtb instance (default = %(default)s)",
@@ -260,12 +281,25 @@ def main():
 
     base = Base(args.stoichiometry)
 
-    calc = XTB(
-        charge = args.charge,
-        threads = args.xtb_threads,
-        xtb_path = args.xtb_path,
-        gfn = args.xtb_gfn,
-    )
+    if args.functional or args.basis_set:
+        if not args.spin_multiplicity:
+            print("Spin multiplicity should be defined for the Orca module")
+            return
+
+        calc = Orca(
+            functional = args.functional,
+            basis_set = args.basis_set,
+            spin_multiplicity = args.spin_multiplicity,
+            charge = args.charge,
+            threads = args.opt_threads,
+        )
+    else:
+        calc = XTB(
+            charge = args.charge,
+            threads = args.opt_threads,
+            xtb_path = args.xtb_path,
+            gfn = args.xtb_gfn,
+        )
 
     computer = Computer(
         cpu_count_limit = args.threads,
@@ -333,8 +367,8 @@ def main():
     def new_genetic() -> Genetic:
         return Genetic(
             population_size = args.population_size,
-            computer = computer,
-            calculator = "xtb",
+            cpu_count = args.threads,
+            calculator = calc,
 
             mutations = mutators,
             crossovers = crossover, #type: ignore
