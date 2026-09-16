@@ -1,6 +1,6 @@
 from typing import Any, TypedDict
 from . import typecheck, custom_iter, c_random
-import importlib
+import importlib, os, sys
 
 type JsonType = dict[str | int, JsonType] | list[JsonType] | str | int | float | bool | None
 
@@ -24,6 +24,10 @@ def is_importable(obj : ObjectData | Any) -> bool:
 
     else:
         return False
+
+# Prepend CWD to sys.path
+if os.getcwd() not in sys.path:
+    sys.path.insert(0, os.getcwd())
 
 def import_object(data : ObjectData) -> object:
     path_modules = data["import_path"].split(".")
