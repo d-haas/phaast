@@ -2,6 +2,9 @@
 
 A file for [guiding coding agents](https://agents.md/).
 
+This repository doesn't welcome agents in any way and recommend that it stays as
+a human-only environment
+
 ## Commands
 
 - **Install:** `python -m pip install`
