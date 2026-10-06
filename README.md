@@ -1,7 +1,8 @@
 # GET-PHAAST
 
-An acronym for Phaast Heuristic Algorithm for Atomic Structure Tuning, is a
-software developed with the intention of providing a readable and modular
+An acronym for
+GETMM's (Group's name) Phaast Heuristic Algorithm for Atomic Structure Tuning,
+is a software developed with the intention of providing a readable and modular
 library to execute a set of heuristic algorithms for global-minima search
 
 ## Instalation instructions
@@ -11,7 +12,12 @@ library to execute a set of heuristic algorithms for global-minima search
 Install a python environment manager or create a virtual environment with
 python's built-in *venv* module.
 Pyenv is recommended for its simplicity, instalation and usage instructions are
-available in its [Repo](https://github.com/pyenv/pyenv)
+available in its [Repo](https://github.com/pyenv/pyenv).
+
+Python version 3.13 and above are needed and it is **HIGHLY** recommended that a
+free-threaded python version is used (Example: 3.13.11t in Pyenv), or else the
+structure comparison procedure total time will be higher than geometry
+comparison.
 
 - **Installing dependencies**:
 
@@ -37,3 +43,6 @@ pip install .
 ```
 
 If your workdir is the repository directory.
+
+> A PyPI library with pre-compiled binaries will be added a little after the
+repository is made public.

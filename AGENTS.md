@@ -2,21 +2,8 @@
 
 A file for [guiding coding agents](https://agents.md/).
 
-This repository doesn't welcome agents in any way and recommend that it stays as
-a human-only environment
-
-## Commands
-
-- **Install:** `python -m pip install`
-  - No need to build before instalation
-- **Build:** `python -m build`
-- **Test:** `python -m pytest`
-
-
-## Directory Structure
-
-- Main GET-PHAAST code: `src/phaast`
-- Build, install and testing config: `pyproject.toml`
+This repository doesn't welcome agents in any way and it is recommended that it
+stays as a human-only environment
 
 ## Issue and PR Guidelines
 
