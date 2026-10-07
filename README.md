@@ -17,7 +17,8 @@ available in its [Repo](https://github.com/pyenv/pyenv).
 Python version 3.13 and above are needed and it is **HIGHLY** recommended that a
 free-threaded python version is used (Example: 3.13.11t in Pyenv), or else the
 structure comparison procedure total time will be higher than geometry
-comparison.
+optimization.
+
 
 - **Installing dependencies**:
 
