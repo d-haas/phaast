@@ -7,7 +7,7 @@ library to execute a set of heuristic algorithms for global-minima search
 
 ## Instalation instructions
 
-- **Creating a Python virtual environment**:
+### Creating a Python virtual environment
 
 Install a python environment manager or create a virtual environment with
 python's built-in *venv* module.
@@ -20,7 +20,7 @@ structure comparison procedure total time will be higher than geometry
 optimization.
 
 
-- **Installing dependencies**:
+### Dependencies
 
 GET-PHAAST only needs cython as mandatory dependency so, for the headless usage
 of phaast, it can be installed in your virtual environment with:
@@ -35,10 +35,15 @@ If the GUI is needed, then a full dependency command is installed as:
 pip install cython pyopengl pyopengl-accelerate pyopengltk
 ```
 
-- **Installing GET-PHAAST**:
+[xTB](https://github.com/grimme-lab/xtb) is needed in your `$PATH` for basic
+searches with the built-in genetic algorithm
+
+Searches using the optional DFT package will also require inserting
+[Orca](https://www.faccts.de/orca/) in your `$PATH`
+
+### Installing GET-PHAAST
 
 Then the framework is simply installed using pip in the repository, for example:
-
 ```
 pip install .
 ```
