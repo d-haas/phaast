@@ -1,11 +1,16 @@
 # GET-PHAAST
 
+**`Linux` | `Python 3.13+`**
+
 An acronym for
 GETMM's (Group's name) Phaast Heuristic Algorithm for Atomic Structure Tuning,
 is a software developed with the intention of providing a readable and modular
 library to execute a set of heuristic algorithms for global-minima search
 
-## Instalation instructions
+- [Instalation](#instalation)
+- [Running](#running)
+
+## Instalation
 
 ### Creating a Python virtual environment
 
@@ -52,3 +57,20 @@ If your workdir is the repository directory.
 
 > A PyPI library with pre-compiled binaries will be added a little after the
 repository is made public.
+
+## Running
+
+### Python interface
+Examples are present in the `examples` directory to show how the library can be
+used.
+
+### Command-line interface (CLI)
+
+The command-line allows a user to run GET-PHAAST's genetic algorithm with just
+one obligatory flags (e.g. `phaast C6H6`).
+Additional optional flags are present in the [Manual](manual.pdf)
+
+### Graphical user interface (GUI)
+
+The GET-PHAAST's GUI, a tool to manage structures as well as genetic algorithm
+results, can be accessed through the `phaast-gui` command. 
